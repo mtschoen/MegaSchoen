@@ -20,10 +20,27 @@ namespace DisplayManager.Core
         [DllImport("user32.dll")]
         private static extern int SetDisplayConfig(uint numPathArrayElements, IntPtr pathArray, uint numModeInfoArrayElements, IntPtr modeInfoArray, uint flags);
 
+        [DllImport("user32.dll")]
+        private static extern int GetDisplayConfigBufferSizes(uint flags, out uint numPathArrayElements, out uint numModeInfoArrayElements);
+
+        [DllImport("gdi32.dll")]
+        private static extern int D3DKMTPollDisplayChildren(IntPtr pData);
+
         private const int ENUM_CURRENT_SETTINGS = -1;
         private const int CDS_UPDATEREGISTRY = 0x01;
         private const int DISP_CHANGE_SUCCESSFUL = 0;
         private const int DISPLAY_DEVICE_ACTIVE = 0x00000001;
+
+        // SetDisplayConfig constants
+        private const uint SDC_TOPOLOGY_INTERNAL = 0x80000000;
+        private const uint SDC_TOPOLOGY_CLONE = 0x40000000;
+        private const uint SDC_TOPOLOGY_EXTEND = 0x20000000;
+        private const uint SDC_TOPOLOGY_EXTERNAL = 0x10000000;
+        private const uint SDC_APPLY = 0x80;
+        private const uint SDC_SAVE_TO_DATABASE = 0x800;
+        private const uint SDC_USE_SUPPLIED_DISPLAY_CONFIG = 0x20;
+        private const uint QDC_ALL_PATHS = 0x01;
+        private const int ERROR_INVALID_PARAMETER = 0x57;
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
         private struct DISPLAY_DEVICE
@@ -217,6 +234,79 @@ namespace DisplayManager.Core
             }
 
             return allSuccessful;
+        }
+
+        public static bool SetDisplayModeUsingSetDisplayConfig(uint topologyFlags)
+        {
+            uint flags;
+            
+            if ((topologyFlags & 0xc0000000) == 0)
+            {
+                // Call D3DKMTPollDisplayChildren first, like FUN_1400161c8 does
+                ulong pollData = 0x1e00000000; // From decompiled code
+                IntPtr pollDataPtr = Marshal.AllocHGlobal(8);
+                Marshal.WriteInt64(pollDataPtr, (long)pollData);
+                int pollResult = D3DKMTPollDisplayChildren(pollDataPtr);
+                Marshal.FreeHGlobal(pollDataPtr);
+                Console.WriteLine($"D3DKMTPollDisplayChildren returned: 0x{pollResult:X8}");
+                
+                flags = topologyFlags | 0x880; // SDC_APPLY | SDC_SAVE_TO_DATABASE
+            }
+            else if (topologyFlags == SDC_TOPOLOGY_INTERNAL)
+            {
+                flags = topologyFlags | 0x80; // SDC_APPLY only
+            }
+            else
+            {
+                return false; // Invalid parameter
+            }
+            
+            Console.WriteLine($"Calling SetDisplayConfig with flags: 0x{flags:X8}");
+            int result = SetDisplayConfig(0, IntPtr.Zero, 0, IntPtr.Zero, flags);
+            
+            if (result != 0)
+            {
+                Console.WriteLine($"SetDisplayConfig failed with error code: 0x{result:X8} ({result})");
+                Debug.WriteLine($"SetDisplayConfig failed with error code: 0x{result:X8} ({result})");
+            }
+            else
+            {
+                Console.WriteLine("SetDisplayConfig succeeded!");
+            }
+            
+            return result == 0;
+        }
+
+        // Import from our native DLL
+        [DllImport("DisplayManagerNative.dll")]
+        private static extern int SwitchToInternalDisplay();
+
+        public static bool SwitchToInternalDisplayNative()
+        {
+            try
+            {
+                int result = SwitchToInternalDisplay();
+                if (result == 0)
+                {
+                    Console.WriteLine("Successfully switched to internal display using native DLL!");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"Native DLL failed with error code: {result}");
+                    return false;
+                }
+            }
+            catch (DllNotFoundException)
+            {
+                Console.WriteLine("DisplayManagerNative.dll not found!");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calling native DLL: {ex.Message}");
+                return false;
+            }
         }
 
         public static void EnableAllDisplays()
