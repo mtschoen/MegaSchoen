@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace MegaSchoen
+namespace DisplayManager.Core
 {
     public static class DisplayManager
     {

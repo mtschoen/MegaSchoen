@@ -21,6 +21,13 @@
                 SemanticProperties.Hint="Connects all displays"
                 Clicked="OnAllScreenButtonClicked"
                 HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="DebugDisplays"
+                Text="Debug Displays"
+                SemanticProperties.Hint="Print display information to debug output"
+                Clicked="OnDebugDisplaysButtonClicked"
+                HorizontalOptions="Fill" />
         </VerticalStackLayout>
     </ScrollView>
 
