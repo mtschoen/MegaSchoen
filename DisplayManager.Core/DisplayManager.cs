@@ -14,6 +14,12 @@ namespace DisplayManager.Core
         [DllImport("user32.dll")]
         private static extern int ChangeDisplaySettingsEx(string lpszDeviceName, ref DEVMODE lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
 
+        [DllImport("user32.dll")]
+        private static extern int ChangeDisplaySettingsEx(string lpszDeviceName, IntPtr lpDevMode, IntPtr hwnd, uint dwflags, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern int SetDisplayConfig(uint numPathArrayElements, IntPtr pathArray, uint numModeInfoArrayElements, IntPtr modeInfoArray, uint flags);
+
         private const int ENUM_CURRENT_SETTINGS = -1;
         private const int CDS_UPDATEREGISTRY = 0x01;
         private const int DISP_CHANGE_SUCCESSFUL = 0;
@@ -138,6 +144,26 @@ namespace DisplayManager.Core
             return allSuccessful;
         }
 
+        public static bool DisableAllDisplaysExceptPrimaryUsingDisplaySwitch()
+        {
+            try
+            {
+                var process = Process.Start(new ProcessStartInfo
+                {
+                    FileName = "DisplaySwitch.exe",
+                    Arguments = "/internal",  // Switch to internal (primary) display only
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                });
+                process?.WaitForExit();
+                return process?.ExitCode == 0;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public static bool DisableAllDisplaysExceptPrimary()
         {
             var displays = GetAllDisplays();
@@ -147,19 +173,47 @@ namespace DisplayManager.Core
             {
                 if (!display.IsPrimary && display.IsActive)
                 {
+                    Console.WriteLine($"Disabling display {display.DeviceName}");
+                    
+                    // Try to disable by setting resolution to 0x0
                     DEVMODE dm = new DEVMODE();
                     dm.dmSize = (short)Marshal.SizeOf(dm);
-                    dm.dmFields = 0x40000; // DM_POSITION
                     dm.dmPelsWidth = 0;
                     dm.dmPelsHeight = 0;
-
-                    int result = ChangeDisplaySettingsEx(display.DeviceName, ref dm, IntPtr.Zero, 0, IntPtr.Zero);
+                    dm.dmFields = 0x80000 | 0x100000; // DM_PELSWIDTH | DM_PELSHEIGHT
+                    
+                    int result = ChangeDisplaySettingsEx(display.DeviceName, ref dm, IntPtr.Zero, CDS_UPDATEREGISTRY, IntPtr.Zero);
+                    Console.WriteLine($"  Disable call result: {result} (0=success)");
+                    
                     if (result != DISP_CHANGE_SUCCESSFUL)
                     {
-                        Debug.WriteLine($"Failed to disable display {display.DeviceName}, error code: {result}");
-                        allSuccessful = false;
+                        Console.WriteLine($"  Trying alternative method...");
+                        // Alternative: try with CDS_RESET flag
+                        result = ChangeDisplaySettingsEx(display.DeviceName, IntPtr.Zero, IntPtr.Zero, 4, IntPtr.Zero); // CDS_RESET = 0x40000000 but trying 4
+                        Console.WriteLine($"  Alternative result: {result} (0=success)");
+                        
+                        if (result != DISP_CHANGE_SUCCESSFUL)
+                        {
+                            Debug.WriteLine($"Failed to disable display {display.DeviceName}, error code: {result}");
+                            allSuccessful = false;
+                        }
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"Successfully disabled display {display.DeviceName}");
                     }
                 }
+            }
+
+            // Second call: apply all changes with all nulls
+            Console.WriteLine("Applying display changes with null call...");
+            int finalResult = ChangeDisplaySettingsEx(null, IntPtr.Zero, IntPtr.Zero, 0, IntPtr.Zero);
+            Console.WriteLine($"Apply changes result: {finalResult} (0=success)");
+            
+            if (finalResult != DISP_CHANGE_SUCCESSFUL)
+            {
+                Debug.WriteLine($"Failed to apply display changes, error code: {finalResult}");
+                allSuccessful = false;
             }
 
             return allSuccessful;

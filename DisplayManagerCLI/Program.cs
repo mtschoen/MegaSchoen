@@ -22,8 +22,8 @@ switch (command)
         Console.WriteLine("Attempted to enable all displays");
         break;
     case "disable":
-        bool success = DisplayManager.Core.DisplayManager.DisableAllDisplaysExceptPrimary();
-        Console.WriteLine(success ? "Successfully disabled displays except primary" : "Failed to disable some displays");
+        bool success = DisplayManager.Core.DisplayManager.DisableAllDisplaysExceptPrimaryUsingDisplaySwitch();
+        Console.WriteLine(success ? "Successfully disabled displays except primary using DisplaySwitch" : "Failed to disable displays using DisplaySwitch");
         break;
     default:
         Console.WriteLine($"Unknown command: {command}");
