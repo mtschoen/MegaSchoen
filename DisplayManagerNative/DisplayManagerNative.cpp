@@ -41,5 +41,5 @@ int SwitchToInternalDisplay()
     // For topology changes, we don't need to pass the current configuration
     result = SetDisplayConfig(0, nullptr, 0, nullptr, flags);
     
-    return (result == ERROR_SUCCESS) ? 0 : (int)result;
+    return result == ERROR_SUCCESS ? 0 : (int)result;
 }

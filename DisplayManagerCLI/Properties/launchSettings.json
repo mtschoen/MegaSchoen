@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DisplayManagerCLI": {
+      "commandName": "Project",
+      "commandLineArgs": "disable"
+    }
+  }
+}
