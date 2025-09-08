@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MegaSchoen.MainPage">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="30,0"
+            Spacing="25">
+
+            <Button
+                x:Name="OneScreen"
+                Text="One Screen"
+                SemanticProperties.Hint="Disconnects all displays aside from the main one"
+                Clicked="OnOneScreenButtonClicked"
+                HorizontalOptions="Fill" />
+
+            <Button
+                x:Name="AllScreens"
+                Text="All Screens"
+                SemanticProperties.Hint="Connects all displays"
+                Clicked="OnAllScreenButtonClicked"
+                HorizontalOptions="Fill" />
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
