@@ -2,7 +2,7 @@
   "profiles": {
     "DisplayManagerCLI": {
       "commandName": "Project",
-      "commandLineArgs": "disable"
+      "commandLineArgs": "raw"
     }
   }
 }

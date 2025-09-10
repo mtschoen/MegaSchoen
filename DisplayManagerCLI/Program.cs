@@ -7,6 +7,7 @@ if (args.Length == 0)
     Console.WriteLine("  list        - List all displays");
     Console.WriteLine("  enable      - Enable all displays");
     Console.WriteLine("  disable     - Disable all displays except primary");
+    Console.WriteLine("  raw         - Show raw JSON from native DLL");
     return;
 }
 
@@ -18,12 +19,15 @@ switch (command)
         ListDisplays();
         break;
     case "enable":
-        DisplayManager.Core.DisplayManager.EnableAllDisplays();
-        Console.WriteLine("Attempted to enable all displays");
+        bool enableSuccess = DisplayManager.Core.DisplayManager.EnableAllDisplaysNative();
+        Console.WriteLine(enableSuccess ? "Successfully enabled all displays" : "Failed to enable all displays");
         break;
     case "disable":
         bool success = DisplayManager.Core.DisplayManager.SwitchToInternalDisplayNative();
         Console.WriteLine(success ? "Successfully switched to internal display only" : "Failed to switch to internal display");
+        break;
+    case "raw":
+        Console.WriteLine(DisplayManager.Core.DisplayManager.GetRawDisplayJson());
         break;
     default:
         Console.WriteLine($"Unknown command: {command}");
@@ -47,5 +51,15 @@ static void ListDisplays()
         Console.WriteLine($"  Bits Per Pixel: {display.BitsPerPixel}");
         Console.WriteLine($"  Is Active: {display.IsActive}");
         Console.WriteLine($"  Is Primary: {display.IsPrimary}");
+        Console.WriteLine($"  State Flags: 0x{display.StateFlags:X8}");
+        Console.WriteLine($"  Settings Source: {display.SettingsSource}");
+        Console.WriteLine($"  Device ID: {display.DeviceID}");
+        Console.WriteLine($"  Device Key: {display.DeviceKey}");
+        if (!string.IsNullOrEmpty(display.MonitorName))
+        {
+            Console.WriteLine($"  Monitor Name: {display.MonitorName}");
+            Console.WriteLine($"  Monitor ID: {display.MonitorID}");
+            Console.WriteLine($"  Monitor State Flags: 0x{display.MonitorStateFlags:X8}");
+        }
     }
 }

@@ -12,5 +12,12 @@ namespace DisplayManager.Core
         public bool IsActive { get; set; }
         public bool IsPrimary { get; set; }
         public int BitsPerPixel { get; set; }
+        public int StateFlags { get; set; }
+        public string DeviceID { get; set; } = "";
+        public string DeviceKey { get; set; } = "";
+        public string SettingsSource { get; set; } = ""; // "current", "registry", or "none"
+        public string MonitorName { get; set; } = "";
+        public string MonitorID { get; set; } = "";
+        public int MonitorStateFlags { get; set; }
     }
 }

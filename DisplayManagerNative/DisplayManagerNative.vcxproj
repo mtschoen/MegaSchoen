@@ -71,7 +71,9 @@ xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(SolutionDir)DisplayManagerCLI
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="DisplayInfo.h" />
     <ClInclude Include="DisplayManagerNative.h" />
+    <ClInclude Include="json.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DisplayManagerNative.cpp" />

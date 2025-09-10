@@ -98,38 +98,68 @@ namespace DisplayManager.Core
 
         public static List<DisplayInfo> GetAllDisplays()
         {
-            var displays = new List<DisplayInfo>();
-            DISPLAY_DEVICE d = new DISPLAY_DEVICE();
-            d.cb = Marshal.SizeOf(d);
+            const int bufferSize = 128 * 1024; // 64KB buffer
+            byte[] buffer = new byte[bufferSize];
 
-            int deviceIndex = 0;
-            while (EnumDisplayDevices(null, deviceIndex, ref d, 0) != 0)
+            try
             {
-                DEVMODE dm = new DEVMODE();
-                dm.dmSize = (short)Marshal.SizeOf(dm);
-
-                if (EnumDisplaySettings(d.DeviceName, ENUM_CURRENT_SETTINGS, ref dm))
+                int result = GetAllDisplaysJson(buffer, bufferSize);
+                if (result < 0)
                 {
-                    var display = new DisplayInfo
-                    {
-                        DeviceName = d.DeviceName,
-                        DeviceString = d.DeviceString,
-                        Width = dm.dmPelsWidth,
-                        Height = dm.dmPelsHeight,
-                        PositionX = dm.dmPositionX,
-                        PositionY = dm.dmPositionY,
-                        Frequency = dm.dmDisplayFrequency,
-                        BitsPerPixel = dm.dmBitsPerPel,
-                        IsActive = (d.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0,
-                        IsPrimary = dm.dmPositionX == 0 && dm.dmPositionY == 0
-                    };
-                    displays.Add(display);
+                    throw new InvalidOperationException($"Native call failed or buffer too small. Required size: {-result}");
                 }
 
-                deviceIndex++;
+                string jsonString = System.Text.Encoding.UTF8.GetString(buffer, 0, result);
+                var options = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                };
+                
+                // Try new format first (with legacy and queryConfig sections)
+                try 
+                {
+                    var jsonDoc = System.Text.Json.JsonDocument.Parse(jsonString);
+                    if (jsonDoc.RootElement.TryGetProperty("legacy", out var legacyElement))
+                    {
+                        var legacyArray = System.Text.Json.JsonSerializer.Deserialize<DisplayInfo[]>(legacyElement.GetRawText(), options);
+                        return legacyArray?.ToList() ?? new List<DisplayInfo>();
+                    }
+                }
+                catch (System.Text.Json.JsonException)
+                {
+                    // Fall back to old format
+                }
+                
+                // Old format fallback
+                var displayArray = System.Text.Json.JsonSerializer.Deserialize<DisplayInfo[]>(jsonString, options);
+                return displayArray?.ToList() ?? new List<DisplayInfo>();
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to get displays from native DLL: {ex.Message}");
+                return new List<DisplayInfo>();
+            }
+        }
 
-            return displays;
+        public static string GetRawDisplayJson()
+        {
+            const int bufferSize = 128 * 1024; // 64KB buffer
+            byte[] buffer = new byte[bufferSize];
+
+            try
+            {
+                int result = GetAllDisplaysJson(buffer, bufferSize);
+                if (result < 0)
+                {
+                    return $"Error: Native call failed or buffer too small. Required size: {-result}";
+                }
+
+                return System.Text.Encoding.UTF8.GetString(buffer, 0, result);
+            }
+            catch (Exception ex)
+            {
+                return $"Error getting raw JSON: {ex.Message}";
+            }
         }
 
         public static bool SetDisplayConfiguration(List<DisplayInfo> displays)
@@ -281,6 +311,12 @@ namespace DisplayManager.Core
         [DllImport("DisplayManagerNative.dll")]
         private static extern int SwitchToInternalDisplay();
 
+        [DllImport("DisplayManagerNative.dll")]
+        private static extern int EnableAllDisplays();
+
+        [DllImport("DisplayManagerNative.dll")]
+        private static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
+
         public static bool SwitchToInternalDisplayNative()
         {
             try
@@ -309,47 +345,31 @@ namespace DisplayManager.Core
             }
         }
 
-        public static void EnableAllDisplays()
+        public static bool EnableAllDisplaysNative()
         {
-            DISPLAY_DEVICE d = new DISPLAY_DEVICE();
-            d.cb = Marshal.SizeOf(d);
-
-            int deviceIndex = 0;
-            while (EnumDisplayDevices(null, deviceIndex, ref d, 0) != 0)
+            try
             {
-                Debug.WriteLine($"Found display device: {d.DeviceName}");
-
-                DEVMODE dm = new DEVMODE();
-                dm.dmSize = (short)Marshal.SizeOf(dm);
-
-                if (EnumDisplaySettings(d.DeviceName, ENUM_CURRENT_SETTINGS, ref dm))
+                int result = EnableAllDisplays();
+                if (result == 0)
                 {
-                    Debug.WriteLine($"Current settings for {d.DeviceName}: {dm.dmPelsWidth}x{dm.dmPelsHeight} @ {dm.dmDisplayFrequency}Hz");
-
-                    dm.dmDisplayFlags = DISPLAY_DEVICE_ACTIVE;
-                    int result = ChangeDisplaySettingsEx(d.DeviceName, ref dm, IntPtr.Zero, CDS_UPDATEREGISTRY, IntPtr.Zero);
-                    if (result != DISP_CHANGE_SUCCESSFUL)
-                    {
-                        Debug.WriteLine($"Failed to enable display for {d.DeviceName}, error code: {result}");
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"Successfully enabled display for {d.DeviceName}");
-                    }
+                    Console.WriteLine("Successfully enabled all displays using native DLL!");
+                    return true;
                 }
-
-                deviceIndex++;
+                else
+                {
+                    Console.WriteLine($"Native DLL failed with error code: {result}");
+                    return false;
+                }
             }
-
-            DEVMODE devMode = default;
-            int finalResult = ChangeDisplaySettingsEx(null, ref devMode, IntPtr.Zero, 0, IntPtr.Zero);
-            if (finalResult != DISP_CHANGE_SUCCESSFUL)
+            catch (DllNotFoundException)
             {
-                Debug.WriteLine($"Failed to apply display changes, error code: {finalResult}");
+                Console.WriteLine("DisplayManagerNative.dll not found!");
+                return false;
             }
-            else
+            catch (Exception ex)
             {
-                Debug.WriteLine("Successfully applied display changes");
+                Console.WriteLine($"Error calling native DLL: {ex.Message}");
+                return false;
             }
         }
     }
