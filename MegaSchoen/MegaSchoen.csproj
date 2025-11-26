@@ -67,6 +67,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\DisplayManager.Core\DisplayManager.Core.csproj" />
+		<ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj" />
 	</ItemGroup>
 
 </Project>
