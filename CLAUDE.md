@@ -26,9 +26,9 @@ Run the CLI tool (after building with MSBuild):
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug    # Build first
 
-".\DisplayManagerCLI\bin\Debug\net9.0\DisplayManagerCLI.exe" list      # List all displays
-".\DisplayManagerCLI\bin\Debug\net9.0\DisplayManagerCLI.exe" enable    # Enable all displays
-".\DisplayManagerCLI\bin\Debug\net9.0\DisplayManagerCLI.exe" disable   # Disable all except primary
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" list      # List all displays
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" enable    # Enable all displays
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" disable   # Disable all except primary
 ```
 
 ## Architecture Overview
@@ -67,5 +67,5 @@ MegaSchoen is a cross-platform utility suite focused on display management with 
 ### Build Configuration Notes
 
 - Native C++ project outputs to solution bin folder and automatically copies DLL/PDB to dependent projects' output directories via post-build events
-- .NET projects target different frameworks: Core/CLI use .NET 9, MAUI uses .NET 8
-- C++ project requires Visual Studio with Windows 10 SDK and v143 platform toolset
+- All .NET projects now target .NET 10
+- C++ project requires Visual Studio 2026 with Windows 10 SDK and v145 platform toolset
