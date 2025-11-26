@@ -64,10 +64,10 @@
       <AdditionalDependencies>user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(SolutionDir)DisplayManager.Core\bin\$(Configuration)\net8.0\DisplayManagerNative.dll*"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(SolutionDir)DisplayManager.Core\bin\$(Configuration)\net8.0\DisplayManagerNative.pdb*"
-xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(SolutionDir)DisplayManagerCLI\bin\$(Configuration)\net8.0\DisplayManagerNative.dll*"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(SolutionDir)DisplayManagerCLI\bin\$(Configuration)\net8.0\DisplayManagerNative.pdb*"</Command>
+      <Command>xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(SolutionDir)DisplayManager.Core\bin\$(Configuration)\net10.0\DisplayManagerNative.dll*"
+xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(SolutionDir)DisplayManager.Core\bin\$(Configuration)\net10.0\DisplayManagerNative.pdb*"
+xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(SolutionDir)DisplayManagerCLI\bin\$(Configuration)\net10.0\DisplayManagerNative.dll*"
+xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(SolutionDir)DisplayManagerCLI\bin\$(Configuration)\net10.0\DisplayManagerNative.pdb*"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
