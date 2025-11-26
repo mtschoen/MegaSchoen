@@ -8,5 +8,8 @@
 .vs/
 *.user
 
+# Claude Code
+.claude/
+
 # MAUI
 **/platforms/
