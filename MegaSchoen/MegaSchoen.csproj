@@ -20,6 +20,10 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
+		<!-- Windows Unpackaged deployment for development -->
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+
 		<!-- Display name -->
 		<ApplicationTitle>MegaSchoen</ApplicationTitle>
 

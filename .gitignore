@@ -12,4 +12,6 @@
 .claude/
 
 # MAUI
+# Note: Platforms/ (capital P) contains source code and should be committed
 **/platforms/
+!**/Platforms/
