@@ -70,4 +70,14 @@
 		<ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj" />
 	</ItemGroup>
 
+	<!-- Copy native DLL to Windows output directory after build -->
+	<Target Name="CopyNativeDllToOutput" AfterTargets="Build" Condition="$(TargetFramework.Contains('windows'))">
+		<Copy SourceFiles="..\bin\Debug\DisplayManagerNative.dll"
+			  DestinationFolder="$(OutputPath)"
+			  Condition="Exists('..\bin\Debug\DisplayManagerNative.dll')" />
+		<Copy SourceFiles="..\bin\Debug\DisplayManagerNative.pdb"
+			  DestinationFolder="$(OutputPath)"
+			  Condition="Exists('..\bin\Debug\DisplayManagerNative.pdb')" />
+	</Target>
+
 </Project>
