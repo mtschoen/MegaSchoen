@@ -1,26 +1,163 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="MegaSchoen.MainPage">
+             xmlns:viewmodels="clr-namespace:MegaSchoen.ViewModels"
+             xmlns:models="clr-namespace:DisplayManager.Core.Models;assembly=DisplayManager.Core"
+             xmlns:core="clr-namespace:DisplayManager.Core;assembly=DisplayManager.Core"
+             x:Class="MegaSchoen.MainPage"
+             Title="Display Manager">
+
+    <ContentPage.BindingContext>
+        <viewmodels:MainPageViewModel />
+    </ContentPage.BindingContext>
 
     <ScrollView>
-        <VerticalStackLayout
-            Padding="30,0"
-            Spacing="25">
+        <VerticalStackLayout Padding="20" Spacing="20">
 
-            <Button
-                x:Name="OneScreen"
-                Text="One Screen"
-                SemanticProperties.Hint="Disconnects all displays aside from the main one"
-                Clicked="OnOneScreenButtonClicked"
-                HorizontalOptions="Fill" />
+            <!-- Loading Indicator -->
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                             IsVisible="{Binding IsLoading}"
+                             Color="{StaticResource Primary}"
+                             HeightRequest="40"/>
 
-            <Button
-                x:Name="AllScreens"
-                Text="All Screens"
-                SemanticProperties.Hint="Connects all displays"
-                Clicked="OnAllScreenButtonClicked"
-                HorizontalOptions="Fill" />
+            <!-- Current Displays Section -->
+            <Frame BorderColor="{StaticResource Primary}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
+                   Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="10">
+                        <Label Text="💻 Current Displays"
+                               FontSize="20"
+                               FontAttributes="Bold"/>
+                        <Button Text="🔄"
+                                Command="{Binding LoadDisplaysCommand}"
+                                WidthRequest="40"
+                                HeightRequest="40"
+                                CornerRadius="20"
+                                Padding="0"/>
+                    </HorizontalStackLayout>
+
+                    <CollectionView ItemsSource="{Binding CurrentDisplays}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="core:DisplayInfo">
+                                <Frame Margin="0,5"
+                                       Padding="10"
+                                       BorderColor="{StaticResource Gray300}">
+                                    <VerticalStackLayout Spacing="5">
+                                        <HorizontalStackLayout Spacing="10">
+                                            <Label Text="{Binding MonitorName}"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="[PRIMARY]"
+                                                   TextColor="{StaticResource Primary}"
+                                                   IsVisible="{Binding IsPrimary}"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="[ACTIVE]"
+                                                   TextColor="Green"
+                                                   IsVisible="{Binding IsActive}"
+                                                   FontSize="12"/>
+                                        </HorizontalStackLayout>
+                                        <Label FontSize="12" TextColor="{StaticResource Gray600}">
+                                            <Label.Text>
+                                                <MultiBinding StringFormat="{}{0} x {1} @ {2}Hz">
+                                                    <Binding Path="Width" />
+                                                    <Binding Path="Height" />
+                                                    <Binding Path="Frequency" />
+                                                </MultiBinding>
+                                            </Label.Text>
+                                        </Label>
+                                        <Label Text="{Binding DeviceName}"
+                                               FontSize="10"
+                                               TextColor="{StaticResource Gray500}"/>
+                                    </VerticalStackLayout>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="No displays detected"
+                           IsVisible="{Binding CurrentDisplays.Count, Converter={StaticResource IsZeroConverter}}"
+                           TextColor="{StaticResource Gray500}"
+                           HorizontalOptions="Center"
+                           Margin="20"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Save Current Arrangement Section -->
+            <Frame BorderColor="{StaticResource Primary}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
+                   Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="💾 Save Current Arrangement"
+                           FontSize="20"
+                           FontAttributes="Bold"/>
+
+                    <Entry Placeholder="Enter profile name..."
+                           Text="{Binding NewProfileName}"
+                           IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+
+                    <Button Text="Save Current Arrangement"
+                            Command="{Binding SaveCurrentArrangementCommand}"
+                            IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                            BackgroundColor="{StaticResource Primary}"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Saved Profiles Section -->
+            <Frame BorderColor="{StaticResource Primary}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
+                   Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="📋 Saved Profiles"
+                           FontSize="20"
+                           FontAttributes="Bold"/>
+
+                    <CollectionView ItemsSource="{Binding SavedProfiles}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="models:SavedDisplayProfile">
+                                <Frame Margin="0,5"
+                                       Padding="10"
+                                       BorderColor="{StaticResource Gray300}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout Spacing="5" Grid.Column="0">
+                                            <Label Text="{Binding Name}"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold"/>
+                                            <Label Text="{Binding Description}"
+                                                   FontSize="12"
+                                                   TextColor="{StaticResource Gray600}"/>
+                                            <Label FontSize="10" TextColor="{StaticResource Gray500}">
+                                                <Label.Text>
+                                                    <MultiBinding StringFormat="{}{0} displays • Created {1:g}">
+                                                        <Binding Path="Displays.Count" />
+                                                        <Binding Path="Created" Converter="{StaticResource UtcToLocalConverter}" />
+                                                    </MultiBinding>
+                                                </Label.Text>
+                                            </Label>
+                                        </VerticalStackLayout>
+
+                                        <Button Text="🗑️"
+                                                Grid.Column="1"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=DeleteProfileCommand}"
+                                                CommandParameter="{Binding .}"
+                                                WidthRequest="50"
+                                                HeightRequest="50"
+                                                BackgroundColor="{StaticResource Tertiary}"
+                                                VerticalOptions="Center"/>
+                                    </Grid>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label Text="No saved profiles yet. Save your current arrangement to get started!"
+                           IsVisible="{Binding SavedProfiles.Count, Converter={StaticResource IsZeroConverter}}"
+                           TextColor="{StaticResource Gray500}"
+                           HorizontalOptions="Center"
+                           Margin="20"/>
+                </VerticalStackLayout>
+            </Frame>
+
         </VerticalStackLayout>
     </ScrollView>
 
