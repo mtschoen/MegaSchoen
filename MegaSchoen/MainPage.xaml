@@ -118,7 +118,7 @@
                                 <Frame Margin="0,5"
                                        Padding="10"
                                        BorderColor="{StaticResource Gray300}">
-                                    <Grid ColumnDefinitions="*,Auto">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                                         <VerticalStackLayout Spacing="5" Grid.Column="0">
                                             <Label Text="{Binding Name}"
                                                    FontSize="16"
@@ -136,8 +136,17 @@
                                             </Label>
                                         </VerticalStackLayout>
 
-                                        <Button Text="🗑️"
+                                        <Button Text="✓ Apply"
                                                 Grid.Column="1"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=ApplyProfileCommand}"
+                                                CommandParameter="{Binding .}"
+                                                WidthRequest="80"
+                                                HeightRequest="50"
+                                                BackgroundColor="{StaticResource Primary}"
+                                                VerticalOptions="Center"/>
+
+                                        <Button Text="🗑️"
+                                                Grid.Column="2"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=DeleteProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="50"

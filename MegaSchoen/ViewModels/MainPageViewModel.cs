@@ -44,6 +44,7 @@ namespace MegaSchoen.ViewModels
         public ICommand SaveCurrentArrangementCommand { get; }
         public ICommand DeleteProfileCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand ApplyProfileCommand { get; }
 
         public MainPageViewModel()
         {
@@ -55,6 +56,7 @@ namespace MegaSchoen.ViewModels
                 () => !string.IsNullOrWhiteSpace(NewProfileName)
             );
             DeleteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await DeleteProfileAsync(profile));
+            ApplyProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await ApplyProfileAsync(profile));
             RefreshCommand = new Command(async () => await RefreshAllAsync());
 
             // Load initial data
@@ -153,6 +155,40 @@ namespace MegaSchoen.ViewModels
             catch (Exception ex)
             {
                 await ShowErrorAsync($"Failed to delete profile: {ex.Message}");
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private async Task ApplyProfileAsync(SavedDisplayProfile? profile)
+        {
+            if (profile == null)
+                return;
+
+            try
+            {
+                IsLoading = true;
+
+                bool success = _profileService.ApplyProfile(profile);
+
+                if (success)
+                {
+                    await ShowSuccessAsync($"Profile '{profile.Name}' applied successfully!");
+
+                    // Refresh displays to show the new configuration
+                    await Task.Delay(500); // Small delay to let Windows settle
+                    await LoadDisplaysAsync();
+                }
+                else
+                {
+                    await ShowErrorAsync($"Failed to apply profile '{profile.Name}'. Check the system logs for details.");
+                }
+            }
+            catch (Exception ex)
+            {
+                await ShowErrorAsync($"Failed to apply profile: {ex.Message}");
             }
             finally
             {

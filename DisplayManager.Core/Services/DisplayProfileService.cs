@@ -1,4 +1,5 @@
 using DisplayManager.Core.Models;
+using System.Text.Json;
 
 namespace DisplayManager.Core.Services
 {
@@ -28,6 +29,18 @@ namespace DisplayManager.Core.Services
         public SavedDisplayProfile CaptureCurrentConfiguration(string profileName, string? description = null)
         {
             var currentDisplays = DisplayManager.GetAllDisplays();
+
+            // Debug: Log what we're capturing
+            System.Diagnostics.Debug.WriteLine("=== CAPTURING PROFILE ===");
+            System.Diagnostics.Debug.WriteLine($"Profile: {profileName}");
+            System.Diagnostics.Debug.WriteLine($"Found {currentDisplays.Count} displays:");
+            foreach (var d in currentDisplays)
+            {
+                System.Diagnostics.Debug.WriteLine($"  - {d.MonitorName} ({d.DeviceName})");
+                System.Diagnostics.Debug.WriteLine($"    MonitorID: {d.MonitorID}");
+                System.Diagnostics.Debug.WriteLine($"    IsActive: {d.IsActive}");
+                System.Diagnostics.Debug.WriteLine($"    IsPrimary: {d.IsPrimary}");
+            }
 
             var profile = new SavedDisplayProfile
             {
@@ -101,6 +114,50 @@ namespace DisplayManager.Core.Services
         {
             var collection = await _storageService.LoadAsync();
             return collection.Profiles.FirstOrDefault(p => p.Id == profileId);
+        }
+
+        /// <summary>
+        /// Applies a saved profile to the system.
+        /// </summary>
+        /// <param name="profile">The profile to apply</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public bool ApplyProfile(SavedDisplayProfile profile)
+        {
+            // Convert profile to JSON format expected by native code
+            var config = new
+            {
+                displays = profile.Displays.Select(d => new
+                {
+                    enabled = d.Enabled,
+                    isPrimary = d.IsPrimary,
+                    identifier = new
+                    {
+                        monitorId = d.Identifier.MonitorId,
+                        deviceName = d.Identifier.DeviceName,
+                        monitorName = d.Identifier.MonitorName
+                    }
+                }).ToArray()
+            };
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            };
+
+            string jsonConfig = JsonSerializer.Serialize(config, options);
+
+            // Debug: Log what we're sending
+            System.Diagnostics.Debug.WriteLine("=== APPLYING PROFILE ===");
+            System.Diagnostics.Debug.WriteLine($"Profile: {profile.Name}");
+            System.Diagnostics.Debug.WriteLine($"Config JSON:\n{jsonConfig}");
+
+            // Call the native function to apply the configuration
+            bool result = DisplayManager.ApplyDisplayConfiguration(jsonConfig);
+
+            System.Diagnostics.Debug.WriteLine($"Result: {result}");
+
+            return result;
         }
     }
 }

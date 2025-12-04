@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current Status (Last updated: 2025-11-26)
 
-### ✅ Phase 2 COMPLETE: Display Profile Management UI
+### ✅ Phase 3 COMPLETE: Profile Application with Display Matching
 
 **What's Working:**
 - MAUI app builds and runs on Windows (Visual Studio 2026)
@@ -14,21 +14,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - View current displays (resolution, refresh rate, primary/active status)
   - Save current arrangement with custom name
   - List all saved profiles with metadata
+  - **Apply saved profiles with "Apply" button**
   - Delete profiles with confirmation dialog
 - Profile storage: `%APPDATA%\MegaSchoen\configs.json`
+- **Smart profile application logic:**
+  - **Matches displays by MonitorID (most reliable)**
+  - **Falls back to MonitorName if MonitorID unavailable**
+  - **Falls back to DeviceName as last resort**
+  - **Enables/disables each matched display individually**
+  - Uses `ChangeDisplaySettingsEx` to enable/disable specific displays
+  - Applies all changes atomically
+  - Refreshes display list after applying configuration
 
-**Recent Fixes:**
-- Added MSBuild target to copy DisplayManagerNative.dll to Windows output folder
-- Fixed namespace conflicts between DisplayManager.Core.DisplayInfo and MAUI's DisplayInfo
-- Updated all projects to .NET 10
-- Upgraded to Visual Studio 2026 with v145 platform toolset
+**Recent Additions (Session 2):**
+- Completely rewrote `ApplyDisplayConfiguration()` in DisplayManagerNative.cpp:254
+  - Now enumerates current displays and matches them to saved profile displays
+  - Uses hierarchical matching: MonitorID → MonitorName → DeviceName
+  - Enables/disables each display individually based on saved profile
+  - Uses `ChangeDisplaySettingsEx` with `CDS_UPDATEREGISTRY` and `CDS_NORESET`
+  - Applies all changes atomically with final `ChangeDisplaySettingsEx(nullptr, ...)`
+- Verified DisplayProfileService captures all necessary identifiers (MonitorID, MonitorName, DeviceName)
 
-### 🎯 Next Steps (Phase 3 - Profile Application):
+**Known Limitations:**
+- Does not restore specific display positions, resolutions, or refresh rates (uses current/registry settings)
+- Does not validate if saved displays are currently connected before applying
+- Unmatched displays are left in their current state
 
-**Priority 1: Apply Saved Profiles**
-- Add "Apply" button to each saved profile in the UI
-- Implement native DLL function to restore display configuration
+### 🎯 Next Steps (Phase 3 - Enhanced Profile Application):
+
+**Priority 1: Advanced Profile Application**
+- Implement display matching by MonitorID/MonitorName
+- Restore specific display positions and resolutions
 - Handle edge cases (missing displays, resolution mismatch, etc.)
+- Add validation warnings before applying profiles
 
 **Priority 2: Global Hotkey Support**
 - Research Windows hotkey registration (RegisterHotKey Win32 API)

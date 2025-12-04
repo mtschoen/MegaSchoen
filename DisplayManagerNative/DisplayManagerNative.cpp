@@ -94,18 +94,19 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
     int deviceIndex = 0;
     while (EnumDisplayDevicesW(nullptr, deviceIndex, &d, 0) != 0)
     {
-        // Check if this display adapter has any monitors connected
-        DISPLAY_DEVICE monitor = {};
-        monitor.cb = sizeof(monitor);
-        bool hasMonitor = EnumDisplayDevicesW(d.DeviceName, 0, &monitor, 0) != 0;
-        
-        // Filter to only PCI devices (real hardware) that have monitors
-        bool isPCIDevice = wcsstr(d.DeviceID, L"PCI\\") != nullptr;
-        
-        if (!isPCIDevice || !hasMonitor) {
+        // Skip software/virtual display adapters (Remote Desktop, etc)
+        // We want the physical display outputs which have DeviceNames like \\.\DISPLAY1, \\.\DISPLAY2, etc.
+        bool isPhysicalDisplayOutput = wcsstr(d.DeviceID, L"PCI\\") != nullptr || wcsstr(d.DeviceID, L"USB\\") != nullptr;
+
+        if (!isPhysicalDisplayOutput) {
             deviceIndex++;
             continue;
         }
+
+        // Try to get monitor information (may not be available for disabled displays)
+        DISPLAY_DEVICE monitor = {};
+        monitor.cb = sizeof(monitor);
+        bool hasMonitor = EnumDisplayDevicesW(d.DeviceName, 0, &monitor, 0) != 0;
 
         json display;
         
@@ -115,15 +116,14 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         
         display["deviceName"] = std::string(deviceName.begin(), deviceName.end());
         display["deviceString"] = std::string(deviceString.begin(), deviceString.end());
-        display["isActive"] = (d.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0;
         display["stateFlags"] = (int)d.StateFlags; // Debug info
-        
+
         // Add DeviceID and DeviceKey for debugging
         std::wstring deviceID(d.DeviceID);
         std::wstring deviceKey(d.DeviceKey);
         display["deviceID"] = std::string(deviceID.begin(), deviceID.end());
         display["deviceKey"] = std::string(deviceKey.begin(), deviceKey.end());
-        
+
         // Add monitor information if available
         if (hasMonitor) {
             std::wstring monitorName(monitor.DeviceString);
@@ -131,15 +131,22 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
             display["monitorName"] = std::string(monitorName.begin(), monitorName.end());
             display["monitorID"] = std::string(monitorID.begin(), monitorID.end());
             display["monitorStateFlags"] = (int)monitor.StateFlags;
+        } else {
+            // No monitor info available (display might be disabled)
+            display["monitorName"] = "";
+            display["monitorID"] = "";
+            display["monitorStateFlags"] = 0;
         }
 
         // Try to get current settings for enabled displays
         DEVMODEW dm = {};
         dm.dmSize = sizeof(dm);
-        
+        bool hasCurrentSettings = false;
+
         if (EnumDisplaySettingsW(d.DeviceName, ENUM_CURRENT_SETTINGS, &dm))
         {
             // Display is enabled and has current settings
+            hasCurrentSettings = true;
             display["width"] = (int)dm.dmPelsWidth;
             display["height"] = (int)dm.dmPelsHeight;
             display["positionX"] = (int)dm.dmPosition.x;
@@ -173,6 +180,9 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
             display["isPrimary"] = false;
             display["settingsSource"] = "none";
         }
+
+        // isActive = true if we have current settings (display is enabled)
+        display["isActive"] = hasCurrentSettings;
 
         legacyDisplays.push_back(display);
         deviceIndex++;
@@ -249,4 +259,122 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
 
     strcpy_s(buffer, bufferSize, jsonString.c_str());
     return jsonLength;
+}
+
+int ApplyDisplayConfiguration(const char* configJson)
+{
+    if (!configJson) {
+        return -1; // Invalid parameter
+    }
+
+    try {
+        // Parse the JSON configuration
+        json config = json::parse(configJson);
+
+        // Get all current displays
+        DISPLAY_DEVICE currentDisplay = {};
+        currentDisplay.cb = sizeof(currentDisplay);
+
+        std::vector<std::tuple<std::wstring, std::wstring, std::wstring>> currentDisplays; // DeviceName, MonitorID, MonitorName
+
+        int deviceIndex = 0;
+        while (EnumDisplayDevicesW(nullptr, deviceIndex, &currentDisplay, 0) != 0)
+        {
+            // Get monitor information
+            DISPLAY_DEVICE monitor = {};
+            monitor.cb = sizeof(monitor);
+            bool hasMonitor = EnumDisplayDevicesW(currentDisplay.DeviceName, 0, &monitor, 0) != 0;
+
+            bool isPCIDevice = wcsstr(currentDisplay.DeviceID, L"PCI\\") != nullptr;
+
+            if (isPCIDevice && hasMonitor) {
+                std::wstring deviceName(currentDisplay.DeviceName);
+                std::wstring monitorID(monitor.DeviceID);
+                std::wstring monitorName(monitor.DeviceString);
+                currentDisplays.push_back(std::make_tuple(deviceName, monitorID, monitorName));
+            }
+
+            deviceIndex++;
+        }
+
+        // Process each current display
+        for (const auto& [deviceName, monitorID, monitorName] : currentDisplays)
+        {
+            // Convert wide strings to narrow for comparison
+            std::string deviceNameStr(deviceName.begin(), deviceName.end());
+            std::string monitorIDStr(monitorID.begin(), monitorID.end());
+            std::string monitorNameStr(monitorName.begin(), monitorName.end());
+
+            // Try to match this display to one in the config
+            bool shouldEnable = false;
+            bool matched = false;
+
+            for (const auto& configDisplay : config["displays"]) {
+                std::string cfgMonitorID = configDisplay["identifier"]["monitorId"].get<std::string>();
+                std::string cfgMonitorName = configDisplay["identifier"]["monitorName"].get<std::string>();
+                std::string cfgDeviceName = configDisplay["identifier"]["deviceName"].get<std::string>();
+
+                // Match by MonitorID first (most specific)
+                if (!cfgMonitorID.empty() && !monitorIDStr.empty() && cfgMonitorID == monitorIDStr) {
+                    matched = true;
+                    shouldEnable = configDisplay["enabled"].get<bool>();
+                    break;
+                }
+
+                // Fall back to MonitorName
+                if (!cfgMonitorName.empty() && !monitorNameStr.empty() && cfgMonitorName == monitorNameStr) {
+                    matched = true;
+                    shouldEnable = configDisplay["enabled"].get<bool>();
+                    break;
+                }
+
+                // Last resort: DeviceName (least reliable as it can change)
+                if (!cfgDeviceName.empty() && !deviceNameStr.empty() && cfgDeviceName == deviceNameStr) {
+                    matched = true;
+                    shouldEnable = configDisplay["enabled"].get<bool>();
+                    break;
+                }
+            }
+
+            // If we didn't match this display in the config, leave it as-is
+            if (!matched) {
+                continue;
+            }
+
+            // Apply the enable/disable setting
+            DEVMODEW dm = {};
+            dm.dmSize = sizeof(dm);
+
+            if (shouldEnable) {
+                // Enable the display - get current or registry settings
+                if (!EnumDisplaySettingsW(deviceName.c_str(), ENUM_CURRENT_SETTINGS, &dm)) {
+                    // If no current settings, try registry settings
+                    if (!EnumDisplaySettingsW(deviceName.c_str(), ENUM_REGISTRY_SETTINGS, &dm)) {
+                        // Can't get settings, skip this display
+                        continue;
+                    }
+                }
+
+                // Apply the settings to enable the display
+                dm.dmFields = DM_POSITION | DM_PELSWIDTH | DM_PELSHEIGHT | DM_DISPLAYFREQUENCY;
+                LONG result = ChangeDisplaySettingsExW(deviceName.c_str(), &dm, nullptr, CDS_UPDATEREGISTRY | CDS_NORESET, nullptr);
+            } else {
+                // Disable the display
+                LONG result = ChangeDisplaySettingsExW(deviceName.c_str(), nullptr, nullptr, CDS_UPDATEREGISTRY | CDS_NORESET, nullptr);
+            }
+        }
+
+        // Apply all changes at once
+        ChangeDisplaySettingsExW(nullptr, nullptr, nullptr, 0, nullptr);
+
+        return 0; // Success
+    }
+    catch (const json::exception& e) {
+        // JSON parsing error
+        return -3;
+    }
+    catch (...) {
+        // Unknown error
+        return -4;
+    }
 }

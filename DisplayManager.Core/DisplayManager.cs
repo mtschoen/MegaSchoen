@@ -15,6 +15,9 @@ namespace DisplayManager.Core
         [DllImport("DisplayManagerNative.dll")]
         private static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
 
+        [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyDisplayConfiguration", CharSet = CharSet.Ansi)]
+        private static extern int ApplyDisplayConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string configJson);
+
         public static List<DisplayInfo> GetAllDisplays()
         {
             const int bufferSize = 128 * 1024; // 64KB buffer
@@ -122,6 +125,42 @@ namespace DisplayManager.Core
                 else
                 {
                     Console.WriteLine($"Native DLL failed with error code: {result}");
+                    return false;
+                }
+            }
+            catch (DllNotFoundException)
+            {
+                Console.WriteLine("DisplayManagerNative.dll not found!");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calling native DLL: {ex.Message}");
+                return false;
+            }
+        }
+
+        public static bool ApplyDisplayConfiguration(string configJson)
+        {
+            try
+            {
+                int result = ApplyDisplayConfigurationNative(configJson);
+                if (result == 0)
+                {
+                    Console.WriteLine("Successfully applied display configuration!");
+                    return true;
+                }
+                else
+                {
+                    string errorMessage = result switch
+                    {
+                        -1 => "Invalid parameter (null pointer)",
+                        -2 => "Invalid configuration (no displays enabled)",
+                        -3 => "JSON parsing error",
+                        -4 => "Unknown error",
+                        _ => $"Windows error code: {result}"
+                    };
+                    Console.WriteLine($"Failed to apply configuration: {errorMessage}");
                     return false;
                 }
             }
