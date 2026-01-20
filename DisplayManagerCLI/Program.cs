@@ -1,5 +1,3 @@
-using DisplayManager.Core;
-using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
 
 var profileService = new DisplayProfileService();

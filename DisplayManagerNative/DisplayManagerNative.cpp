@@ -6,11 +6,6 @@
 #include <set>
 #include <map>
 
-// QueryDisplayConfig constants
-#define QDC_ALL_PATHS                    0x00000001
-#define QDC_ONLY_ACTIVE_PATHS            0x00000002
-#define DISPLAYCONFIG_PATH_ACTIVE        0x00000001
-
 using json = nlohmann::json;
 
 // Helper to convert wide string to UTF-8

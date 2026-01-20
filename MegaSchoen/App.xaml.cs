@@ -1,5 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-
 namespace MegaSchoen
 {
     public partial class App : Application
