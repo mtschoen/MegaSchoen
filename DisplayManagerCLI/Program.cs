@@ -1,4 +1,3 @@
-﻿using DisplayManager.Core;
 using DisplayManager.Core.Services;
 
 // Initialize services
@@ -23,7 +22,7 @@ if (args.Length == 0)
     return;
 }
 
-string command = args[0].ToLower();
+var command = args[0].ToLower();
 
 switch (command)
 {
@@ -31,11 +30,11 @@ switch (command)
         ListDisplays();
         break;
     case "enable":
-        bool enableSuccess = DisplayManager.Core.DisplayManager.EnableAllDisplays();
+        var enableSuccess = DisplayManager.Core.DisplayManager.EnableAllDisplays();
         Console.WriteLine(enableSuccess ? "Successfully enabled all displays" : "Failed to enable all displays");
         break;
     case "disable":
-        bool success = DisplayManager.Core.DisplayManager.SwitchToInternalDisplay();
+        var success = DisplayManager.Core.DisplayManager.SwitchToInternalDisplay();
         Console.WriteLine(success ? "Successfully switched to internal display only" : "Failed to switch to internal display");
         break;
     case "raw":
@@ -74,8 +73,8 @@ static void ToggleDisplay(string[] args)
         return;
     }
 
-    string deviceName = args[1];
-    string action = args[2].ToLower();
+    var deviceName = args[1];
+    var action = args[2].ToLower();
 
     // Add \\.\ prefix if not present
     if (!deviceName.StartsWith("\\\\.\\"))
@@ -83,7 +82,7 @@ static void ToggleDisplay(string[] args)
         deviceName = "\\\\.\\" + deviceName;
     }
 
-    bool enable = action switch
+    var enable = action switch
     {
         "on" or "enable" or "1" or "true" => true,
         "off" or "disable" or "0" or "false" => false,
@@ -91,7 +90,7 @@ static void ToggleDisplay(string[] args)
     };
 
     Console.WriteLine($"Toggling {deviceName} {(enable ? "ON" : "OFF")}...");
-    int result = DisplayManager.Core.DisplayManager.ToggleDisplay(deviceName, enable);
+    var result = DisplayManager.Core.DisplayManager.ToggleDisplay(deviceName, enable);
 
     if (result == 0)
     {
@@ -113,9 +112,9 @@ static void ListDisplays()
 
     foreach (var display in physicalDisplays)
     {
-        string status = display.IsActive ? "ACTIVE" : "inactive";
-        string primary = display.IsPrimary ? " (PRIMARY)" : "";
-        string name = !string.IsNullOrEmpty(display.MonitorName) ? display.MonitorName : "(unknown)";
+        var status = display.IsActive ? "ACTIVE" : "inactive";
+        var primary = display.IsPrimary ? " (PRIMARY)" : "";
+        var name = !string.IsNullOrEmpty(display.MonitorName) ? display.MonitorName : "(unknown)";
 
         Console.WriteLine($"{display.DeviceName}: {name} [{status}]{primary}");
 
@@ -136,8 +135,8 @@ async Task SaveProfile(string[] args)
         return;
     }
 
-    string name = args[1];
-    string? description = args.Length > 2 ? string.Join(" ", args.Skip(2)) : null;
+    var name = args[1];
+    var description = args.Length > 2 ? string.Join(" ", args.Skip(2)) : null;
 
     try
     {
@@ -200,7 +199,7 @@ async Task ApplyProfile(string[] args)
         return;
     }
 
-    string name = args[1];
+    var name = args[1];
 
     try
     {
@@ -213,7 +212,7 @@ async Task ApplyProfile(string[] args)
         }
 
         Console.WriteLine($"Applying profile '{profile.Name}'...");
-        bool success = configManager.ApplyProfile(profile);
+        var success = configManager.ApplyProfile(profile);
 
         if (success)
         {
@@ -238,7 +237,7 @@ async Task DeleteProfile(string[] args)
         return;
     }
 
-    string name = args[1];
+    var name = args[1];
 
     try
     {
@@ -250,7 +249,7 @@ async Task DeleteProfile(string[] args)
             return;
         }
 
-        bool success = await configManager.DeleteProfileAsync(profile.Id);
+        var success = await configManager.DeleteProfileAsync(profile.Id);
 
         if (success)
         {

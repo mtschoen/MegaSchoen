@@ -2,30 +2,50 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Coding Conventions
+
+These conventions are enforced by `.editorconfig` and must be followed when writing code.
+
+### C# Style
+
+- **Use `var` everywhere** - Always use `var` instead of explicit types
+- **Use file-scoped namespaces** - `namespace Foo;` not `namespace Foo { }`
+- **Use language keywords** - `string`, `int`, `bool` not `String`, `Int32`, `Boolean`
+- **No `this.` qualification** - Omit `this.` for fields, properties, methods, events
+- **Use expression-bodied members** for simple accessors and properties
+- **Use pattern matching** - Prefer `is null`, `is not null`, pattern matching over casts
+- **Use null propagation** - `foo?.Bar` and `foo ?? default`
+- **Use collection/object initializers** where applicable
+- **Always use braces** for control flow statements
+- **Private fields use camelCase** - `private int count;`
+- **Interfaces start with I** - `IDisplayService`
+- **Types, methods, properties use PascalCase**
+
+```csharp
+// Good
+var displays = GetDisplays();
+var count = 5;
+var name = displays?.FirstOrDefault()?.Name ?? "Unknown";
+
+// Bad
+List<DisplayInfo> displays = GetDisplays();
+int count = 5;
+string name = displays != null && displays.Count > 0 ? displays[0].Name : "Unknown";
+```
+
 ## Build Commands
 
-**IMPORTANT: Always use `-p:Platform=x64` when building from command line!**
+**ALWAYS use MSBuild with `-p:Platform=x64`** - the native DLL must be 64-bit.
 
-The native C++ DLL must be built as x64 to work with the .NET apps. If you build without specifying the platform, it defaults to Win32 (32-bit) which causes "incorrect format" errors at runtime.
-
-### Building the Solution (Recommended)
 ```bash
-# Build everything - this is the safest approach
+# Build the CLI
+MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug -p:Platform=x64
+
+# Build entire solution
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64
-
-# Or for release
-MSBuild.exe MegaSchoen.sln -p:Configuration=Release -p:Platform=x64
 ```
 
-### Building Individual Projects
-```bash
-# Native DLL - MUST specify x64
-MSBuild.exe DisplayManagerNative\DisplayManagerNative.vcxproj -p:Configuration=Debug -p:Platform=x64
-
-# .NET projects (these will also trigger native build, but may use wrong platform)
-MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug
-MSBuild.exe MegaSchoen\MegaSchoen.csproj -p:Configuration=Debug -p:TargetFramework=net10.0-windows10.0.19041.0
-```
+Do NOT use `dotnet build` - it cannot build the native C++ dependency.
 
 ### Running the CLI
 ```bash
@@ -36,6 +56,13 @@ MSBuild.exe MegaSchoen\MegaSchoen.csproj -p:Configuration=Debug -p:TargetFramewo
 ```
 
 ## Current Status (Last updated: 2026-01-19)
+
+### 🔍 TODO: Review for Further Cleanup
+User wants to review the codebase for more cleanup opportunities before continuing. Areas to potentially examine:
+- Are there unused services or models?
+- Can the profile system be simplified now that we use CCD API?
+- Is ConfigurationManager redundant with DisplayProfileService?
+- Any dead code paths in the MAUI ViewModel?
 
 ### ✅ CCD API Refactor Complete
 
