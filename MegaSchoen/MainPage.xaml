@@ -59,10 +59,10 @@
                                         </HorizontalStackLayout>
                                         <Label FontSize="12" TextColor="{StaticResource Gray600}">
                                             <Label.Text>
-                                                <MultiBinding StringFormat="{}{0} x {1} @ {2}Hz">
+                                                <MultiBinding StringFormat="{}{0} x {1} @ {2:F0}Hz">
                                                     <Binding Path="Width" />
                                                     <Binding Path="Height" />
-                                                    <Binding Path="Frequency" />
+                                                    <Binding Path="RefreshRate" />
                                                 </MultiBinding>
                                             </Label.Text>
                                         </Label>
