@@ -8,8 +8,10 @@
 
 using json = nlohmann::json;
 
+namespace {
+
 // Helper to convert wide string to UTF-8
-static std::string WideToUtf8(const std::wstring& wide) {
+std::string WideToUtf8(const std::wstring& wide) {
     if (wide.empty()) return "";
     int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (utf8Len <= 0) return "";
@@ -17,6 +19,28 @@ static std::string WideToUtf8(const std::wstring& wide) {
     WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, utf8.data(), utf8Len, nullptr, nullptr);
     return std::string(utf8.data());
 }
+
+// Helper to convert UTF-8 to wide string
+std::wstring Utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return L"";
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (wideLen <= 0) return L"";
+    std::vector<wchar_t> wide(wideLen);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wide.data(), wideLen);
+    return std::wstring(wide.data());
+}
+
+// Structure to hold parsed display config from JSON
+struct DisplayConfigRequest {
+    std::wstring monitorDevicePath;
+    int width = 0;
+    int height = 0;
+    int positionX = 0;
+    int positionY = 0;
+    double refreshRate = 0.0;
+};
+
+} // anonymous namespace
 
 int GetAllDisplaysJson(char* buffer, int bufferSize)
 {
@@ -140,26 +164,6 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
     strcpy_s(buffer, bufferSize, jsonString.c_str());
     return jsonLength;
 }
-
-// Helper to convert UTF-8 to wide string
-static std::wstring Utf8ToWide(const std::string& utf8) {
-    if (utf8.empty()) return L"";
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
-    if (wideLen <= 0) return L"";
-    std::vector<wchar_t> wide(wideLen);
-    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wide.data(), wideLen);
-    return std::wstring(wide.data());
-}
-
-// Structure to hold parsed display config from JSON
-struct DisplayConfigRequest {
-    std::wstring monitorDevicePath;
-    int width = 0;
-    int height = 0;
-    int positionX = 0;
-    int positionY = 0;
-    double refreshRate = 0.0;
-};
 
 // Apply a full display configuration
 // configJson: JSON array of display configs with monitorDevicePath for matching
