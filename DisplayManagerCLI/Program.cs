@@ -13,6 +13,7 @@ if (args.Length == 0)
     Console.WriteLine("  enable      - Enable all displays");
     Console.WriteLine("  disable     - Disable all displays except primary");
     Console.WriteLine("  raw         - Show raw JSON from native DLL");
+    Console.WriteLine("  toggle <device> <on|off> - Toggle a display on/off (e.g., toggle DISPLAY5 off)");
     Console.WriteLine("\nProfile Commands:");
     Console.WriteLine("  save <name> [description] - Save current configuration as a profile");
     Console.WriteLine("  profiles    - List all saved profiles");
@@ -40,6 +41,9 @@ switch (command)
     case "raw":
         Console.WriteLine(DisplayManager.Core.DisplayManager.GetRawDisplayJson());
         break;
+    case "toggle":
+        ToggleDisplay(args);
+        break;
     case "save":
         await SaveProfile(args);
         break;
@@ -58,6 +62,45 @@ switch (command)
     default:
         Console.WriteLine($"Unknown command: {command}");
         break;
+}
+
+static void ToggleDisplay(string[] args)
+{
+    if (args.Length < 3)
+    {
+        Console.WriteLine("Usage: toggle <device> <on|off>");
+        Console.WriteLine("Example: toggle DISPLAY5 off");
+        Console.WriteLine("         toggle \\\\.\\DISPLAY5 on");
+        return;
+    }
+
+    string deviceName = args[1];
+    string action = args[2].ToLower();
+
+    // Add \\.\ prefix if not present
+    if (!deviceName.StartsWith("\\\\.\\"))
+    {
+        deviceName = "\\\\.\\" + deviceName;
+    }
+
+    bool enable = action switch
+    {
+        "on" or "enable" or "1" or "true" => true,
+        "off" or "disable" or "0" or "false" => false,
+        _ => throw new ArgumentException($"Invalid action: {action}. Use 'on' or 'off'.")
+    };
+
+    Console.WriteLine($"Toggling {deviceName} {(enable ? "ON" : "OFF")}...");
+    int result = DisplayManager.Core.DisplayManager.ToggleDisplay(deviceName, enable);
+
+    if (result == 0)
+    {
+        Console.WriteLine("Success!");
+    }
+    else
+    {
+        Console.WriteLine($"Failed with error code: {result}");
+    }
 }
 
 static void ListDisplays()

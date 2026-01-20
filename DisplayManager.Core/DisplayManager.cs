@@ -18,9 +18,12 @@ namespace DisplayManager.Core
         [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyDisplayConfiguration", CharSet = CharSet.Ansi)]
         private static extern int ApplyDisplayConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string configJson);
 
+        [DllImport("DisplayManagerNative.dll", EntryPoint = "ToggleDisplayCCD", CharSet = CharSet.Ansi)]
+        private static extern int ToggleDisplayCCDNative([MarshalAs(UnmanagedType.LPStr)] string deviceName, [MarshalAs(UnmanagedType.I1)] bool enable);
+
         public static List<DisplayInfo> GetAllDisplays()
         {
-            const int bufferSize = 128 * 1024; // 64KB buffer
+            const int bufferSize = 256 * 1024; // 256KB buffer
             byte[] buffer = new byte[bufferSize];
 
             try
@@ -65,7 +68,7 @@ namespace DisplayManager.Core
 
         public static string GetRawDisplayJson()
         {
-            const int bufferSize = 128 * 1024; // 64KB buffer
+            const int bufferSize = 256 * 1024; // 256KB buffer
             byte[] buffer = new byte[bufferSize];
 
             try
@@ -173,6 +176,50 @@ namespace DisplayManager.Core
             {
                 Console.WriteLine($"Error calling native DLL: {ex.Message}");
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Toggle a display on or off using the CCD API (SetDisplayConfig).
+        /// This should be less disruptive than ChangeDisplaySettingsEx.
+        /// </summary>
+        /// <param name="deviceName">GDI device name like "\\\\.\\DISPLAY5"</param>
+        /// <param name="enable">true to enable, false to disable</param>
+        /// <returns>0 on success, error code on failure</returns>
+        public static int ToggleDisplay(string deviceName, bool enable)
+        {
+            try
+            {
+                int result = ToggleDisplayCCDNative(deviceName, enable);
+                if (result == 0)
+                {
+                    Console.WriteLine($"Successfully {(enable ? "enabled" : "disabled")} {deviceName}");
+                }
+                else
+                {
+                    string errorMessage = result switch
+                    {
+                        -1 => "Invalid parameter (null device name)",
+                        -2 => "String conversion error",
+                        -3 => "Device not found in display paths",
+                        _ when result <= -300 => $"SetDisplayConfig failed with error {-(result + 300)}",
+                        _ when result <= -200 => $"QueryDisplayConfig failed with error {-(result + 200)}",
+                        _ when result <= -100 => $"GetDisplayConfigBufferSizes failed with error {-(result + 100)}",
+                        _ => $"Unknown error: {result}"
+                    };
+                    Console.WriteLine($"Failed to toggle {deviceName}: {errorMessage}");
+                }
+                return result;
+            }
+            catch (DllNotFoundException)
+            {
+                Console.WriteLine("DisplayManagerNative.dll not found!");
+                return -999;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error calling native DLL: {ex.Message}");
+                return -998;
             }
         }
     }

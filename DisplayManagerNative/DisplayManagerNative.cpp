@@ -2,8 +2,13 @@
 #include "DisplayInfo.h"
 #include "json.hpp"
 #include <windows.h>
+#include <SetupAPI.h>
 #include <vector>
 #include <string>
+#include <sstream>
+#include <iomanip>
+
+#pragma comment(lib, "SetupAPI.lib")
 
 // Constants for display enumeration
 #define ENUM_CURRENT_SETTINGS   ((DWORD)-1)
@@ -18,12 +23,98 @@
 #define DISPLAY_DEVICE_MODESPRUNED         0x08000000
 #define DISPLAY_DEVICE_REMOTE              0x04000000
 #define DISPLAY_DEVICE_DISCONNECT          0x02000000
+#define EDD_GET_DEVICE_INTERFACE_NAME      0x00000001
 
 // QueryDisplayConfig constants
 #define QDC_ALL_PATHS                    0x00000001
+#define QDC_ONLY_ACTIVE_PATHS            0x00000002
+#define QDC_DATABASE_CURRENT             0x00000004
 #define DISPLAYCONFIG_PATH_ACTIVE        0x00000001
 
 using json = nlohmann::json;
+
+// Helper function to extract monitor name from EDID data
+std::wstring GetMonitorNameFromEDID(const BYTE* edid, DWORD edidSize) {
+    if (!edid || edidSize < 128) {
+        return L"";
+    }
+
+    // EDID descriptor blocks start at offset 54 (0x36)
+    // Each descriptor is 18 bytes, there are 4 descriptors
+    for (int i = 0; i < 4; i++) {
+        int offset = 54 + (i * 18);
+
+        // Check if this is a monitor name descriptor (type 0xFC)
+        if (edid[offset] == 0x00 && edid[offset + 1] == 0x00 &&
+            edid[offset + 2] == 0x00 && edid[offset + 3] == 0xFC) {
+
+            // Monitor name starts at offset + 5, up to 13 bytes
+            char name[14] = {0};
+            int nameLen = 0;
+            for (int j = 0; j < 13; j++) {
+                char c = edid[offset + 5 + j];
+                if (c == 0x0A || c == 0x00) break; // End marker
+                name[nameLen++] = c;
+            }
+            name[nameLen] = '\0';
+
+            // Convert to wide string
+            if (nameLen > 0) {
+                int wideLen = MultiByteToWideChar(CP_UTF8, 0, name, -1, nullptr, 0);
+                if (wideLen > 0) {
+                    std::vector<wchar_t> wideName(wideLen);
+                    MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName.data(), wideLen);
+                    return std::wstring(wideName.data());
+                }
+            }
+        }
+    }
+
+    return L"";
+}
+
+// Helper function to get EDID data from registry for a monitor device ID
+std::wstring GetMonitorNameFromRegistry(const std::wstring& deviceID) {
+    // Parse device ID to extract hardware ID
+    // Format: \\?\DISPLAY#<manufacturer>#<instance>...
+    // We want to look up: HKLM\SYSTEM\CurrentControlSet\Enum\DISPLAY\<manufacturer>\<instance>\Device Parameters\EDID
+
+    size_t displayPos = deviceID.find(L"DISPLAY#");
+    if (displayPos == std::wstring::npos) {
+        return L"";
+    }
+
+    // Extract manufacturer and instance
+    size_t start = displayPos + 8; // Skip "DISPLAY#"
+    size_t hash1 = deviceID.find(L'#', start);
+    if (hash1 == std::wstring::npos) return L"";
+
+    std::wstring manufacturer = deviceID.substr(start, hash1 - start);
+
+    size_t hash2 = deviceID.find(L'#', hash1 + 1);
+    if (hash2 == std::wstring::npos) return L"";
+
+    std::wstring instance = deviceID.substr(hash1 + 1, hash2 - hash1 - 1);
+
+    // Build registry path
+    std::wstring regPath = L"SYSTEM\\CurrentControlSet\\Enum\\DISPLAY\\" + manufacturer + L"\\" + instance + L"\\Device Parameters";
+
+    HKEY hKey;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        BYTE edid[256];
+        DWORD edidSize = sizeof(edid);
+        DWORD type;
+
+        if (RegQueryValueExW(hKey, L"EDID", nullptr, &type, edid, &edidSize) == ERROR_SUCCESS && type == REG_BINARY) {
+            RegCloseKey(hKey);
+            return GetMonitorNameFromEDID(edid, edidSize);
+        }
+
+        RegCloseKey(hKey);
+    }
+
+    return L"";
+}
 
 int SwitchToInternalDisplay()
 {
@@ -103,10 +194,11 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
             continue;
         }
 
-        // Try to get monitor information (may not be available for disabled displays)
+        // Try to get monitor information
+        // Use EDD_GET_DEVICE_INTERFACE_NAME flag to get more info about inactive devices
         DISPLAY_DEVICE monitor = {};
         monitor.cb = sizeof(monitor);
-        bool hasMonitor = EnumDisplayDevicesW(d.DeviceName, 0, &monitor, 0) != 0;
+        bool hasMonitor = EnumDisplayDevicesW(d.DeviceName, 0, &monitor, EDD_GET_DEVICE_INTERFACE_NAME) != 0;
 
         json display;
         
@@ -125,12 +217,24 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         display["deviceKey"] = std::string(deviceKey.begin(), deviceKey.end());
 
         // Add monitor information if available
+        std::wstring monitorName;
+        std::wstring monitorID;
+
         if (hasMonitor) {
-            std::wstring monitorName(monitor.DeviceString);
-            std::wstring monitorID(monitor.DeviceID);
-            display["monitorName"] = std::string(monitorName.begin(), monitorName.end());
+            monitorName = monitor.DeviceString;
+            monitorID = monitor.DeviceID;
             display["monitorID"] = std::string(monitorID.begin(), monitorID.end());
             display["monitorStateFlags"] = (int)monitor.StateFlags;
+
+            // Try to get a better monitor name from EDID if we only have "Generic PnP Monitor"
+            if (monitorName == L"Generic PnP Monitor" && !monitorID.empty()) {
+                std::wstring edidName = GetMonitorNameFromRegistry(monitorID);
+                if (!edidName.empty()) {
+                    monitorName = edidName;
+                }
+            }
+
+            display["monitorName"] = std::string(monitorName.begin(), monitorName.end());
         } else {
             // No monitor info available (display might be disabled)
             display["monitorName"] = "";
@@ -189,16 +293,23 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
     }
 
     // Now try QueryDisplayConfig method
+    // Use QDC_ALL_PATHS to get all possible paths (active and inactive)
+    // Note: QDC_ALL_PATHS and QDC_DATABASE_CURRENT are mutually exclusive
     UINT32 pathCount = 0;
     UINT32 modeCount = 0;
-    
+
     LONG queryResult = GetDisplayConfigBufferSizes(QDC_ALL_PATHS, &pathCount, &modeCount);
+    jsonResult["queryConfigError"] = (int)queryResult;
+    jsonResult["queryConfigPathCount"] = (int)pathCount;
+    jsonResult["queryConfigModeCount"] = (int)modeCount;
+
     if (queryResult == ERROR_SUCCESS && pathCount > 0) {
         std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
         std::vector<DISPLAYCONFIG_MODE_INFO> modes(modeCount);
-        
-        queryResult = QueryDisplayConfig(QDC_ALL_PATHS, &pathCount, paths.data(), 
+
+        queryResult = QueryDisplayConfig(QDC_ALL_PATHS, &pathCount, paths.data(),
                                    &modeCount, modes.data(), nullptr);
+        jsonResult["queryConfigQueryError"] = (int)queryResult;
         if (queryResult == ERROR_SUCCESS) {
             for (UINT32 i = 0; i < pathCount; i++) {
                 json display;
@@ -207,6 +318,14 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
                 display["pathIndex"] = (int)i;
                 display["isActive"] = (path.flags & DISPLAYCONFIG_PATH_ACTIVE) != 0;
                 display["pathFlags"] = (int)path.flags;
+
+                // Include adapter and source/target IDs for matching
+                display["sourceAdapterIdHigh"] = (unsigned int)(path.sourceInfo.adapterId.HighPart);
+                display["sourceAdapterIdLow"] = (unsigned int)(path.sourceInfo.adapterId.LowPart);
+                display["sourceId"] = (int)path.sourceInfo.id;
+                display["targetAdapterIdHigh"] = (unsigned int)(path.targetInfo.adapterId.HighPart);
+                display["targetAdapterIdLow"] = (unsigned int)(path.targetInfo.adapterId.LowPart);
+                display["targetId"] = (int)path.targetInfo.id;
                 
                 // Get source device name
                 DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
@@ -220,25 +339,26 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
                     display["deviceName"] = std::string(sourceDeviceName.begin(), sourceDeviceName.end());
                 }
                 
-                // Get target device info (monitor)
-                if (path.targetInfo.targetAvailable) {
-                    DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
-                    targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
-                    targetName.header.size = sizeof(targetName);
-                    targetName.header.adapterId = path.targetInfo.adapterId;
-                    targetName.header.id = path.targetInfo.id;
-                    
-                    if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
-                        std::wstring monitorFriendlyName(targetName.monitorFriendlyDeviceName);
-                        std::wstring monitorDevicePath(targetName.monitorDevicePath);
-                        display["monitorName"] = std::string(monitorFriendlyName.begin(), monitorFriendlyName.end());
-                        display["monitorDevicePath"] = std::string(monitorDevicePath.begin(), monitorDevicePath.end());
-                    }
-                    
-                    display["targetAvailable"] = true;
+                // Get target device info (monitor) - try even for inactive/unavailable targets
+                display["targetAvailable"] = path.targetInfo.targetAvailable ? true : false;
+                display["outputTechnology"] = (int)path.targetInfo.outputTechnology;
+
+                DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+                targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+                targetName.header.size = sizeof(targetName);
+                targetName.header.adapterId = path.targetInfo.adapterId;
+                targetName.header.id = path.targetInfo.id;
+
+                if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
+                    std::wstring monitorFriendlyName(targetName.monitorFriendlyDeviceName);
+                    std::wstring monitorDevicePath(targetName.monitorDevicePath);
+                    display["monitorName"] = std::string(monitorFriendlyName.begin(), monitorFriendlyName.end());
+                    display["monitorDevicePath"] = std::string(monitorDevicePath.begin(), monitorDevicePath.end());
                     display["outputTechnology"] = (int)path.targetInfo.outputTechnology;
                 } else {
-                    continue;
+                    // If we can't get device info, still include the display with whatever we have
+                    display["monitorName"] = "";
+                    display["monitorDevicePath"] = "";
                 }
                 
                 queryConfigDisplays.push_back(display);
@@ -377,4 +497,84 @@ int ApplyDisplayConfiguration(const char* configJson)
         // Unknown error
         return -4;
     }
+}
+
+// Toggle a display on/off using the CCD API (SetDisplayConfig)
+// deviceName: GDI device name like "\\\\.\\DISPLAY5"
+// enable: true to enable, false to disable
+// Returns: 0 on success, negative error code on failure
+int ToggleDisplayCCD(const char* deviceName, bool enable)
+{
+    if (!deviceName) {
+        return -1;
+    }
+
+    // Convert device name to wide string
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0);
+    if (wideLen <= 0) {
+        return -2;
+    }
+    std::vector<wchar_t> wideDeviceName(wideLen);
+    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wideDeviceName.data(), wideLen);
+    std::wstring targetDeviceName(wideDeviceName.data());
+
+    // Get all display paths
+    UINT32 pathCount = 0;
+    UINT32 modeCount = 0;
+
+    LONG result = GetDisplayConfigBufferSizes(QDC_ALL_PATHS, &pathCount, &modeCount);
+    if (result != ERROR_SUCCESS) {
+        return -100 - (int)result;
+    }
+
+    std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
+    std::vector<DISPLAYCONFIG_MODE_INFO> modes(modeCount);
+
+    result = QueryDisplayConfig(QDC_ALL_PATHS, &pathCount, paths.data(), &modeCount, modes.data(), nullptr);
+    if (result != ERROR_SUCCESS) {
+        return -200 - (int)result;
+    }
+
+    // Find the path matching our device name
+    int targetPathIndex = -1;
+    for (UINT32 i = 0; i < pathCount; i++) {
+        DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
+        sourceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+        sourceName.header.size = sizeof(sourceName);
+        sourceName.header.adapterId = paths[i].sourceInfo.adapterId;
+        sourceName.header.id = paths[i].sourceInfo.id;
+
+        if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS) {
+            if (wcscmp(sourceName.viewGdiDeviceName, targetDeviceName.c_str()) == 0) {
+                targetPathIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (targetPathIndex < 0) {
+        return -3; // Device not found
+    }
+
+    // Toggle the DISPLAYCONFIG_PATH_ACTIVE flag
+    if (enable) {
+        paths[targetPathIndex].flags |= DISPLAYCONFIG_PATH_ACTIVE;
+    } else {
+        paths[targetPathIndex].flags &= ~DISPLAYCONFIG_PATH_ACTIVE;
+    }
+
+    // Apply the new configuration
+    // SDC_APPLY: Apply immediately
+    // SDC_USE_SUPPLIED_DISPLAY_CONFIG: Use the paths/modes we're supplying
+    // SDC_SAVE_TO_DATABASE: Persist the change
+    // SDC_ALLOW_CHANGES: Allow Windows to make adjustments if needed
+    DWORD flags = SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES;
+
+    result = SetDisplayConfig(pathCount, paths.data(), modeCount, modes.data(), flags);
+
+    if (result != ERROR_SUCCESS) {
+        return -300 - (int)result;
+    }
+
+    return 0;
 }
