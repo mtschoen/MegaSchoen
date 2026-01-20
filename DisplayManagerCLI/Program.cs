@@ -106,30 +106,25 @@ static void ToggleDisplay(string[] args)
 static void ListDisplays()
 {
     var displays = DisplayManager.Core.DisplayManager.GetAllDisplays();
-    Console.WriteLine($"Found {displays.Count} displays:");
 
-    for (int i = 0; i < displays.Count; i++)
+    // Filter to only show paths with a device name (physical outputs)
+    var physicalDisplays = displays.Where(d => !string.IsNullOrEmpty(d.DeviceName)).ToList();
+    Console.WriteLine($"Found {physicalDisplays.Count} display paths:\n");
+
+    foreach (var display in physicalDisplays)
     {
-        var display = displays[i];
-        Console.WriteLine($"\nDisplay {i + 1}:");
-        Console.WriteLine($"  Device Name: {display.DeviceName}");
-        Console.WriteLine($"  Device String: {display.DeviceString}");
-        Console.WriteLine($"  Resolution: {display.Width}x{display.Height}");
-        Console.WriteLine($"  Position: ({display.PositionX}, {display.PositionY})");
-        Console.WriteLine($"  Frequency: {display.Frequency}Hz");
-        Console.WriteLine($"  Bits Per Pixel: {display.BitsPerPixel}");
-        Console.WriteLine($"  Is Active: {display.IsActive}");
-        Console.WriteLine($"  Is Primary: {display.IsPrimary}");
-        Console.WriteLine($"  State Flags: 0x{display.StateFlags:X8}");
-        Console.WriteLine($"  Settings Source: {display.SettingsSource}");
-        Console.WriteLine($"  Device ID: {display.DeviceID}");
-        Console.WriteLine($"  Device Key: {display.DeviceKey}");
-        if (!string.IsNullOrEmpty(display.MonitorName))
+        string status = display.IsActive ? "ACTIVE" : "inactive";
+        string primary = display.IsPrimary ? " (PRIMARY)" : "";
+        string name = !string.IsNullOrEmpty(display.MonitorName) ? display.MonitorName : "(unknown)";
+
+        Console.WriteLine($"{display.DeviceName}: {name} [{status}]{primary}");
+
+        if (display.IsActive)
         {
-            Console.WriteLine($"  Monitor Name: {display.MonitorName}");
-            Console.WriteLine($"  Monitor ID: {display.MonitorID}");
-            Console.WriteLine($"  Monitor State Flags: 0x{display.MonitorStateFlags:X8}");
+            Console.WriteLine($"  Resolution: {display.Width}x{display.Height} @ {display.RefreshRate:F1}Hz");
+            Console.WriteLine($"  Position: ({display.PositionX}, {display.PositionY})");
         }
+        Console.WriteLine();
     }
 }
 

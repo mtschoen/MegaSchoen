@@ -2,22 +2,26 @@ namespace DisplayManager.Core
 {
     public class DisplayInfo
     {
-        public string DeviceName { get; set; } = "";
-        public string DeviceString { get; set; } = "";
+        // Core identification
+        public string DeviceName { get; set; } = "";  // e.g., \\.\DISPLAY1
+        public string MonitorName { get; set; } = ""; // Friendly name from EDID
+        public string MonitorDevicePath { get; set; } = ""; // Full device path
+
+        // Display state
+        public bool IsActive { get; set; }
+        public bool IsPrimary { get; set; }
+        public bool TargetAvailable { get; set; }
+
+        // Resolution and position
         public int Width { get; set; }
         public int Height { get; set; }
         public int PositionX { get; set; }
         public int PositionY { get; set; }
-        public int Frequency { get; set; }
-        public bool IsActive { get; set; }
-        public bool IsPrimary { get; set; }
-        public int BitsPerPixel { get; set; }
-        public int StateFlags { get; set; }
-        public string DeviceID { get; set; } = "";
-        public string DeviceKey { get; set; } = "";
-        public string SettingsSource { get; set; } = ""; // "current", "registry", or "none"
-        public string MonitorName { get; set; } = "";
-        public string MonitorID { get; set; } = "";
-        public int MonitorStateFlags { get; set; }
+        public double RefreshRate { get; set; }
+
+        // CCD path identifiers (for internal use)
+        public int PathIndex { get; set; }
+        public int SourceId { get; set; }
+        public int TargetId { get; set; }
     }
 }

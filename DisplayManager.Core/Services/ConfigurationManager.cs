@@ -35,18 +35,20 @@ namespace DisplayManager.Core.Services
                 Description = description ?? "",
                 ConfigType = "topology",
                 Topology = topology,
-                Displays = displays.Select(d => new DisplaySettings
-                {
-                    Identifier = new DisplayIdentifier
+                Displays = displays
+                    .Where(d => !string.IsNullOrEmpty(d.DeviceName))
+                    .Select(d => new DisplaySettings
                     {
-                        MonitorId = d.MonitorID,
-                        DeviceName = d.DeviceName,
-                        MonitorName = d.MonitorName,
-                        FallbackMatch = "deviceName"
-                    },
-                    Enabled = d.IsActive,
-                    IsPrimary = d.IsPrimary
-                }).ToList()
+                        Identifier = new DisplayIdentifier
+                        {
+                            MonitorId = d.MonitorDevicePath,
+                            DeviceName = d.DeviceName,
+                            MonitorName = d.MonitorName,
+                            FallbackMatch = "deviceName"
+                        },
+                        Enabled = d.IsActive,
+                        IsPrimary = d.IsPrimary
+                    }).ToList()
             };
 
             // Save the profile

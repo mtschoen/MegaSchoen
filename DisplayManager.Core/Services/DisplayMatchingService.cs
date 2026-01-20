@@ -20,7 +20,7 @@ namespace DisplayManager.Core.Services
             if (!string.IsNullOrEmpty(identifier.MonitorId))
             {
                 var match = currentDisplays.FirstOrDefault(d =>
-                    d.MonitorID.Equals(identifier.MonitorId, StringComparison.OrdinalIgnoreCase));
+                    d.MonitorDevicePath.Equals(identifier.MonitorId, StringComparison.OrdinalIgnoreCase));
                 if (match != null) return match;
             }
 
@@ -66,7 +66,7 @@ namespace DisplayManager.Core.Services
             if (string.IsNullOrEmpty(monitorId)) return null;
 
             return displays.FirstOrDefault(d =>
-                d.MonitorID.Equals(monitorId, StringComparison.OrdinalIgnoreCase));
+                d.MonitorDevicePath.Equals(monitorId, StringComparison.OrdinalIgnoreCase));
         }
 
         private DisplayInfo? FindByDeviceName(string deviceName, List<DisplayInfo> displays)

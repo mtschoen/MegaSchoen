@@ -6,22 +6,13 @@ extern "C" {
     DISPLAYMANAGER_API int SwitchToInternalDisplay();
     DISPLAYMANAGER_API int EnableAllDisplays();
     
-    // Get all display information as JSON
+    // Get all display information as JSON array
     // Returns: JSON length on success, negative error code on failure
-    // If buffer too small, returns -(required size)
+    //   -1: Invalid parameters
+    //   -2: Failed to get buffer sizes
+    //   -3: Failed to query display config
+    //   -(n): Buffer too small, need n bytes
     DISPLAYMANAGER_API int GetAllDisplaysJson(char* buffer, int bufferSize);
-
-    // Apply a display configuration from JSON
-    // Parameters:
-    //   configJson: JSON string containing display configuration with format:
-    //               { "displays": [{ "enabled": true/false }] }
-    // Returns: 0 on success, negative error code on failure
-    //   -1: Invalid parameter (null pointer)
-    //   -2: Invalid configuration (no displays enabled)
-    //   -3: JSON parsing error
-    //   -4: Unknown error
-    //   Other positive values: Windows error codes from SetDisplayConfig
-    DISPLAYMANAGER_API int ApplyDisplayConfiguration(const char* configJson);
 
     // Toggle a display on/off using the CCD API (SetDisplayConfig)
     // Parameters:
