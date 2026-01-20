@@ -2,141 +2,111 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current Status (Last updated: 2025-11-26)
-
-### ✅ Phase 3 COMPLETE: Profile Application with Display Matching
-
-**What's Working:**
-- MAUI app builds and runs on Windows (Visual Studio 2026)
-- Native DLL properly integrated and copying to output directory
-- Display detection via native Windows API (GetAllDisplays)
-- Full profile management UI:
-  - View current displays (resolution, refresh rate, primary/active status)
-  - Save current arrangement with custom name
-  - List all saved profiles with metadata
-  - **Apply saved profiles with "Apply" button**
-  - Delete profiles with confirmation dialog
-- Profile storage: `%APPDATA%\MegaSchoen\configs.json`
-- **Smart profile application logic:**
-  - **Matches displays by MonitorID (most reliable)**
-  - **Falls back to MonitorName if MonitorID unavailable**
-  - **Falls back to DeviceName as last resort**
-  - **Enables/disables each matched display individually**
-  - Uses `ChangeDisplaySettingsEx` to enable/disable specific displays
-  - Applies all changes atomically
-  - Refreshes display list after applying configuration
-
-**Recent Additions (Session 2):**
-- Completely rewrote `ApplyDisplayConfiguration()` in DisplayManagerNative.cpp:254
-  - Now enumerates current displays and matches them to saved profile displays
-  - Uses hierarchical matching: MonitorID → MonitorName → DeviceName
-  - Enables/disables each display individually based on saved profile
-  - Uses `ChangeDisplaySettingsEx` with `CDS_UPDATEREGISTRY` and `CDS_NORESET`
-  - Applies all changes atomically with final `ChangeDisplaySettingsEx(nullptr, ...)`
-- Verified DisplayProfileService captures all necessary identifiers (MonitorID, MonitorName, DeviceName)
-
-**Known Limitations:**
-- Does not restore specific display positions, resolutions, or refresh rates (uses current/registry settings)
-- Does not validate if saved displays are currently connected before applying
-- Unmatched displays are left in their current state
-
-### 🎯 Next Steps (Phase 3 - Enhanced Profile Application):
-
-**Priority 1: Advanced Profile Application**
-- Implement display matching by MonitorID/MonitorName
-- Restore specific display positions and resolutions
-- Handle edge cases (missing displays, resolution mismatch, etc.)
-- Add validation warnings before applying profiles
-
-**Priority 2: Global Hotkey Support**
-- Research Windows hotkey registration (RegisterHotKey Win32 API)
-- Add HotkeyDefinition to SavedDisplayProfile model (already exists!)
-- Implement hotkey UI (key combination picker)
-- Background service to monitor and trigger hotkeys
-
-**Priority 3: Profile Management Enhancements**
-- Edit profile names/descriptions
-- Duplicate profiles
-- Export/import profiles
-- Profile validation (check if displays exist)
-
-**Future Considerations:**
-- Visual display arrangement designer (drag-and-drop positioning)
-- Per-display resolution/refresh rate configuration
-- Profile auto-switching based on connected displays
-- System tray integration
-
-**Key Files for Next Session:**
-- `MegaSchoen/ViewModels/MainPageViewModel.cs` - UI logic
-- `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile operations
-- `DisplayManagerNative/DisplayManagerNative.cpp` - Native API calls
-- `DisplayManager.Core/Models/SavedDisplayProfile.cs` - Data model
-
 ## Build Commands
 
-Build the entire solution (includes C++ native DLL):
+**IMPORTANT: Always use `-p:Platform=x64` when building from command line!**
+
+The native C++ DLL must be built as x64 to work with the .NET apps. If you build without specifying the platform, it defaults to Win32 (32-bit) which causes "incorrect format" errors at runtime.
+
+### Building the Solution (Recommended)
 ```bash
-MSBuild.exe MegaSchoen.sln
+# Build everything - this is the safest approach
+MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64
+
+# Or for release
+MSBuild.exe MegaSchoen.sln -p:Configuration=Release -p:Platform=x64
 ```
 
-Build for specific configurations:
+### Building Individual Projects
 ```bash
-MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
-MSBuild.exe MegaSchoen.sln -p:Configuration=Release
+# Native DLL - MUST specify x64
+MSBuild.exe DisplayManagerNative\DisplayManagerNative.vcxproj -p:Configuration=Debug -p:Platform=x64
+
+# .NET projects (these will also trigger native build, but may use wrong platform)
+MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug
+MSBuild.exe MegaSchoen\MegaSchoen.csproj -p:Configuration=Debug -p:TargetFramework=net10.0-windows10.0.19041.0
 ```
 
-Build specific projects:
+### Running the CLI
 ```bash
-MSBuild.exe DisplayManagerNative\DisplayManagerNative.vcxproj
-MSBuild.exe DisplayManager.Core\DisplayManager.Core.csproj
-MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" list              # List all displays
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" toggle DISPLAY5 off  # Toggle display off
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" toggle DISPLAY5 on   # Toggle display on
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw              # Show raw JSON
 ```
 
-Run the CLI tool (after building with MSBuild):
-```bash
-MSBuild.exe MegaSchoen.sln -p:Configuration=Debug    # Build first
+## Current Status (Last updated: 2026-01-19)
 
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" list      # List all displays
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" enable    # Enable all displays
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" disable   # Disable all except primary
-```
+### ✅ CCD API Refactor Complete
+
+**What's Working:**
+- Display detection and listing via CCD API (QueryDisplayConfig)
+- Individual display toggle on/off via CCD API (SetDisplayConfig)
+- Toggle uses `SDC_USE_SUPPLIED_DISPLAY_CONFIG` which is less disruptive than the old `ChangeDisplaySettingsEx` approach
+- MAUI app builds and runs on Windows
+- CLI tool for testing display operations
+- Profile save/load (profiles stored in `%APPDATA%\MegaSchoen\configs.json`)
+
+**Recent Changes:**
+- Removed legacy `EnumDisplayDevices`/`EnumDisplaySettings` code
+- Removed `ApplyDisplayConfiguration` function (replaced by `ToggleDisplayCCD`)
+- Switched entirely to CCD API (`QueryDisplayConfig`/`SetDisplayConfig`)
+- Simplified `DisplayInfo` model to match CCD output
+- Filter display paths to only show active or connected monitors
+
+### 🎯 Next Steps
+
+**Priority 1: Display Position Restoration**
+- When re-enabling a display, Windows places it at a default position
+- Need to also restore position/resolution from saved profile
+
+**Priority 2: Test Audio Preservation**
+- The CCD API toggle should be less disruptive than the old method
+- Need to test if YouTube Music (etc.) keeps playing during display switches
+
+**Priority 3: Global Hotkey Support**
+- RegisterHotKey Win32 API for hotkey registration
+- Background listener to trigger profile switches
+- HotkeyDefinition model already exists in SavedDisplayProfile
 
 ## Architecture Overview
 
-MegaSchoen is a cross-platform utility suite focused on display management with a hybrid C#/.NET and native C++ architecture:
-
 ### Core Components
 
-- **DisplayManagerNative** (C++ DLL) - Native Windows display API wrapper using SetDisplayConfig and related Win32 APIs. Exports JSON-based display information and core switching functionality.
+- **DisplayManagerNative** (C++ DLL) - Native Windows CCD API wrapper. Uses `QueryDisplayConfig` and `SetDisplayConfig` for display enumeration and control. Exports JSON-based display information.
 
-- **DisplayManager.Core** (.NET 9 Library) - Managed wrapper around the native DLL, provides C# interop via P/Invoke. Contains the main DisplayManager static class and DisplayInfo data models.
+- **DisplayManager.Core** (.NET 10 Library) - Managed wrapper around the native DLL via P/Invoke. Contains DisplayManager static class, DisplayInfo model, and profile services.
 
-- **DisplayManagerCLI** (.NET 9 Console App) - Command-line interface for testing and basic operations. Provides list, enable, disable commands.
+- **DisplayManagerCLI** (.NET 10 Console App) - Command-line interface for testing. Commands: list, toggle, raw, save, profiles, apply, delete.
 
-- **MegaSchoen** (MAUI App) - Cross-platform GUI application targeting Android, iOS, macOS, and Windows. Currently uses .NET 8 MAUI framework.
+- **MegaSchoen** (MAUI App) - Cross-platform GUI application. Currently Windows-only for display management features.
 
-### Key Architectural Patterns
+### Key Files
 
-**Native/Managed Interop**: The C++ native DLL handles low-level Windows display APIs (SetDisplayConfig, QueryDisplayConfig, EnumDisplayDevices) and serializes display information as JSON. The C# layer deserializes this JSON into strongly-typed DisplayInfo objects.
+- `DisplayManagerNative/DisplayManagerNative.cpp` - Native CCD API implementation
+- `DisplayManager.Core/DisplayManager.cs` - P/Invoke wrappers
+- `DisplayManager.Core/DisplayInfo.cs` - Display data model
+- `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile save/load/apply
+- `DisplayManagerCLI/Program.cs` - CLI commands
+- `MegaSchoen/ViewModels/MainPageViewModel.cs` - MAUI UI logic
 
-**Multi-Method Display Control**: The codebase implements multiple approaches to display management:
-- Direct Win32 API calls (ChangeDisplaySettingsEx)
-- SetDisplayConfig topology changes 
-- DisplaySwitch.exe process invocation
-- Custom native DLL methods
+### Native API Functions
 
-**Cross-Platform Preparation**: While currently Windows-only, the architecture separates platform-specific code (native DLL) from cross-platform logic (MAUI app), preparing for macOS/Linux support.
+```cpp
+// Get all display paths as JSON array
+int GetAllDisplaysJson(char* buffer, int bufferSize);
 
-### Project Dependencies
+// Toggle a display on/off using CCD API
+int ToggleDisplayCCD(const char* deviceName, bool enable);
 
-- DisplayManagerCLI depends on DisplayManager.Core
-- DisplayManager.Core depends on DisplayManagerNative (C++ DLL)
-- MegaSchoen (MAUI) depends on DisplayManager.Core and DisplayManagerNative
-- Native DLL includes nlohmann/json for JSON serialization
-- MAUI app includes custom MSBuild target to copy native DLL to Windows output folder
+// Topology shortcuts
+int SwitchToInternalDisplay();  // SDC_TOPOLOGY_INTERNAL
+int EnableAllDisplays();        // SDC_TOPOLOGY_EXTEND
+```
 
 ### Build Configuration Notes
 
-- Native C++ project outputs to solution bin folder and automatically copies DLL/PDB to dependent projects' output directories via post-build events
-- All .NET projects now target .NET 10
-- C++ project requires Visual Studio 2026 with Windows 10 SDK and v145 platform toolset
+- Native C++ project has both Win32 and x64 configurations - **always use x64**
+- Post-build events copy DLL to dependent project output directories
+- All .NET projects target .NET 10
+- C++ project requires Visual Studio 2022+ with Windows 10 SDK
