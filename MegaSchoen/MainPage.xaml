@@ -25,17 +25,28 @@
                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
                    Padding="15">
                 <VerticalStackLayout Spacing="10">
-                    <HorizontalStackLayout Spacing="10">
-                        <Label Text="💻 Current Displays"
-                               FontSize="20"
-                               FontAttributes="Bold"/>
-                        <Button Text="🔄"
-                                Command="{Binding LoadDisplaysCommand}"
-                                WidthRequest="40"
-                                HeightRequest="40"
-                                CornerRadius="20"
-                                Padding="0"/>
-                    </HorizontalStackLayout>
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto">
+                        <HorizontalStackLayout Spacing="10" Grid.Column="0">
+                            <Label Text="💻 Current Displays"
+                                   FontSize="20"
+                                   FontAttributes="Bold"
+                                   VerticalOptions="Center"/>
+                            <Button Text="🔄"
+                                    Command="{Binding LoadDisplaysCommand}"
+                                    WidthRequest="40"
+                                    HeightRequest="40"
+                                    CornerRadius="20"
+                                    Padding="0"/>
+                        </HorizontalStackLayout>
+                        <HorizontalStackLayout Grid.Column="1" Spacing="5" VerticalOptions="Center">
+                            <Label Text="Hide inactive"
+                                   VerticalOptions="Center"
+                                   FontSize="12"
+                                   TextColor="{StaticResource Gray600}"/>
+                            <Switch IsToggled="{Binding HideInactiveDisplays}"
+                                    VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </Grid>
 
                     <CollectionView ItemsSource="{Binding CurrentDisplays}">
                         <CollectionView.ItemTemplate>

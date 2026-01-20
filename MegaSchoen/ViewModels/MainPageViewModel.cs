@@ -13,6 +13,7 @@ public class MainPageViewModel : INotifyPropertyChanged
     readonly DisplayProfileService _profileService;
     bool _isLoading;
     string _newProfileName = "";
+    bool _hideInactiveDisplays = true;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -37,6 +38,17 @@ public class MainPageViewModel : INotifyPropertyChanged
             _newProfileName = value;
             OnPropertyChanged();
             ((Command)SaveCurrentArrangementCommand).ChangeCanExecute();
+        }
+    }
+
+    public bool HideInactiveDisplays
+    {
+        get => _hideInactiveDisplays;
+        set
+        {
+            _hideInactiveDisplays = value;
+            OnPropertyChanged();
+            _ = LoadDisplaysAsync();
         }
     }
 
@@ -68,6 +80,11 @@ public class MainPageViewModel : INotifyPropertyChanged
         try
         {
             var displays = DisplayManager.Core.DisplayManager.GetAllDisplays();
+
+            if (HideInactiveDisplays)
+            {
+                displays = displays.Where(d => d.IsActive).ToList();
+            }
 
             CurrentDisplays.Clear();
             foreach (var display in displays)
