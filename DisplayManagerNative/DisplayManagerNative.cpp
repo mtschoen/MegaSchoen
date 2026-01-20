@@ -145,7 +145,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         // Determine if this is the primary display (position 0,0)
         int posX = display["positionX"].get<int>();
         int posY = display["positionY"].get<int>();
-        display["isPrimary"] = display["isActive"].get<bool>() && (posX == 0 && posY == 0);
+        display["isPrimary"] = display["isActive"].get<bool>() && posX == 0 && posY == 0;
 
         // Include IDs for matching/identification
         display["sourceId"] = static_cast<int>(path.sourceInfo.id);
@@ -233,10 +233,10 @@ int ApplyConfiguration(const char* configJson)
         }
 
         auto wantedIt = wantedConfigs.find(monitorPath);
-        bool isWanted = !monitorPath.empty() && (wantedIt != wantedConfigs.end());
+        bool isWanted = !monitorPath.empty() && wantedIt != wantedConfigs.end();
         bool alreadyEnabled = enabledMonitors.count(monitorPath) > 0;
-        bool hasValidSourceMode = (paths[i].sourceInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
-        bool hasValidTargetMode = (paths[i].targetInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
+        bool hasValidSourceMode = paths[i].sourceInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
+        bool hasValidTargetMode = paths[i].targetInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
 
         if (isWanted && !alreadyEnabled) {
             const auto& config = wantedIt->second;
