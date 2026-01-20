@@ -9,7 +9,7 @@
 using json = nlohmann::json;
 
 // Helper to convert wide string to UTF-8
-std::string WideToUtf8(const std::wstring& wide) {
+static std::string WideToUtf8(const std::wstring& wide) {
     if (wide.empty()) return "";
     int utf8Len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
     if (utf8Len <= 0) return "";
@@ -55,7 +55,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
 
         json display;
 
-        display["pathIndex"] = (int)i;
+        display["pathIndex"] = static_cast<int>(i);
         display["isActive"] = isActive;
 
         // Get source device name (e.g., \\.\DISPLAY1)
@@ -72,7 +72,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         }
 
         // Get target (monitor) device info
-        display["targetAvailable"] = path.targetInfo.targetAvailable ? true : false;
+        display["targetAvailable"] = path.targetInfo.targetAvailable != 0;
 
         DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
         targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
@@ -99,10 +99,10 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
             UINT32 modeIdx = path.sourceInfo.modeInfoIdx;
             if (modeIdx < modeCount && modes[modeIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
                 auto& sourceMode = modes[modeIdx].sourceMode;
-                display["width"] = (int)sourceMode.width;
-                display["height"] = (int)sourceMode.height;
-                display["positionX"] = (int)sourceMode.position.x;
-                display["positionY"] = (int)sourceMode.position.y;
+                display["width"] = static_cast<int>(sourceMode.width);
+                display["height"] = static_cast<int>(sourceMode.height);
+                display["positionX"] = static_cast<int>(sourceMode.position.x);
+                display["positionY"] = static_cast<int>(sourceMode.position.y);
             }
         }
 
@@ -113,7 +113,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
                 auto& targetMode = modes[modeIdx].targetMode.targetVideoSignalInfo;
                 // Refresh rate = vSyncFreq.Numerator / vSyncFreq.Denominator
                 if (targetMode.vSyncFreq.Denominator > 0) {
-                    display["refreshRate"] = (double)targetMode.vSyncFreq.Numerator / targetMode.vSyncFreq.Denominator;
+                    display["refreshRate"] = static_cast<double>(targetMode.vSyncFreq.Numerator) / targetMode.vSyncFreq.Denominator;
                 }
             }
         }
@@ -124,8 +124,8 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         display["isPrimary"] = display["isActive"].get<bool>() && (posX == 0 && posY == 0);
 
         // Include IDs for matching/identification
-        display["sourceId"] = (int)path.sourceInfo.id;
-        display["targetId"] = (int)path.targetInfo.id;
+        display["sourceId"] = static_cast<int>(path.sourceInfo.id);
+        display["targetId"] = static_cast<int>(path.targetInfo.id);
 
         displays.push_back(display);
     }
@@ -142,7 +142,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
 }
 
 // Helper to convert UTF-8 to wide string
-std::wstring Utf8ToWide(const std::string& utf8) {
+static std::wstring Utf8ToWide(const std::string& utf8) {
     if (utf8.empty()) return L"";
     int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
     if (wideLen <= 0) return L"";
@@ -154,11 +154,11 @@ std::wstring Utf8ToWide(const std::string& utf8) {
 // Structure to hold parsed display config from JSON
 struct DisplayConfigRequest {
     std::wstring monitorDevicePath;
-    int width;
-    int height;
-    int positionX;
-    int positionY;
-    double refreshRate;
+    int width = 0;
+    int height = 0;
+    int positionX = 0;
+    int positionY = 0;
+    double refreshRate = 0.0;
 };
 
 // Apply a full display configuration
@@ -200,7 +200,7 @@ int ApplyConfiguration(const char* configJson)
 
     LONG result = GetDisplayConfigBufferSizes(QDC_ALL_PATHS, &pathCount, &modeCount);
     if (result != ERROR_SUCCESS) {
-        return -100 - (int)result;
+        return -100 - static_cast<int>(result);
     }
 
     std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
@@ -208,7 +208,7 @@ int ApplyConfiguration(const char* configJson)
 
     result = QueryDisplayConfig(QDC_ALL_PATHS, &pathCount, paths.data(), &modeCount, modes.data(), nullptr);
     if (result != ERROR_SUCCESS) {
-        return -200 - (int)result;
+        return -200 - static_cast<int>(result);
     }
 
     // Track which monitors we've already enabled (to avoid duplicates)
@@ -230,7 +230,7 @@ int ApplyConfiguration(const char* configJson)
 
         auto wantedIt = wantedConfigs.find(monitorPath);
         bool isWanted = !monitorPath.empty() && (wantedIt != wantedConfigs.end());
-        bool alreadyEnabled = enabledMonitors.find(monitorPath) != enabledMonitors.end();
+        bool alreadyEnabled = enabledMonitors.count(monitorPath) > 0;
         bool hasValidSourceMode = (paths[i].sourceInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
         bool hasValidTargetMode = (paths[i].targetInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
 
@@ -251,7 +251,7 @@ int ApplyConfiguration(const char* configJson)
                 newSourceMode.sourceMode.position.y = config.positionY;
 
                 modes.push_back(newSourceMode);
-                paths[i].sourceInfo.modeInfoIdx = (UINT32)(modes.size() - 1);
+                paths[i].sourceInfo.modeInfoIdx = static_cast<UINT32>(modes.size() - 1);
                 hasValidSourceMode = true;
             }
 
@@ -262,7 +262,7 @@ int ApplyConfiguration(const char* configJson)
                 newTargetMode.adapterId = paths[i].targetInfo.adapterId;
                 newTargetMode.id = paths[i].targetInfo.id;
                 // Set refresh rate (convert Hz to rational)
-                UINT32 refreshNumerator = (UINT32)(config.refreshRate * 1000);
+                auto refreshNumerator = static_cast<UINT32>(config.refreshRate * 1000);
                 newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Numerator = refreshNumerator;
                 newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Denominator = 1000;
                 newTargetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Numerator = 0;
@@ -276,7 +276,7 @@ int ApplyConfiguration(const char* configJson)
                 newTargetMode.targetMode.targetVideoSignalInfo.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
 
                 modes.push_back(newTargetMode);
-                paths[i].targetInfo.modeInfoIdx = (UINT32)(modes.size() - 1);
+                paths[i].targetInfo.modeInfoIdx = static_cast<UINT32>(modes.size() - 1);
                 hasValidTargetMode = true;
             }
 
@@ -294,12 +294,12 @@ int ApplyConfiguration(const char* configJson)
     }
 
     // Apply the configuration
-    UINT32 newModeCount = (UINT32)modes.size();
+    auto newModeCount = static_cast<UINT32>(modes.size());
     DWORD flags = SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES;
     result = SetDisplayConfig(pathCount, paths.data(), newModeCount, modes.data(), flags);
 
     if (result != ERROR_SUCCESS) {
-        return -300 - (int)result;
+        return -300 - static_cast<int>(result);
     }
 
     return 0;
