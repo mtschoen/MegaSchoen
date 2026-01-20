@@ -11,26 +11,33 @@ These conventions are enforced by `.editorconfig` and must be followed when writ
 - **Use `var` everywhere** - Always use `var` instead of explicit types
 - **Use file-scoped namespaces** - `namespace Foo;` not `namespace Foo { }`
 - **Use language keywords** - `string`, `int`, `bool` not `String`, `Int32`, `Boolean`
+- **Omit default access modifiers** - Don't write `private` for members or `internal` for types
 - **No `this.` qualification** - Omit `this.` for fields, properties, methods, events
 - **Use expression-bodied members** for simple accessors and properties
 - **Use pattern matching** - Prefer `is null`, `is not null`, pattern matching over casts
 - **Use null propagation** - `foo?.Bar` and `foo ?? default`
 - **Use collection/object initializers** where applicable
 - **Always use braces** for control flow statements
-- **Private fields use camelCase** - `private int count;`
+- **Private fields use camelCase** - `int _count;` (no `private` keyword)
 - **Interfaces start with I** - `IDisplayService`
 - **Types, methods, properties use PascalCase**
 
 ```csharp
 // Good
-var displays = GetDisplays();
-var count = 5;
-var name = displays?.FirstOrDefault()?.Name ?? "Unknown";
+class MyService                    // implicit internal
+{
+    readonly string _name;         // implicit private
+
+    void DoWork() { }              // implicit private
+    public void DoPublicWork() { } // explicit public (required)
+}
 
 // Bad
-List<DisplayInfo> displays = GetDisplays();
-int count = 5;
-string name = displays != null && displays.Count > 0 ? displays[0].Name : "Unknown";
+internal class MyService
+{
+    private readonly string _name;
+    private void DoWork() { }
+}
 ```
 
 ## Build Commands

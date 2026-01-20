@@ -9,9 +9,9 @@ namespace DisplayManager.Core.Services;
 /// </summary>
 public class ProfileStorageService
 {
-    private readonly string _configDirectory;
-    private readonly string _configFilePath;
-    private readonly JsonSerializerOptions _jsonOptions;
+    readonly string _configDirectory;
+    readonly string _configFilePath;
+    readonly JsonSerializerOptions _jsonOptions;
 
     public ProfileStorageService()
     {

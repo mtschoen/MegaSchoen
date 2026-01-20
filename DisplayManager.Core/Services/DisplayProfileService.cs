@@ -7,7 +7,7 @@ namespace DisplayManager.Core.Services;
 /// </summary>
 public class DisplayProfileService
 {
-    private readonly ProfileStorageService _storageService;
+    readonly ProfileStorageService _storageService;
 
     public DisplayProfileService()
     {

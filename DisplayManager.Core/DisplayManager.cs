@@ -18,12 +18,12 @@ public class ApplyResult
 public static class DisplayManager
 {
     [DllImport("DisplayManagerNative.dll")]
-    private static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
+    static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
 
     [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyConfiguration", CharSet = CharSet.Ansi)]
-    private static extern int ApplyConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string activeDevicesJson);
+    static extern int ApplyConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string activeDevicesJson);
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };

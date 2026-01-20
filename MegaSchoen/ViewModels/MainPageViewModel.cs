@@ -10,9 +10,9 @@ namespace MegaSchoen.ViewModels;
 
 public class MainPageViewModel : INotifyPropertyChanged
 {
-    private readonly DisplayProfileService _profileService;
-    private bool _isLoading;
-    private string _newProfileName = "";
+    readonly DisplayProfileService _profileService;
+    bool _isLoading;
+    string _newProfileName = "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -63,7 +63,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         _ = RefreshAllAsync();
     }
 
-    private async Task LoadDisplaysAsync()
+    async Task LoadDisplaysAsync()
     {
         try
         {
@@ -81,7 +81,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task LoadProfilesAsync()
+    async Task LoadProfilesAsync()
     {
         try
         {
@@ -99,7 +99,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task SaveCurrentArrangementAsync()
+    async Task SaveCurrentArrangementAsync()
     {
         if (string.IsNullOrWhiteSpace(NewProfileName))
         {
@@ -132,7 +132,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task DeleteProfileAsync(SavedDisplayProfile? profile)
+    async Task DeleteProfileAsync(SavedDisplayProfile? profile)
     {
         if (profile == null)
         {
@@ -168,7 +168,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task ApplyProfileAsync(SavedDisplayProfile? profile)
+    async Task ApplyProfileAsync(SavedDisplayProfile? profile)
     {
         if (profile == null)
         {
@@ -205,7 +205,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task RefreshAllAsync()
+    async Task RefreshAllAsync()
     {
         IsLoading = true;
         try
@@ -219,7 +219,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task ShowErrorAsync(string message)
+    async Task ShowErrorAsync(string message)
     {
         if (Application.Current?.MainPage != null)
         {
@@ -227,7 +227,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task ShowSuccessAsync(string message)
+    async Task ShowSuccessAsync(string message)
     {
         if (Application.Current?.MainPage != null)
         {
@@ -235,7 +235,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
-    private async Task<bool> ConfirmAsync(string title, string message)
+    async Task<bool> ConfirmAsync(string title, string message)
     {
         if (Application.Current?.MainPage != null)
         {
