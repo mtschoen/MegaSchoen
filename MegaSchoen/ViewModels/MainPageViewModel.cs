@@ -221,25 +221,28 @@ public class MainPageViewModel : INotifyPropertyChanged
 
     async Task ShowErrorAsync(string message)
     {
-        if (Application.Current?.MainPage != null)
+        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        if (page != null)
         {
-            await Application.Current.MainPage.DisplayAlert("Error", message, "OK");
+            await page.DisplayAlertAsync("Error", message, "OK");
         }
     }
 
     async Task ShowSuccessAsync(string message)
     {
-        if (Application.Current?.MainPage != null)
+        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        if (page != null)
         {
-            await Application.Current.MainPage.DisplayAlert("Success", message, "OK");
+            await page.DisplayAlertAsync("Success", message, "OK");
         }
     }
 
     async Task<bool> ConfirmAsync(string title, string message)
     {
-        if (Application.Current?.MainPage != null)
+        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        if (page != null)
         {
-            return await Application.Current.MainPage.DisplayAlert(title, message, "Yes", "No");
+            return await page.DisplayAlertAsync(title, message, "Yes", "No");
         }
         return false;
     }
