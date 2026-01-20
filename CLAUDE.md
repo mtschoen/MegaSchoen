@@ -50,51 +50,38 @@ Do NOT use `dotnet build` - it cannot build the native C++ dependency.
 ### Running the CLI
 ```bash
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" list              # List all displays
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" toggle DISPLAY5 off  # Toggle display off
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" toggle DISPLAY5 on   # Toggle display on
-".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw              # Show raw JSON
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" save "My Profile" # Save current config
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" load "My Profile" # Load a profile
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" profiles          # List all profiles
+".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw               # Show raw JSON
 ```
 
-## Current Status (Last updated: 2026-01-19)
+## Current Status (Last updated: 2026-01-20)
 
-### 🔍 TODO: Review for Further Cleanup
-User wants to review the codebase for more cleanup opportunities before continuing. Areas to potentially examine:
-- Are there unused services or models?
-- Can the profile system be simplified now that we use CCD API?
-- Is ConfigurationManager redundant with DisplayProfileService?
-- Any dead code paths in the MAUI ViewModel?
-
-### ✅ CCD API Refactor Complete
+### ✅ Display Toggle Working
 
 **What's Working:**
 - Display detection and listing via CCD API (QueryDisplayConfig)
-- Individual display toggle on/off via CCD API (SetDisplayConfig)
-- Toggle uses `SDC_USE_SUPPLIED_DISPLAY_CONFIG` which is less disruptive than the old `ChangeDisplaySettingsEx` approach
-- MAUI app builds and runs on Windows
-- CLI tool for testing display operations
-- Profile save/load (profiles stored in `%APPDATA%\MegaSchoen\configs.json`)
+- Full display enable/disable including displays on secondary GPUs
+- Position, resolution, and refresh rate restoration when re-enabling displays
+- Profile save/load with full display configuration
+- Profiles stored in `%APPDATA%\MegaSchoen\configs.json`
 
-**Recent Changes:**
-- Removed legacy `EnumDisplayDevices`/`EnumDisplaySettings` code
-- Removed `ApplyDisplayConfiguration` function (replaced by `ToggleDisplayCCD`)
-- Switched entirely to CCD API (`QueryDisplayConfig`/`SetDisplayConfig`)
-- Simplified `DisplayInfo` model to match CCD output
-- Filter display paths to only show active or connected monitors
+**Key Implementation Details:**
+- Profiles store full `SavedDisplayConfig` objects (monitorDevicePath, resolution, position, refresh rate)
+- `monitorDevicePath` is used for reliable display matching (stable across reboots)
+- When re-enabling a display with cleared mode info, native code creates mode entries from saved profile data
+- Works across multiple GPUs (tested with displays on different adapters)
 
 ### 🎯 Next Steps
 
-**Priority 1: Display Position Restoration**
-- When re-enabling a display, Windows places it at a default position
-- Need to also restore position/resolution from saved profile
-
-**Priority 2: Test Audio Preservation**
-- The CCD API toggle should be less disruptive than the old method
+**Priority 1: Test Audio Preservation**
+- The CCD API approach should be less disruptive than ChangeDisplaySettingsEx
 - Need to test if YouTube Music (etc.) keeps playing during display switches
 
-**Priority 3: Global Hotkey Support**
+**Priority 2: Global Hotkey Support**
 - RegisterHotKey Win32 API for hotkey registration
-- Background listener to trigger profile switches
-- HotkeyDefinition model already exists in SavedDisplayProfile
+- HotkeyDefinition model exists in SavedDisplayProfile
 
 ## Architecture Overview
 
@@ -104,7 +91,7 @@ User wants to review the codebase for more cleanup opportunities before continui
 
 - **DisplayManager.Core** (.NET 10 Library) - Managed wrapper around the native DLL via P/Invoke. Contains DisplayManager static class, DisplayInfo model, and profile services.
 
-- **DisplayManagerCLI** (.NET 10 Console App) - Command-line interface for testing. Commands: list, toggle, raw, save, profiles, apply, delete.
+- **DisplayManagerCLI** (.NET 10 Console App) - Command-line interface. Commands: list, apply, save, load, profiles, delete, config, raw.
 
 - **MegaSchoen** (MAUI App) - Cross-platform GUI application. Currently Windows-only for display management features.
 
@@ -123,12 +110,13 @@ User wants to review the codebase for more cleanup opportunities before continui
 // Get all display paths as JSON array
 int GetAllDisplaysJson(char* buffer, int bufferSize);
 
-// Toggle a display on/off using CCD API
-int ToggleDisplayCCD(const char* deviceName, bool enable);
-
-// Topology shortcuts
-int SwitchToInternalDisplay();  // SDC_TOPOLOGY_INTERNAL
-int EnableAllDisplays();        // SDC_TOPOLOGY_EXTEND
+// Apply a full display configuration
+// Takes JSON array of SavedDisplayConfig objects with:
+//   - monitorDevicePath (for matching)
+//   - width, height, positionX, positionY, refreshRate (for mode creation)
+// Displays in array are enabled; all others are disabled
+// Creates mode entries from saved config if path lacks mode info
+int ApplyConfiguration(const char* configJson);
 ```
 
 ### Build Configuration Notes

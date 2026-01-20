@@ -67,7 +67,11 @@
       <Command>xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManager.Core\bin\$(Configuration)\net10.0\"
 xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManager.Core\bin\$(Configuration)\net10.0\"
 xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManagerCLI\bin\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManagerCLI\bin\$(Configuration)\net10.0\"</Command>
+xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManagerCLI\bin\$(Configuration)\net10.0\"
+xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManager.Core\bin\x64\$(Configuration)\net10.0\"
+xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManager.Core\bin\x64\$(Configuration)\net10.0\"
+xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManagerCLI\bin\x64\$(Configuration)\net10.0\"
+xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManagerCLI\bin\x64\$(Configuration)\net10.0\"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

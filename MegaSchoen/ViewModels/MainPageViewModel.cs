@@ -179,9 +179,9 @@ public class MainPageViewModel : INotifyPropertyChanged
         {
             IsLoading = true;
 
-            var success = _profileService.ApplyProfile(profile);
+            var result = _profileService.ApplyProfile(profile);
 
-            if (success)
+            if (result.Success)
             {
                 await ShowSuccessAsync($"Profile '{profile.Name}' applied successfully!");
 
@@ -191,7 +191,8 @@ public class MainPageViewModel : INotifyPropertyChanged
             }
             else
             {
-                await ShowErrorAsync($"Failed to apply profile '{profile.Name}'. Check the system logs for details.");
+                var errors = string.Join("\n", result.Errors);
+                await ShowErrorAsync($"Failed to apply profile '{profile.Name}':\n{errors}");
             }
         }
         catch (Exception ex)

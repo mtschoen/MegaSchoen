@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <set>
+#include <map>
 
 // QueryDisplayConfig constants
 #define QDC_ALL_PATHS                    0x00000001
@@ -19,59 +21,6 @@ std::string WideToUtf8(const std::wstring& wide) {
     std::vector<char> utf8(utf8Len);
     WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, utf8.data(), utf8Len, nullptr, nullptr);
     return std::string(utf8.data());
-}
-
-int SwitchToInternalDisplay()
-{
-    // First, get the current display configuration
-    UINT32 pathCount = 0;
-    UINT32 modeCount = 0;
-    
-    // Get buffer sizes for current configuration
-    LONG result = GetDisplayConfigBufferSizes(QDC_ALL_PATHS, &pathCount, &modeCount);
-    if (result != ERROR_SUCCESS)
-    {
-        return result;
-    }
-    
-    // Check if we already have only one display path (likely already internal-only)
-    if (pathCount <= 1)
-    {
-        // Already in single display mode, nothing to do
-        return 0;
-    }
-    
-    // Allocate buffers
-    std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
-    std::vector<DISPLAYCONFIG_MODE_INFO> modes(modeCount);
-    
-    // Get current configuration
-    result = QueryDisplayConfig(QDC_ALL_PATHS, &pathCount, paths.data(), 
-                               &modeCount, modes.data(), nullptr);
-    if (result != ERROR_SUCCESS)
-    {
-        return result;
-    }
-    
-    // Now apply topology change to internal display only
-    // Use SDC_TOPOLOGY_INTERNAL with SDC_APPLY
-    DWORD flags = SDC_TOPOLOGY_INTERNAL | SDC_APPLY;
-    
-    // For topology changes, we don't need to pass the current configuration
-    result = SetDisplayConfig(0, nullptr, 0, nullptr, flags);
-    
-    return result == ERROR_SUCCESS ? 0 : (int)result;
-}
-
-int EnableAllDisplays()
-{
-    // Use SetDisplayConfig to enable extended desktop (all displays)
-    // SDC_TOPOLOGY_EXTEND enables all available displays in extended mode
-    DWORD flags = SDC_TOPOLOGY_EXTEND | SDC_APPLY;
-    
-    LONG result = SetDisplayConfig(0, nullptr, 0, nullptr, flags);
-    
-    return result == ERROR_SUCCESS ? 0 : (int)result;
 }
 
 int GetAllDisplaysJson(char* buffer, int bufferSize)
@@ -197,26 +146,60 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
     return jsonLength;
 }
 
-// Toggle a display on/off using the CCD API (SetDisplayConfig)
-// deviceName: GDI device name like "\\\\.\\DISPLAY5"
-// enable: true to enable, false to disable
+// Helper to convert UTF-8 to wide string
+std::wstring Utf8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return L"";
+    int wideLen = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (wideLen <= 0) return L"";
+    std::vector<wchar_t> wide(wideLen);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wide.data(), wideLen);
+    return std::wstring(wide.data());
+}
+
+// Structure to hold parsed display config from JSON
+struct DisplayConfigRequest {
+    std::wstring monitorDevicePath;
+    int width;
+    int height;
+    int positionX;
+    int positionY;
+    double refreshRate;
+};
+
+// Apply a full display configuration
+// configJson: JSON array of display configs with monitorDevicePath for matching
+// All displays in the list will be enabled; all others will be disabled
 // Returns: 0 on success, negative error code on failure
-int ToggleDisplayCCD(const char* deviceName, bool enable)
+int ApplyConfiguration(const char* configJson)
 {
-    if (!deviceName) {
+    if (!configJson) {
         return -1;
     }
 
-    // Convert device name to wide string
-    int wideLen = MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, nullptr, 0);
-    if (wideLen <= 0) {
-        return -2;
+    // Parse the JSON array of display configs
+    std::map<std::wstring, DisplayConfigRequest> wantedConfigs;
+    try {
+        json configList = json::parse(configJson);
+        if (!configList.is_array()) {
+            return -2; // Not a JSON array
+        }
+        for (const auto& item : configList) {
+            if (item.is_object() && item.contains("monitorDevicePath")) {
+                DisplayConfigRequest req;
+                req.monitorDevicePath = Utf8ToWide(item["monitorDevicePath"].get<std::string>());
+                req.width = item.value("width", 0);
+                req.height = item.value("height", 0);
+                req.positionX = item.value("positionX", 0);
+                req.positionY = item.value("positionY", 0);
+                req.refreshRate = item.value("refreshRate", 60.0);
+                wantedConfigs[req.monitorDevicePath] = req;
+            }
+        }
+    } catch (...) {
+        return -3; // JSON parse error
     }
-    std::vector<wchar_t> wideDeviceName(wideLen);
-    MultiByteToWideChar(CP_UTF8, 0, deviceName, -1, wideDeviceName.data(), wideLen);
-    std::wstring targetDeviceName(wideDeviceName.data());
 
-    // Get all display paths
+    // Get ALL display paths (including inactive ones)
     UINT32 pathCount = 0;
     UINT32 modeCount = 0;
 
@@ -233,42 +216,92 @@ int ToggleDisplayCCD(const char* deviceName, bool enable)
         return -200 - (int)result;
     }
 
-    // Find the path matching our device name
-    int targetPathIndex = -1;
-    for (UINT32 i = 0; i < pathCount; i++) {
-        DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
-        sourceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
-        sourceName.header.size = sizeof(sourceName);
-        sourceName.header.adapterId = paths[i].sourceInfo.adapterId;
-        sourceName.header.id = paths[i].sourceInfo.id;
+    // Track which monitors we've already enabled (to avoid duplicates)
+    std::set<std::wstring> enabledMonitors;
 
-        if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS) {
-            if (wcscmp(sourceName.viewGdiDeviceName, targetDeviceName.c_str()) == 0) {
-                targetPathIndex = i;
-                break;
+    // For each path, decide if it should be active
+    for (UINT32 i = 0; i < pathCount; i++) {
+        // Get monitor device path for this target
+        DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+        targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+        targetName.header.size = sizeof(targetName);
+        targetName.header.adapterId = paths[i].targetInfo.adapterId;
+        targetName.header.id = paths[i].targetInfo.id;
+
+        std::wstring monitorPath;
+        if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
+            monitorPath = std::wstring(targetName.monitorDevicePath);
+        }
+
+        auto wantedIt = wantedConfigs.find(monitorPath);
+        bool isWanted = !monitorPath.empty() && (wantedIt != wantedConfigs.end());
+        bool alreadyEnabled = enabledMonitors.find(monitorPath) != enabledMonitors.end();
+        bool hasValidSourceMode = (paths[i].sourceInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
+        bool hasValidTargetMode = (paths[i].targetInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID);
+
+        if (isWanted && !alreadyEnabled) {
+            const auto& config = wantedIt->second;
+
+            // If path lacks mode info, create it from saved config
+            if (!hasValidSourceMode && config.width > 0 && config.height > 0) {
+                // Create a new source mode entry
+                DISPLAYCONFIG_MODE_INFO newSourceMode = {};
+                newSourceMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
+                newSourceMode.adapterId = paths[i].sourceInfo.adapterId;
+                newSourceMode.id = paths[i].sourceInfo.id;
+                newSourceMode.sourceMode.width = config.width;
+                newSourceMode.sourceMode.height = config.height;
+                newSourceMode.sourceMode.pixelFormat = DISPLAYCONFIG_PIXELFORMAT_32BPP;
+                newSourceMode.sourceMode.position.x = config.positionX;
+                newSourceMode.sourceMode.position.y = config.positionY;
+
+                modes.push_back(newSourceMode);
+                paths[i].sourceInfo.modeInfoIdx = (UINT32)(modes.size() - 1);
+                hasValidSourceMode = true;
             }
+
+            if (!hasValidTargetMode && config.refreshRate > 0) {
+                // Create a new target mode entry
+                DISPLAYCONFIG_MODE_INFO newTargetMode = {};
+                newTargetMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_TARGET;
+                newTargetMode.adapterId = paths[i].targetInfo.adapterId;
+                newTargetMode.id = paths[i].targetInfo.id;
+                // Set refresh rate (convert Hz to rational)
+                UINT32 refreshNumerator = (UINT32)(config.refreshRate * 1000);
+                newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Numerator = refreshNumerator;
+                newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Denominator = 1000;
+                newTargetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Numerator = 0;
+                newTargetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Denominator = 0;
+                // Active size matches resolution
+                newTargetMode.targetMode.targetVideoSignalInfo.activeSize.cx = config.width;
+                newTargetMode.targetMode.targetVideoSignalInfo.activeSize.cy = config.height;
+                newTargetMode.targetMode.targetVideoSignalInfo.totalSize.cx = config.width;
+                newTargetMode.targetMode.targetVideoSignalInfo.totalSize.cy = config.height;
+                newTargetMode.targetMode.targetVideoSignalInfo.videoStandard = 255; // D3DKMDT_VSS_OTHER
+                newTargetMode.targetMode.targetVideoSignalInfo.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
+
+                modes.push_back(newTargetMode);
+                paths[i].targetInfo.modeInfoIdx = (UINT32)(modes.size() - 1);
+                hasValidTargetMode = true;
+            }
+
+            if (hasValidSourceMode && hasValidTargetMode) {
+                // Enable this path
+                paths[i].flags |= DISPLAYCONFIG_PATH_ACTIVE;
+                enabledMonitors.insert(monitorPath);
+            }
+        }
+
+        // Disable paths that aren't wanted or already enabled
+        if (!isWanted || alreadyEnabled) {
+            paths[i].flags &= ~DISPLAYCONFIG_PATH_ACTIVE;
         }
     }
 
-    if (targetPathIndex < 0) {
-        return -3; // Device not found
-    }
-
-    // Toggle the DISPLAYCONFIG_PATH_ACTIVE flag
-    if (enable) {
-        paths[targetPathIndex].flags |= DISPLAYCONFIG_PATH_ACTIVE;
-    } else {
-        paths[targetPathIndex].flags &= ~DISPLAYCONFIG_PATH_ACTIVE;
-    }
-
-    // Apply the new configuration
-    // SDC_APPLY: Apply immediately
-    // SDC_USE_SUPPLIED_DISPLAY_CONFIG: Use the paths/modes we're supplying
-    // SDC_SAVE_TO_DATABASE: Persist the change
-    // SDC_ALLOW_CHANGES: Allow Windows to make adjustments if needed
+    // Apply the configuration
+    UINT32 newModeCount = (UINT32)modes.size();
     DWORD flags = SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES;
-
-    result = SetDisplayConfig(pathCount, paths.data(), modeCount, modes.data(), flags);
+    result = SetDisplayConfig(pathCount, paths.data(), newModeCount, modes.data(), flags);
 
     if (result != ERROR_SUCCESS) {
         return -300 - (int)result;

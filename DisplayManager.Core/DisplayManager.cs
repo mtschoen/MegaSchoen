@@ -1,23 +1,27 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
+using DisplayManager.Core.Models;
 
 namespace DisplayManager.Core;
 
+/// <summary>
+/// Result of applying a display configuration.
+/// </summary>
+public class ApplyResult
+{
+    public bool Success { get; set; }
+    public List<string> Errors { get; set; } = [];
+    public List<string> Applied { get; set; } = [];
+}
+
 public static class DisplayManager
 {
-    // Native DLL imports
-    [DllImport("DisplayManagerNative.dll", EntryPoint = "SwitchToInternalDisplay")]
-    private static extern int SwitchToInternalDisplayNative();
-
-    [DllImport("DisplayManagerNative.dll", EntryPoint = "EnableAllDisplays")]
-    private static extern int EnableAllDisplaysNative();
-
     [DllImport("DisplayManagerNative.dll")]
     private static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
 
-    [DllImport("DisplayManagerNative.dll", EntryPoint = "ToggleDisplayCCD", CharSet = CharSet.Ansi)]
-    private static extern int ToggleDisplayCCDNative([MarshalAs(UnmanagedType.LPStr)] string deviceName, [MarshalAs(UnmanagedType.I1)] bool enable);
+    [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyConfiguration", CharSet = CharSet.Ansi)]
+    private static extern int ApplyConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string activeDevicesJson);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -69,96 +73,57 @@ public static class DisplayManager
         }
     }
 
-    public static bool SwitchToInternalDisplay()
-    {
-        try
-        {
-            var result = SwitchToInternalDisplayNative();
-            if (result == 0)
-            {
-                Console.WriteLine("Successfully switched to internal display!");
-                return true;
-            }
-            Console.WriteLine($"Failed to switch to internal display. Error: {result}");
-            return false;
-        }
-        catch (DllNotFoundException)
-        {
-            Console.WriteLine("DisplayManagerNative.dll not found!");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            return false;
-        }
-    }
-
-    public static bool EnableAllDisplays()
-    {
-        try
-        {
-            var result = EnableAllDisplaysNative();
-            if (result == 0)
-            {
-                Console.WriteLine("Successfully enabled all displays!");
-                return true;
-            }
-            Console.WriteLine($"Failed to enable all displays. Error: {result}");
-            return false;
-        }
-        catch (DllNotFoundException)
-        {
-            Console.WriteLine("DisplayManagerNative.dll not found!");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            return false;
-        }
-    }
-
     /// <summary>
-    /// Toggle a display on or off using the CCD API (SetDisplayConfig).
+    /// Apply a display configuration. All displays in the list will be enabled,
+    /// all displays NOT in the list will be disabled.
     /// </summary>
-    /// <param name="deviceName">GDI device name like "\\.\DISPLAY5"</param>
-    /// <param name="enable">true to enable, false to disable</param>
-    /// <returns>0 on success, error code on failure</returns>
-    public static int ToggleDisplay(string deviceName, bool enable)
+    /// <param name="displays">Display configurations that should be active</param>
+    /// <returns>Result with success status and any errors</returns>
+    public static ApplyResult ApplyConfiguration(IEnumerable<SavedDisplayConfig> displays)
     {
+        var result = new ApplyResult { Success = true };
+        var displayList = displays.ToList();
+
         try
         {
-            var result = ToggleDisplayCCDNative(deviceName, enable);
-            if (result == 0)
+            // Serialize full display config to JSON array
+            var json = JsonSerializer.Serialize(displayList, JsonOptions);
+
+            // Call the native function
+            var nativeResult = ApplyConfigurationNative(json);
+
+            if (nativeResult == 0)
             {
-                Console.WriteLine($"Successfully {(enable ? "enabled" : "disabled")} {deviceName}");
+                var names = string.Join(", ", displayList.Select(d => d.MonitorName));
+                result.Applied.Add($"Applied configuration: {names}");
             }
             else
             {
-                var errorMessage = result switch
+                result.Success = false;
+                var errorMessage = nativeResult switch
                 {
-                    -1 => "Invalid parameter (null device name)",
-                    -2 => "String conversion error",
-                    -3 => "Device not found in display paths",
-                    _ when result <= -300 => $"SetDisplayConfig failed with error {-(result + 300)}",
-                    _ when result <= -200 => $"QueryDisplayConfig failed with error {-(result + 200)}",
-                    _ when result <= -100 => $"GetDisplayConfigBufferSizes failed with error {-(result + 100)}",
-                    _ => $"Unknown error: {result}"
+                    -1 => "Invalid parameter (null JSON)",
+                    -2 => "JSON is not an array",
+                    -3 => "JSON parse error",
+                    _ when nativeResult <= -300 => $"SetDisplayConfig failed with error {-(nativeResult + 300)}",
+                    _ when nativeResult <= -200 => $"QueryDisplayConfig failed with error {-(nativeResult + 200)}",
+                    _ when nativeResult <= -100 => $"GetDisplayConfigBufferSizes failed with error {-(nativeResult + 100)}",
+                    _ => $"Unknown error: {nativeResult}"
                 };
-                Console.WriteLine($"Failed to toggle {deviceName}: {errorMessage}");
+                result.Errors.Add(errorMessage);
             }
-            return result;
         }
         catch (DllNotFoundException)
         {
-            Console.WriteLine("DisplayManagerNative.dll not found!");
-            return -999;
+            result.Success = false;
+            result.Errors.Add("DisplayManagerNative.dll not found");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
-            return -998;
+            result.Success = false;
+            result.Errors.Add($"Exception: {ex.Message}");
         }
+
+        return result;
     }
 }

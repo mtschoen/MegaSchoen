@@ -1,54 +1,53 @@
 namespace DisplayManager.Core.Models;
 
 /// <summary>
-/// Represents a saved display configuration profile that can be applied via hotkey or UI.
+/// Display configuration saved in a profile.
+/// </summary>
+public class SavedDisplayConfig
+{
+    /// <summary>
+    /// Hardware path that uniquely identifies the monitor (stable across reboots).
+    /// </summary>
+    public string MonitorDevicePath { get; set; } = "";
+
+    /// <summary>
+    /// Friendly monitor name from EDID.
+    /// </summary>
+    public string MonitorName { get; set; } = "";
+
+    /// <summary>
+    /// GDI device name at time of capture (may change between sessions).
+    /// </summary>
+    public string DeviceName { get; set; } = "";
+
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public int PositionX { get; set; }
+    public int PositionY { get; set; }
+    public double RefreshRate { get; set; }
+    public bool IsPrimary { get; set; }
+}
+
+/// <summary>
+/// A saved display profile - a full display configuration to restore.
 /// </summary>
 public class SavedDisplayProfile
 {
-    /// <summary>
-    /// Unique identifier for this profile.
-    /// </summary>
     public Guid Id { get; set; } = Guid.NewGuid();
-
-    /// <summary>
-    /// User-friendly name for the profile (e.g., "Desk Mode", "TV Mode").
-    /// </summary>
     public string Name { get; set; } = "";
-
-    /// <summary>
-    /// Optional description of what this profile does.
-    /// </summary>
     public string Description { get; set; } = "";
 
     /// <summary>
-    /// Type of configuration: "topology" (simple) or "detailed" (Phase 5).
+    /// Full configuration of displays that should be active.
+    /// Displays not in this list will be disabled when the profile is applied.
     /// </summary>
-    public string ConfigType { get; set; } = "topology";
+    public List<SavedDisplayConfig> Displays { get; set; } = [];
 
     /// <summary>
-    /// Windows display topology for simple configuration.
-    /// Valid values: "internal", "extend", "clone", "external"
-    /// Only used when ConfigType = "topology".
-    /// </summary>
-    public string? Topology { get; set; }
-
-    /// <summary>
-    /// List of display configurations in this profile.
-    /// </summary>
-    public List<DisplaySettings> Displays { get; set; } = [];
-
-    /// <summary>
-    /// Global hotkey definition for activating this profile.
+    /// Optional hotkey for activating this profile.
     /// </summary>
     public HotkeyDefinition? Hotkey { get; set; }
 
-    /// <summary>
-    /// Timestamp when this profile was created.
-    /// </summary>
     public DateTime Created { get; set; } = DateTime.UtcNow;
-
-    /// <summary>
-    /// Timestamp when this profile was last modified.
-    /// </summary>
     public DateTime LastModified { get; set; } = DateTime.UtcNow;
 }

@@ -3,7 +3,7 @@ using DisplayManager.Core.Models;
 namespace DisplayManager.Core.Services;
 
 /// <summary>
-/// Service for creating and managing display profiles from current display state.
+/// Service for saving and loading display profiles.
 /// </summary>
 public class DisplayProfileService
 {
@@ -20,40 +20,39 @@ public class DisplayProfileService
     }
 
     /// <summary>
-    /// Captures the current display configuration and creates a new profile.
+    /// Captures the current display configuration as a new profile.
     /// </summary>
     public SavedDisplayProfile CaptureCurrentConfiguration(string profileName, string? description = null)
     {
-        var currentDisplays = DisplayManager.GetAllDisplays()
-            .Where(d => !string.IsNullOrEmpty(d.DeviceName))
+        var currentDisplays = DisplayManager.GetAllDisplays();
+        var activeDisplayConfigs = currentDisplays
+            .Where(d => d.IsActive && !string.IsNullOrEmpty(d.MonitorDevicePath))
+            .Select(d => new SavedDisplayConfig
+            {
+                MonitorDevicePath = d.MonitorDevicePath,
+                MonitorName = d.MonitorName,
+                DeviceName = d.DeviceName,
+                Width = d.Width,
+                Height = d.Height,
+                PositionX = d.PositionX,
+                PositionY = d.PositionY,
+                RefreshRate = d.RefreshRate,
+                IsPrimary = d.IsPrimary
+            })
             .ToList();
 
-        var profile = new SavedDisplayProfile
+        return new SavedDisplayProfile
         {
             Name = profileName,
             Description = description ?? "",
-            ConfigType = "detailed",
-            Displays = currentDisplays.Select(d => new DisplaySettings
-            {
-                Identifier = new DisplayIdentifier
-                {
-                    MonitorId = d.MonitorDevicePath,
-                    DeviceName = d.DeviceName,
-                    MonitorName = d.MonitorName,
-                    FallbackMatch = "deviceName"
-                },
-                Enabled = d.IsActive,
-                IsPrimary = d.IsPrimary
-            }).ToList(),
+            Displays = activeDisplayConfigs,
             Created = DateTime.UtcNow,
             LastModified = DateTime.UtcNow
         };
-
-        return profile;
     }
 
     /// <summary>
-    /// Saves a profile to the profile collection.
+    /// Saves a profile.
     /// </summary>
     public async Task SaveProfileAsync(SavedDisplayProfile profile)
     {
@@ -93,33 +92,10 @@ public class DisplayProfileService
     }
 
     /// <summary>
-    /// Gets a profile by ID.
+    /// Applies a saved profile using DisplayManager.ApplyConfiguration.
     /// </summary>
-    public async Task<SavedDisplayProfile?> GetProfileByIdAsync(Guid profileId)
+    public ApplyResult ApplyProfile(SavedDisplayProfile profile)
     {
-        var collection = await _storageService.LoadAsync();
-        return collection.Profiles.FirstOrDefault(p => p.Id == profileId);
-    }
-
-    /// <summary>
-    /// Applies a saved profile to the system using the CCD API.
-    /// </summary>
-    public bool ApplyProfile(SavedDisplayProfile profile)
-    {
-        var allSuccess = true;
-
-        foreach (var displaySetting in profile.Displays)
-        {
-            var deviceName = displaySetting.Identifier.DeviceName;
-            if (string.IsNullOrEmpty(deviceName)) continue;
-
-            var result = DisplayManager.ToggleDisplay(deviceName, displaySetting.Enabled);
-            if (result != 0)
-            {
-                allSuccess = false;
-            }
-        }
-
-        return allSuccess;
+        return DisplayManager.ApplyConfiguration(profile.Displays);
     }
 }

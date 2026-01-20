@@ -3,9 +3,6 @@
 #define DISPLAYMANAGER_API __declspec(dllexport)
 
 extern "C" {
-    DISPLAYMANAGER_API int SwitchToInternalDisplay();
-    DISPLAYMANAGER_API int EnableAllDisplays();
-    
     // Get all display information as JSON array
     // Returns: JSON length on success, negative error code on failure
     //   -1: Invalid parameters
@@ -14,16 +11,17 @@ extern "C" {
     //   -(n): Buffer too small, need n bytes
     DISPLAYMANAGER_API int GetAllDisplaysJson(char* buffer, int bufferSize);
 
-    // Toggle a display on/off using the CCD API (SetDisplayConfig)
+    // Apply a full display configuration (enable/disable multiple displays at once)
     // Parameters:
-    //   deviceName: GDI device name like "\\\\.\\DISPLAY5"
-    //   enable: true to enable, false to disable
+    //   activeDevicesJson: JSON array of device names that should be active
+    //                      e.g. ["\\\\.\\\DISPLAY1", "\\\\.\\\DISPLAY2"]
+    //                      All devices in the list will be enabled; all others disabled
     // Returns: 0 on success, negative error code on failure
-    //   -1: Invalid parameter (null device name)
-    //   -2: String conversion error
-    //   -3: Device not found
+    //   -1: Invalid parameter (null JSON)
+    //   -2: JSON is not an array
+    //   -3: JSON parse error
     //   -100 - x: GetDisplayConfigBufferSizes failed with error x
     //   -200 - x: QueryDisplayConfig failed with error x
     //   -300 - x: SetDisplayConfig failed with error x
-    DISPLAYMANAGER_API int ToggleDisplayCCD(const char* deviceName, bool enable);
+    DISPLAYMANAGER_API int ApplyConfiguration(const char* activeDevicesJson);
 }
