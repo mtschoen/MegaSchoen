@@ -17,7 +17,7 @@ std::string WideToUtf8(const std::wstring& wide) {
     if (utf8Len <= 0) return "";
     std::vector<char> utf8(utf8Len);
     WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, utf8.data(), utf8Len, nullptr, nullptr);
-    return std::string(utf8.data());
+    return {utf8.data()};
 }
 
 // Helper to convert UTF-8 to wide string
@@ -27,7 +27,7 @@ std::wstring Utf8ToWide(const std::string& utf8) {
     if (wideLen <= 0) return L"";
     std::vector<wchar_t> wide(wideLen);
     MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wide.data(), wideLen);
-    return std::wstring(wide.data());
+    return {wide.data()};
 }
 
 // Structure to hold parsed display config from JSON
