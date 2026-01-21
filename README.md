@@ -1,58 +1,93 @@
 # MegaSchoen
 
-A cross-platform utility suite. Currently includes display management functionality for Windows with plans for additional system utilities across multiple platforms.
+Dumping ground for various cross-platform utilities. Currently there's just one function: Display Manager.
+
+## Display Manager
+
+A Windows display profile manager that lets you save and quickly switch between different monitor configurations.
+
+![MegaSchoen UI](Screenshots/MegaSchoen-UI.png)
+
+## Features
+
+- **Save Display Profiles** - Capture your current monitor arrangement including resolution, position, refresh rate, and rotation
+- **Quick Profile Switching** - Apply saved profiles with one click to switch between configurations (e.g., "Work" vs "Gaming" vs "TV Only")
+- **Multi-GPU Support** - Works with displays connected to different graphics adapters
+- **Extend Mode** - Properly restores extended desktop layouts (not mirrored)
+- **Portrait Mode Support** - Preserves monitor rotation settings
+
+## Use Cases
+
+- Switch between a multi-monitor work setup and a single TV for gaming/media
+- Toggle portrait monitors on/off while preserving rotation
+- Quickly disable secondary displays for screen sharing
+- Restore complex multi-monitor arrangements after disconnecting displays
+
+## Installation
+
+Download the latest release or build from source.
+
+### Building from Source
+
+**Requirements:**
+- Visual Studio 2022+ with C++ and .NET MAUI workloads
+- Windows 10 SDK
+- .NET 10
+
+**Important:** Always use MSBuild with `-p:Platform=x64` - the native DLL requires 64-bit.
+
+```powershell
+# Build the entire solution
+MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64
+
+# Or build just the CLI
+MSBuild.exe DisplayManagerCLI/DisplayManagerCLI.csproj -p:Configuration=Debug -p:Platform=x64
+```
+
+Do NOT use `dotnet build` - it cannot build the native C++ dependency.
+
+## Usage
+
+### GUI Application
+
+Launch `MegaSchoen.exe` for the graphical interface:
+
+1. **Current Displays** - Shows all connected monitors with their current settings
+2. **Save Current Arrangement** - Enter a name and save your current display configuration
+3. **Saved Profiles** - Lists all saved profiles with options to:
+   - **Apply** - Switch to this display configuration
+   - **Overwrite** - Update the profile with current settings
+   - **Delete** - Remove the profile
+
+### Command Line Interface
+
+```powershell
+DisplayManagerCLI.exe list              # List all displays
+DisplayManagerCLI.exe save "My Profile" # Save current config as a profile
+DisplayManagerCLI.exe load "My Profile" # Load and apply a saved profile
+DisplayManagerCLI.exe profiles          # List all saved profiles
+DisplayManagerCLI.exe raw               # Show raw JSON display data
+```
+
+Profiles are stored in `%APPDATA%\MegaSchoen\configs.json`.
 
 ## Project Structure
 
-- **DisplayManager.Core** - Core library containing platform-specific API wrappers for display management
-- **DisplayManagerCLI** - Command-line interface for testing display operations
-- **MegaSchoen** - MAUI application providing cross-platform GUI interface
+- **DisplayManagerNative** (C++ DLL) - Windows CCD API wrapper for display enumeration and configuration
+- **DisplayManager.Core** (.NET 10) - Managed wrapper with profile management
+- **DisplayManagerCLI** (.NET 10) - Command-line interface
+- **MegaSchoen** (MAUI) - Cross-platform GUI (currently Windows-only for display features)
 
-## Current Features
+## How It Works
 
-### Display Management (Windows)
-- Enumerate all connected displays with detailed information
-- Get current display configurations (resolution, position, frequency, etc.)
-- Enable/disable individual displays
-- Set display configurations programmatically
-- Quick display switching functionality
+MegaSchoen uses the Windows [CCD (Connecting and Configuring Displays) API](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/ccd-apis) to:
 
-### DisplayManagerCLI
-- `list` - Display information for all connected monitors
-- `enable` - Enable all displays
-- `disable` - Disable all displays except primary
+1. Query all display paths via `QueryDisplayConfig`
+2. Store configuration data (resolution, position, refresh rate, rotation) per monitor
+3. Apply configurations via `SetDisplayConfig` with unique source IDs for extend mode
 
-## Next Steps
+Monitors are identified by their hardware device path, which remains stable across reboots.
 
-1. **Enhanced Display Features**
-   - Individual display enable/disable by device name
-   - Custom resolution and positioning
-   - Display profile save/load functionality
+## License
 
-2. **Cross-Platform Support** - Extend display management to macOS and Linux
-
-3. **GUI Implementation** - Complete the MAUI application for user-friendly cross-platform interface
-
-4. **Additional Utilities** - Expand MegaSchoen with more system management tools
-
-5. **Advanced Features**
-   - Multi-monitor arrangement presets
-   - Hotkey support
-   - System tray integration
-
-## Building
-
-```bash
-# Build the entire solution
-dotnet build
-
-# Run the CLI tool (Windows)
-dotnet run --project DisplayManagerCLI -- list
-dotnet run --project DisplayManagerCLI -- enable
-dotnet run --project DisplayManagerCLI -- disable
-```
-
-## Requirements
-
-- .NET 8.0 or later
-- Windows 10/11 (for current display management features)
+MIT

@@ -1,0 +1,13 @@
+- Clean up and pare down what the AI did
+  - Primary display check is just whether the coordinates are 0,0. This can be done in the UI.
+  - Current UX with success dialogs is clunky
+  - Config json seems to have some hypothetical properties
+  - Final pass for unused/redundant code
+  - Double check everything for silent errors
+  - Probably don't need so much complexity in the core library
+  - Project setup may be a little messy still
+- Add tray icon for hotkey listening
+  - Unless AI has a better idea, that low level keyboard API should be good
+  - Allow main window to close while tray stays active (not sure how this works with MAUI)
+- Update UI for assigning hotkeys to profiles
+- Add option to start at launch
