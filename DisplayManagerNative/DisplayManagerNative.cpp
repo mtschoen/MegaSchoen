@@ -38,6 +38,7 @@ struct DisplayConfigRequest {
     int positionX = 0;
     int positionY = 0;
     double refreshRate = 0.0;
+    int rotation = 0;  // degrees: 0, 90, 180, 270
 };
 
 } // anonymous namespace
@@ -147,6 +148,16 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         int posY = display["positionY"].get<int>();
         display["isPrimary"] = display["isActive"].get<bool>() && posX == 0 && posY == 0;
 
+        // Get rotation from path targetInfo (convert enum to degrees)
+        int rotationDegrees = 0;
+        switch (path.targetInfo.rotation) {
+            case DISPLAYCONFIG_ROTATION_ROTATE90:  rotationDegrees = 90;  break;
+            case DISPLAYCONFIG_ROTATION_ROTATE180: rotationDegrees = 180; break;
+            case DISPLAYCONFIG_ROTATION_ROTATE270: rotationDegrees = 270; break;
+            default: rotationDegrees = 0; break;
+        }
+        display["rotation"] = rotationDegrees;
+
         // Include IDs for matching/identification
         display["sourceId"] = static_cast<int>(path.sourceInfo.id);
         display["targetId"] = static_cast<int>(path.targetInfo.id);
@@ -191,6 +202,7 @@ int ApplyConfiguration(const char* configJson)
                 req.positionX = item.value("positionX", 0);
                 req.positionY = item.value("positionY", 0);
                 req.refreshRate = item.value("refreshRate", 60.0);
+                req.rotation = item.value("rotation", 0);
                 wantedConfigs[req.monitorDevicePath] = req;
             }
         }
@@ -218,7 +230,10 @@ int ApplyConfiguration(const char* configJson)
     // Track which monitors we've already enabled (to avoid duplicates)
     std::set<std::wstring> enabledMonitors;
 
-    // For each path, decide if it should be active
+    // First pass: identify which path indices we want to enable
+    // We need to assign unique source IDs for extend mode
+    std::vector<std::pair<UINT32, DisplayConfigRequest>> pathsToEnable;
+
     for (UINT32 i = 0; i < pathCount; i++) {
         // Get monitor device path for this target
         DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
@@ -235,72 +250,90 @@ int ApplyConfiguration(const char* configJson)
         auto wantedIt = wantedConfigs.find(monitorPath);
         bool isWanted = !monitorPath.empty() && wantedIt != wantedConfigs.end();
         bool alreadyEnabled = enabledMonitors.count(monitorPath) > 0;
-        bool hasValidSourceMode = paths[i].sourceInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
-        bool hasValidTargetMode = paths[i].targetInfo.modeInfoIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
 
         if (isWanted && !alreadyEnabled) {
-            const auto& config = wantedIt->second;
-
-            // If path lacks mode info, create it from saved config
-            if (!hasValidSourceMode && config.width > 0 && config.height > 0) {
-                // Create a new source mode entry
-                DISPLAYCONFIG_MODE_INFO newSourceMode = {};
-                newSourceMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
-                newSourceMode.adapterId = paths[i].sourceInfo.adapterId;
-                newSourceMode.id = paths[i].sourceInfo.id;
-                newSourceMode.sourceMode.width = config.width;
-                newSourceMode.sourceMode.height = config.height;
-                newSourceMode.sourceMode.pixelFormat = DISPLAYCONFIG_PIXELFORMAT_32BPP;
-                newSourceMode.sourceMode.position.x = config.positionX;
-                newSourceMode.sourceMode.position.y = config.positionY;
-
-                modes.push_back(newSourceMode);
-                paths[i].sourceInfo.modeInfoIdx = static_cast<UINT32>(modes.size() - 1);
-                hasValidSourceMode = true;
-            }
-
-            if (!hasValidTargetMode && config.refreshRate > 0) {
-                // Create a new target mode entry
-                DISPLAYCONFIG_MODE_INFO newTargetMode = {};
-                newTargetMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_TARGET;
-                newTargetMode.adapterId = paths[i].targetInfo.adapterId;
-                newTargetMode.id = paths[i].targetInfo.id;
-                // Set refresh rate (convert Hz to rational)
-                auto refreshNumerator = static_cast<UINT32>(config.refreshRate * 1000);
-                newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Numerator = refreshNumerator;
-                newTargetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Denominator = 1000;
-                newTargetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Numerator = 0;
-                newTargetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Denominator = 0;
-                // Active size matches resolution
-                newTargetMode.targetMode.targetVideoSignalInfo.activeSize.cx = config.width;
-                newTargetMode.targetMode.targetVideoSignalInfo.activeSize.cy = config.height;
-                newTargetMode.targetMode.targetVideoSignalInfo.totalSize.cx = config.width;
-                newTargetMode.targetMode.targetVideoSignalInfo.totalSize.cy = config.height;
-                newTargetMode.targetMode.targetVideoSignalInfo.videoStandard = 255; // D3DKMDT_VSS_OTHER
-                newTargetMode.targetMode.targetVideoSignalInfo.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
-
-                modes.push_back(newTargetMode);
-                paths[i].targetInfo.modeInfoIdx = static_cast<UINT32>(modes.size() - 1);
-                hasValidTargetMode = true;
-            }
-
-            if (hasValidSourceMode && hasValidTargetMode) {
-                // Enable this path
-                paths[i].flags |= DISPLAYCONFIG_PATH_ACTIVE;
-                enabledMonitors.insert(monitorPath);
-            }
-        }
-
-        // Disable paths that aren't wanted or already enabled
-        if (!isWanted || alreadyEnabled) {
+            pathsToEnable.push_back({i, wantedIt->second});
+            enabledMonitors.insert(monitorPath);
+        } else {
+            // Disable paths that aren't wanted or already handled
             paths[i].flags &= ~DISPLAYCONFIG_PATH_ACTIVE;
         }
     }
 
-    // Apply the configuration
-    auto newModeCount = static_cast<UINT32>(modes.size());
+    // Build new modes array - we'll create fresh source/target modes for each enabled path
+    // This ensures unique source IDs (extend mode) and correct positions
+    std::vector<DISPLAYCONFIG_MODE_INFO> newModes;
+
+    // Assign sequential source IDs starting from 0
+    UINT32 nextSourceId = 0;
+
+    for (auto& [pathIdx, config] : pathsToEnable) {
+        auto& path = paths[pathIdx];
+
+        // Assign a unique source ID for this path (critical for extend mode)
+        UINT32 sourceId = nextSourceId++;
+        path.sourceInfo.id = sourceId;
+
+        // Create source mode with correct resolution and position
+        DISPLAYCONFIG_MODE_INFO sourceMode = {};
+        sourceMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
+        sourceMode.adapterId = path.sourceInfo.adapterId;
+        sourceMode.id = sourceId;
+        sourceMode.sourceMode.width = config.width;
+        sourceMode.sourceMode.height = config.height;
+        sourceMode.sourceMode.pixelFormat = DISPLAYCONFIG_PIXELFORMAT_32BPP;
+        sourceMode.sourceMode.position.x = config.positionX;
+        sourceMode.sourceMode.position.y = config.positionY;
+
+        newModes.push_back(sourceMode);
+        path.sourceInfo.modeInfoIdx = static_cast<UINT32>(newModes.size() - 1);
+
+        // Create target mode with correct refresh rate
+        DISPLAYCONFIG_MODE_INFO targetMode = {};
+        targetMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_TARGET;
+        targetMode.adapterId = path.targetInfo.adapterId;
+        targetMode.id = path.targetInfo.id;
+        // Set refresh rate (convert Hz to rational)
+        auto refreshNumerator = static_cast<UINT32>(config.refreshRate * 1000);
+        targetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Numerator = refreshNumerator;
+        targetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Denominator = 1000;
+        targetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Numerator = 0;
+        targetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Denominator = 0;
+        // Active size matches resolution
+        targetMode.targetMode.targetVideoSignalInfo.activeSize.cx = config.width;
+        targetMode.targetMode.targetVideoSignalInfo.activeSize.cy = config.height;
+        targetMode.targetMode.targetVideoSignalInfo.totalSize.cx = config.width;
+        targetMode.targetMode.targetVideoSignalInfo.totalSize.cy = config.height;
+        targetMode.targetMode.targetVideoSignalInfo.videoStandard = 255; // D3DKMDT_VSS_OTHER
+        targetMode.targetMode.targetVideoSignalInfo.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
+
+        newModes.push_back(targetMode);
+        path.targetInfo.modeInfoIdx = static_cast<UINT32>(newModes.size() - 1);
+
+        // Set rotation (convert degrees to enum)
+        switch (config.rotation) {
+            case 90:  path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE90;  break;
+            case 180: path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE180; break;
+            case 270: path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE270; break;
+            default:  path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_IDENTITY;  break;
+        }
+
+        // Enable this path
+        path.flags |= DISPLAYCONFIG_PATH_ACTIVE;
+    }
+
+    // Update mode indices for disabled paths to invalid
+    for (UINT32 i = 0; i < pathCount; i++) {
+        if (!(paths[i].flags & DISPLAYCONFIG_PATH_ACTIVE)) {
+            paths[i].sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
+            paths[i].targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
+        }
+    }
+
+    // Apply the configuration with our new modes array
+    auto modeCount2 = static_cast<UINT32>(newModes.size());
     DWORD flags = SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES;
-    result = SetDisplayConfig(pathCount, paths.data(), newModeCount, modes.data(), flags);
+    result = SetDisplayConfig(pathCount, paths.data(), modeCount2, newModes.data(), flags);
 
     if (result != ERROR_SUCCESS) {
         return -300 - static_cast<int>(result);

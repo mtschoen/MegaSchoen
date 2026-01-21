@@ -56,6 +56,7 @@ public class MainPageViewModel : INotifyPropertyChanged
     public ICommand DeleteProfileCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand ApplyProfileCommand { get; }
+    public ICommand OverwriteProfileCommand { get; }
 
     public MainPageViewModel()
     {
@@ -68,6 +69,7 @@ public class MainPageViewModel : INotifyPropertyChanged
         );
         DeleteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await DeleteProfileAsync(profile));
         ApplyProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await ApplyProfileAsync(profile));
+        OverwriteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await OverwriteProfileAsync(profile));
         RefreshCommand = new Command(async () => await RefreshAllAsync());
 
         // Load initial data
@@ -214,6 +216,48 @@ public class MainPageViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             await ShowErrorAsync($"Failed to apply profile: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    async Task OverwriteProfileAsync(SavedDisplayProfile? profile)
+    {
+        if (profile == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var confirmed = await ConfirmAsync(
+                "Overwrite Profile",
+                $"Overwrite '{profile.Name}' with the current display configuration?"
+            );
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+            IsLoading = true;
+
+            // Capture current configuration but keep the existing profile's ID and name
+            var updatedProfile = _profileService.CaptureCurrentConfiguration(profile.Name);
+            updatedProfile.Id = profile.Id;
+            updatedProfile.Created = profile.Created;
+            updatedProfile.Description = $"Updated on {DateTime.Now:g}";
+
+            await _profileService.SaveProfileAsync(updatedProfile);
+            await LoadProfilesAsync();
+
+            await ShowSuccessAsync($"Profile '{profile.Name}' updated with current configuration!");
+        }
+        catch (Exception ex)
+        {
+            await ShowErrorAsync($"Failed to overwrite profile: {ex.Message}");
         }
         finally
         {

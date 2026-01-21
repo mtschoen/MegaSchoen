@@ -18,6 +18,7 @@ public class DisplayInfo
     public int PositionX { get; set; }
     public int PositionY { get; set; }
     public double RefreshRate { get; set; }
+    public int Rotation { get; set; }  // degrees: 0, 90, 180, 270
 
     // CCD path identifiers (for internal use)
     public int PathIndex { get; set; }

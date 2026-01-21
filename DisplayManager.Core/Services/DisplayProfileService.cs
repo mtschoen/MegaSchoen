@@ -37,6 +37,7 @@ public class DisplayProfileService
                 PositionX = d.PositionX,
                 PositionY = d.PositionY,
                 RefreshRate = d.RefreshRate,
+                Rotation = d.Rotation,
                 IsPrimary = d.IsPrimary
             })
             .ToList();
