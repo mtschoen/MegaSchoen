@@ -12,6 +12,10 @@ A Windows display profile manager that lets you save and quickly switch between 
 
 - **Save Display Profiles** - Capture your current monitor arrangement including resolution, position, refresh rate, and rotation
 - **Quick Profile Switching** - Apply saved profiles with one click to switch between configurations (e.g., "Work" vs "Gaming" vs "TV Only")
+- **Global Hotkeys** - Assign keyboard shortcuts (e.g., Ctrl+Alt+1) to instantly switch profiles
+- **System Tray** - Runs in the background with quick access to profiles from the tray icon
+- **Start with Windows** - Optional startup registration to have hotkeys ready when you log in
+- **Single Instance** - Only one instance runs; launching again brings the existing window to focus
 - **Multi-GPU Support** - Works with displays connected to different graphics adapters
 - **Extend Mode** - Properly restores extended desktop layouts (not mirrored)
 - **Portrait Mode Support** - Preserves monitor rotation settings
@@ -55,9 +59,13 @@ Launch `MegaSchoen.exe` for the graphical interface:
 1. **Current Displays** - Shows all connected monitors with their current settings
 2. **Save Current Arrangement** - Enter a name and save your current display configuration
 3. **Saved Profiles** - Lists all saved profiles with options to:
+   - **Set Hotkey** - Assign a global hotkey (e.g., Ctrl+Alt+1) to this profile
    - **Apply** - Switch to this display configuration
    - **Overwrite** - Update the profile with current settings
    - **Delete** - Remove the profile
+4. **Settings** - Configure minimize-to-tray and start-with-Windows options
+
+**System Tray:** Closing the window minimizes to the system tray. Right-click the tray icon for quick profile access or to exit.
 
 ### Command Line Interface
 

@@ -24,4 +24,9 @@ public class ProfileSettings
     /// Whether to minimize MAUI app to system tray instead of taskbar.
     /// </summary>
     public bool MinimizeToTray { get; set; } = true;
+
+    /// <summary>
+    /// Whether to start the application when Windows starts.
+    /// </summary>
+    public bool StartWithWindows { get; set; }
 }

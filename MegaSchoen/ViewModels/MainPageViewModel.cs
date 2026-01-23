@@ -4,6 +4,9 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
+#if WINDOWS
+using MegaSchoen.Platforms.Windows.Services;
+#endif
 
 namespace MegaSchoen.ViewModels;
 
@@ -13,6 +16,16 @@ public class MainPageViewModel : INotifyPropertyChanged
     bool _isLoading;
     string _newProfileName = "";
     bool _hideInactiveDisplays = true;
+    bool _minimizeToTray = true;
+    bool _startWithWindows;
+    SavedDisplayProfile? _hotkeyCapturingProfile;
+
+#if WINDOWS
+    KeyCaptureService? _keyCaptureService;
+    GlobalHotkeyService? _globalHotkeyService;
+    TrayIconService? _trayIconService;
+    StartupService? _startupService;
+#endif
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -51,12 +64,43 @@ public class MainPageViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool MinimizeToTray
+    {
+        get => _minimizeToTray;
+        set
+        {
+            _minimizeToTray = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool StartWithWindows
+    {
+        get => _startWithWindows;
+        set
+        {
+            if (_startWithWindows != value)
+            {
+                _startWithWindows = value;
+                OnPropertyChanged();
+#if WINDOWS
+                _startupService?.SetStartupEnabled(value);
+#endif
+            }
+        }
+    }
+
+    public bool IsCapturingHotkey => _hotkeyCapturingProfile != null;
+    public Guid? CapturingProfileId => _hotkeyCapturingProfile?.Id;
+
     public ICommand LoadDisplaysCommand { get; }
     public ICommand SaveCurrentArrangementCommand { get; }
     public ICommand DeleteProfileCommand { get; }
     public ICommand RefreshCommand { get; }
     public ICommand ApplyProfileCommand { get; }
     public ICommand OverwriteProfileCommand { get; }
+    public ICommand SetHotkeyCommand { get; }
+    public ICommand ClearHotkeyCommand { get; }
 
     public MainPageViewModel()
     {
@@ -70,10 +114,134 @@ public class MainPageViewModel : INotifyPropertyChanged
         DeleteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await DeleteProfileAsync(profile));
         ApplyProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await ApplyProfileAsync(profile));
         OverwriteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await OverwriteProfileAsync(profile));
+        SetHotkeyCommand = new Command<SavedDisplayProfile>(StartHotkeyCapture);
+        ClearHotkeyCommand = new Command<SavedDisplayProfile>(async (profile) => await ClearHotkeyAsync(profile));
         RefreshCommand = new Command(async () => await RefreshAllAsync());
+
+#if WINDOWS
+        InitializeWindowsServices();
+#endif
 
         // Load initial data
         _ = RefreshAllAsync();
+    }
+
+#if WINDOWS
+    void InitializeWindowsServices()
+    {
+        // Try to get services from DI
+        var services = Application.Current?.Handler?.MauiContext?.Services;
+        if (services != null)
+        {
+            _keyCaptureService = services.GetService<KeyCaptureService>();
+            _globalHotkeyService = services.GetService<GlobalHotkeyService>();
+            _trayIconService = services.GetService<TrayIconService>();
+            _startupService = services.GetService<StartupService>();
+
+            if (_keyCaptureService != null)
+            {
+                _keyCaptureService.HotkeyCaptured += OnHotkeyCaptured;
+                _keyCaptureService.CaptureCancelled += OnCaptureCancelled;
+            }
+
+            // Initialize startup state from actual shortcut
+            if (_startupService != null)
+            {
+                _startWithWindows = _startupService.IsStartupEnabled;
+                OnPropertyChanged(nameof(StartWithWindows));
+            }
+        }
+    }
+
+    void OnHotkeyCaptured(object? sender, HotkeyDefinition hotkey)
+    {
+        if (_hotkeyCapturingProfile == null)
+        {
+            return;
+        }
+
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            _hotkeyCapturingProfile.Hotkey = hotkey;
+            await _profileService.SaveProfileAsync(_hotkeyCapturingProfile);
+
+            var capturedProfile = _hotkeyCapturingProfile;
+            _hotkeyCapturingProfile = null;
+            OnPropertyChanged(nameof(IsCapturingHotkey));
+            OnPropertyChanged(nameof(CapturingProfileId));
+
+            // Refresh the list to show updated hotkey
+            await LoadProfilesAsync();
+
+            // Re-register hotkeys
+            RefreshGlobalHotkeys();
+
+            await ShowSuccessAsync($"Hotkey set for '{capturedProfile.Name}'");
+        });
+    }
+
+    void OnCaptureCancelled(object? sender, EventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            _hotkeyCapturingProfile = null;
+            OnPropertyChanged(nameof(IsCapturingHotkey));
+            OnPropertyChanged(nameof(CapturingProfileId));
+        });
+    }
+
+    void RefreshGlobalHotkeys()
+    {
+        if (_globalHotkeyService != null)
+        {
+            _globalHotkeyService.RefreshFromProfiles(SavedProfiles.ToList());
+        }
+        if (_trayIconService != null)
+        {
+            _trayIconService.UpdateProfiles(SavedProfiles.ToList());
+        }
+    }
+#endif
+
+    void StartHotkeyCapture(SavedDisplayProfile? profile)
+    {
+        if (profile == null)
+        {
+            return;
+        }
+
+#if WINDOWS
+        if (_keyCaptureService == null)
+        {
+            _ = ShowErrorAsync("Hotkey capture is not available.");
+            return;
+        }
+
+        _hotkeyCapturingProfile = profile;
+        OnPropertyChanged(nameof(IsCapturingHotkey));
+        OnPropertyChanged(nameof(CapturingProfileId));
+        _keyCaptureService.StartCapture();
+#else
+        _ = ShowErrorAsync("Hotkey capture is only available on Windows.");
+#endif
+    }
+
+    async Task ClearHotkeyAsync(SavedDisplayProfile? profile)
+    {
+        if (profile == null)
+        {
+            return;
+        }
+
+        profile.Hotkey = null;
+        await _profileService.SaveProfileAsync(profile);
+        await LoadProfilesAsync();
+
+#if WINDOWS
+        RefreshGlobalHotkeys();
+#endif
+
+        await ShowSuccessAsync($"Hotkey cleared for '{profile.Name}'");
     }
 
     async Task LoadDisplaysAsync()
@@ -138,6 +306,10 @@ public class MainPageViewModel : INotifyPropertyChanged
             NewProfileName = "";
             await LoadProfilesAsync();
 
+#if WINDOWS
+            RefreshGlobalHotkeys();
+#endif
+
             await ShowSuccessAsync($"Profile '{profile.Name}' saved successfully!");
         }
         catch (Exception ex)
@@ -173,6 +345,10 @@ public class MainPageViewModel : INotifyPropertyChanged
 
             await _profileService.DeleteProfileAsync(profile.Id);
             await LoadProfilesAsync();
+
+#if WINDOWS
+            RefreshGlobalHotkeys();
+#endif
 
             await ShowSuccessAsync($"Profile '{profile.Name}' deleted successfully!");
         }
@@ -249,6 +425,7 @@ public class MainPageViewModel : INotifyPropertyChanged
             updatedProfile.Id = profile.Id;
             updatedProfile.Created = profile.Created;
             updatedProfile.Description = $"Updated on {DateTime.Now:g}";
+            updatedProfile.Hotkey = profile.Hotkey; // Preserve hotkey
 
             await _profileService.SaveProfileAsync(updatedProfile);
             await LoadProfilesAsync();
@@ -272,6 +449,10 @@ public class MainPageViewModel : INotifyPropertyChanged
         {
             await LoadDisplaysAsync();
             await LoadProfilesAsync();
+
+#if WINDOWS
+            RefreshGlobalHotkeys();
+#endif
         }
         finally
         {

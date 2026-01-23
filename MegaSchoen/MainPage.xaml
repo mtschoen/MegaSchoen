@@ -129,7 +129,7 @@
                                 <Frame Margin="0,5"
                                        Padding="10"
                                        BorderColor="{StaticResource Gray300}">
-                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
                                         <VerticalStackLayout Spacing="5" Grid.Column="0">
                                             <Label Text="{Binding Name}"
                                                    FontSize="16"
@@ -147,8 +147,24 @@
                                             </Label>
                                         </VerticalStackLayout>
 
+                                        <Button Grid.Column="1"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=SetHotkeyCommand}"
+                                                CommandParameter="{Binding .}"
+                                                WidthRequest="110"
+                                                HeightRequest="50"
+                                                VerticalOptions="Center"
+                                                ToolTipProperties.Text="Set hotkey for this profile">
+                                            <Button.Text>
+                                                <MultiBinding Converter="{StaticResource HotkeyButtonTextConverter}">
+                                                    <Binding Path="Hotkey" />
+                                                    <Binding Path="Id" />
+                                                    <Binding Path="CapturingProfileId" Source="{RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}" />
+                                                </MultiBinding>
+                                            </Button.Text>
+                                        </Button>
+
                                         <Button Text="✓ Apply"
-                                                Grid.Column="1"
+                                                Grid.Column="2"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=ApplyProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="80"
@@ -157,7 +173,7 @@
                                                 VerticalOptions="Center"/>
 
                                         <Button Text="↻"
-                                                Grid.Column="2"
+                                                Grid.Column="3"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=OverwriteProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="50"
@@ -166,8 +182,18 @@
                                                 VerticalOptions="Center"
                                                 ToolTipProperties.Text="Overwrite with current config"/>
 
+                                        <Button Text="✕"
+                                                Grid.Column="4"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=ClearHotkeyCommand}"
+                                                CommandParameter="{Binding .}"
+                                                WidthRequest="40"
+                                                HeightRequest="50"
+                                                VerticalOptions="Center"
+                                                IsVisible="{Binding Hotkey.Enabled, FallbackValue=False}"
+                                                ToolTipProperties.Text="Clear hotkey"/>
+
                                         <Button Text="🗑️"
-                                                Grid.Column="3"
+                                                Grid.Column="5"
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=DeleteProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="50"
@@ -185,6 +211,34 @@
                            TextColor="{StaticResource Gray500}"
                            HorizontalOptions="Center"
                            Margin="20"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- Settings Section -->
+            <Frame BorderColor="{StaticResource Primary}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
+                   Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="⚙️ Settings"
+                           FontSize="20"
+                           FontAttributes="Bold"/>
+
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                        <Switch Grid.Row="0" Grid.Column="0"
+                                IsToggled="{Binding MinimizeToTray}"
+                                VerticalOptions="Center"/>
+                        <Label Grid.Row="0" Grid.Column="1"
+                               Text="Minimize to tray instead of closing"
+                               VerticalOptions="Center"/>
+
+                        <Switch Grid.Row="1" Grid.Column="0"
+                                IsToggled="{Binding StartWithWindows}"
+                                VerticalOptions="Center"/>
+                        <Label Grid.Row="1" Grid.Column="1"
+                               Text="Start with Windows"
+                               VerticalOptions="Center"/>
+                    </Grid>
+
                 </VerticalStackLayout>
             </Frame>
 
