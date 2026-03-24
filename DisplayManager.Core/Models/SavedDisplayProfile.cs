@@ -5,20 +5,27 @@ namespace DisplayManager.Core.Models;
 /// </summary>
 public class SavedDisplayConfig
 {
-    /// <summary>
-    /// Hardware path that uniquely identifies the monitor (stable across reboots).
-    /// </summary>
-    public string MonitorDevicePath { get; set; } = "";
+    // --- Hardware identification (stable across GPU swaps / port changes) ---
 
-    /// <summary>
-    /// Friendly monitor name from EDID.
-    /// </summary>
+    /// <summary>Friendly monitor name from EDID (e.g. "XB271HK").</summary>
     public string MonitorName { get; set; } = "";
 
-    /// <summary>
-    /// GDI device name at time of capture (may change between sessions).
-    /// </summary>
-    public string DeviceName { get; set; } = "";
+    /// <summary>EDID manufacturer ID.</summary>
+    public int EdidManufactureId { get; set; }
+
+    /// <summary>EDID product code.</summary>
+    public int EdidProductCodeId { get; set; }
+
+    /// <summary>EDID serial number string.</summary>
+    public string EdidSerialNumber { get; set; } = "";
+
+    /// <summary>EDID manufacture date "YYYY-WNN".</summary>
+    public string EdidManufactureDate { get; set; } = "";
+
+    /// <summary>DisplayID Container ID (128-bit UUID hex).</summary>
+    public string EdidContainerId { get; set; } = "";
+
+    // --- Display configuration ---
 
     public int Width { get; set; }
     public int Height { get; set; }

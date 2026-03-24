@@ -20,6 +20,13 @@ public class DisplayInfo
     public double RefreshRate { get; set; }
     public int Rotation { get; set; }  // degrees: 0, 90, 180, 270
 
+    // EDID identification (stable across GPU swaps)
+    public int EdidManufactureId { get; set; }
+    public int EdidProductCodeId { get; set; }
+    public string EdidSerialNumber { get; set; } = "";
+    public string EdidManufactureDate { get; set; } = "";
+    public string EdidContainerId { get; set; } = "";
+
     // CCD path identifiers (for internal use)
     public int PathIndex { get; set; }
     public int SourceId { get; set; }

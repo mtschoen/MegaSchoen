@@ -30,9 +30,158 @@ std::wstring Utf8ToWide(const std::string& utf8) {
     return {wide.data()};
 }
 
+// Read EDID binary data from the registry for a given monitor device path
+std::vector<BYTE> ReadEdidFromRegistry(const std::wstring& monitorDevicePath) {
+    std::vector<BYTE> edid;
+    if (monitorDevicePath.empty()) return edid;
+
+    // Parse instance path from device interface path
+    // Input:  \\?\DISPLAY#MODEL#INSTANCE#{GUID}
+    // Output: DISPLAY\MODEL\INSTANCE
+    std::wstring path = monitorDevicePath;
+
+    // Remove \\?\ prefix
+    if (path.size() > 4 && path[0] == L'\\' && path[1] == L'\\' && path[2] == L'?' && path[3] == L'\\') {
+        path = path.substr(4);
+    }
+
+    // Remove GUID suffix (from last #{)
+    auto guidPos = path.rfind(L"#{");
+    if (guidPos != std::wstring::npos) {
+        path = path.substr(0, guidPos);
+    }
+
+    // Replace # with backslash to form instance path
+    for (auto& ch : path) {
+        if (ch == L'#') ch = L'\\';
+    }
+
+    // Read EDID from registry
+    std::wstring regPath = L"SYSTEM\\CurrentControlSet\\Enum\\" + path + L"\\Device Parameters";
+    HKEY hKey;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, regPath.c_str(), 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        DWORD dataSize = 0;
+        if (RegQueryValueExW(hKey, L"EDID", nullptr, nullptr, nullptr, &dataSize) == ERROR_SUCCESS && dataSize > 0) {
+            edid.resize(dataSize);
+            RegQueryValueExW(hKey, L"EDID", nullptr, nullptr, edid.data(), &dataSize);
+        }
+        RegCloseKey(hKey);
+    }
+
+    return edid;
+}
+
+// Parse the serial number string from EDID descriptor blocks
+std::string ParseEdidSerial(const std::vector<BYTE>& edid) {
+    if (edid.size() < 128) return "";
+
+    // Check four 18-byte descriptor blocks starting at byte 54
+    for (int i = 54; i <= 108; i += 18) {
+        // Tag 0xFF = serial number string descriptor
+        if (edid[i] == 0 && edid[i + 1] == 0 && edid[i + 2] == 0 && edid[i + 3] == 0xFF) {
+            std::string serial;
+            for (int j = 5; j < 18; j++) {
+                auto c = static_cast<char>(edid[i + j]);
+                if (c == '\n' || c == '\0') break;
+                serial += c;
+            }
+            while (!serial.empty() && serial.back() == ' ') serial.pop_back();
+            if (!serial.empty()) return serial;
+        }
+    }
+
+    // Fall back to numeric serial from EDID bytes 12-15
+    uint32_t numericSerial = edid[12] | (edid[13] << 8) | (edid[14] << 16) | (edid[15] << 24);
+    if (numericSerial != 0) {
+        return std::to_string(numericSerial);
+    }
+
+    return "";
+}
+
+// Parse manufacture week and year from EDID bytes 16-17
+// Returns "YYYY-WNN" (e.g. "2019-W23") or empty if unavailable
+std::string ParseEdidManufactureDate(const std::vector<BYTE>& edid) {
+    if (edid.size() < 128) return "";
+
+    BYTE week = edid[16];
+    BYTE yearOffset = edid[17];
+    int year = 1990 + yearOffset;
+
+    if (year < 1990 || year > 2100) return "";
+
+    std::string result = std::to_string(year);
+    if (week >= 1 && week <= 53) {
+        result += "-W" + (week < 10 ? std::string("0") : "") + std::to_string(week);
+    }
+    return result;
+}
+
+// Scan EDID extension blocks for a DisplayID Container ID (128-bit UUID)
+// Returns hex string like "a1b2c3d4..." or empty if not found
+std::string ParseEdidContainerId(const std::vector<BYTE>& edid) {
+    if (edid.size() < 128) return "";
+
+    int extensionCount = edid[126];
+    if (extensionCount == 0 || edid.size() < static_cast<size_t>(128 + extensionCount * 128)) {
+        return "";
+    }
+
+    // Scan each 128-byte extension block
+    for (int ext = 0; ext < extensionCount; ext++) {
+        size_t extBase = 128 + ext * 128;
+        BYTE tag = edid[extBase];
+
+        // 0x70 = DisplayID extension
+        if (tag != 0x70) continue;
+
+        // DisplayID structure: byte 0=version, byte 1=data length, byte 2=product type,
+        // byte 3=extension count, then data blocks
+        // Each data block: byte 0=tag, byte 1=revision, byte 2=payload length, then payload
+        size_t dbStart = extBase + 5; // skip ext tag + DisplayID header (4 bytes)
+        BYTE dataLen = edid[extBase + 2];
+        size_t dbEnd = extBase + 5 + dataLen;
+        if (dbEnd > extBase + 127) dbEnd = extBase + 127;
+
+        size_t pos = dbStart;
+        while (pos + 3 <= dbEnd) {
+            BYTE dbTag = edid[pos];
+            BYTE dbPayloadLen = edid[pos + 2];
+            size_t payloadStart = pos + 3;
+
+            // Tag 0x29 = Container ID (16 bytes UUID)
+            if (dbTag == 0x29 && dbPayloadLen >= 16 && payloadStart + 16 <= edid.size()) {
+                // Check it's not all zeros
+                bool allZero = true;
+                for (int k = 0; k < 16; k++) {
+                    if (edid[payloadStart + k] != 0) { allZero = false; break; }
+                }
+                if (!allZero) {
+                    static const char hex[] = "0123456789abcdef";
+                    std::string uuid;
+                    uuid.reserve(32);
+                    for (int k = 0; k < 16; k++) {
+                        uuid += hex[(edid[payloadStart + k] >> 4) & 0x0F];
+                        uuid += hex[edid[payloadStart + k] & 0x0F];
+                    }
+                    return uuid;
+                }
+            }
+
+            pos = payloadStart + dbPayloadLen;
+        }
+    }
+
+    return "";
+}
+
 // Structure to hold parsed display config from JSON
 struct DisplayConfigRequest {
-    std::wstring monitorDevicePath;
+    UINT16 edidManufactureId = 0;
+    UINT16 edidProductCodeId = 0;
+    std::string edidSerialNumber;
+    std::string edidManufactureDate;
+    std::string edidContainerId;
     int width = 0;
     int height = 0;
     int positionX = 0;
@@ -105,12 +254,27 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
         targetName.header.adapterId = path.targetInfo.adapterId;
         targetName.header.id = path.targetInfo.id;
 
+        std::wstring monitorPath;
         if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
+            monitorPath = targetName.monitorDevicePath;
             display["monitorName"] = WideToUtf8(targetName.monitorFriendlyDeviceName);
-            display["monitorDevicePath"] = WideToUtf8(targetName.monitorDevicePath);
+            display["monitorDevicePath"] = WideToUtf8(monitorPath);
+            display["edidManufactureId"] = targetName.edidManufactureId;
+            display["edidProductCodeId"] = targetName.edidProductCodeId;
+
+            // Read EDID from registry for serial, manufacture date, and container ID
+            auto edid = ReadEdidFromRegistry(monitorPath);
+            display["edidSerialNumber"] = ParseEdidSerial(edid);
+            display["edidManufactureDate"] = ParseEdidManufactureDate(edid);
+            display["edidContainerId"] = ParseEdidContainerId(edid);
         } else {
             display["monitorName"] = "";
             display["monitorDevicePath"] = "";
+            display["edidManufactureId"] = 0;
+            display["edidProductCodeId"] = 0;
+            display["edidSerialNumber"] = "";
+            display["edidManufactureDate"] = "";
+            display["edidContainerId"] = "";
         }
 
         // Get resolution and position from source mode
@@ -177,7 +341,7 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
 }
 
 // Apply a full display configuration
-// configJson: JSON array of display configs with monitorDevicePath for matching
+// configJson: JSON array of display configs with EDID fields for matching
 // All displays in the list will be enabled; all others will be disabled
 // Returns: 0 on success, negative error code on failure
 int ApplyConfiguration(const char* configJson)
@@ -187,24 +351,27 @@ int ApplyConfiguration(const char* configJson)
     }
 
     // Parse the JSON array of display configs
-    std::map<std::wstring, DisplayConfigRequest> wantedConfigs;
+    std::vector<DisplayConfigRequest> wantedList;
     try {
         json configList = json::parse(configJson);
         if (!configList.is_array()) {
             return -2; // Not a JSON array
         }
         for (const auto& item : configList) {
-            if (item.is_object() && item.contains("monitorDevicePath")) {
-                DisplayConfigRequest req;
-                req.monitorDevicePath = Utf8ToWide(item["monitorDevicePath"].get<std::string>());
-                req.width = item.value("width", 0);
-                req.height = item.value("height", 0);
-                req.positionX = item.value("positionX", 0);
-                req.positionY = item.value("positionY", 0);
-                req.refreshRate = item.value("refreshRate", 60.0);
-                req.rotation = item.value("rotation", 0);
-                wantedConfigs[req.monitorDevicePath] = req;
-            }
+            if (!item.is_object()) continue;
+            DisplayConfigRequest req;
+            req.edidManufactureId = item.value("edidManufactureId", static_cast<UINT16>(0));
+            req.edidProductCodeId = item.value("edidProductCodeId", static_cast<UINT16>(0));
+            req.edidSerialNumber = item.value("edidSerialNumber", "");
+            req.edidManufactureDate = item.value("edidManufactureDate", "");
+            req.edidContainerId = item.value("edidContainerId", "");
+            req.width = item.value("width", 0);
+            req.height = item.value("height", 0);
+            req.positionX = item.value("positionX", 0);
+            req.positionY = item.value("positionY", 0);
+            req.refreshRate = item.value("refreshRate", 60.0);
+            req.rotation = item.value("rotation", 0);
+            wantedList.push_back(req);
         }
     } catch (...) {
         return -3; // JSON parse error
@@ -227,113 +394,89 @@ int ApplyConfiguration(const char* configJson)
         return -200 - static_cast<int>(result);
     }
 
-    // Track which monitors we've already enabled (to avoid duplicates)
-    std::set<std::wstring> enabledMonitors;
+    // For each wanted display, collect ALL candidate paths from QDC_ALL_PATHS.
+    // Each monitor has multiple path entries with different source IDs per adapter.
+    // We must pick paths with non-conflicting (adapter, sourceId) pairs.
+    auto luidKey = [](const LUID& id) -> uint64_t {
+        return (static_cast<uint64_t>(id.HighPart) << 32) | static_cast<uint64_t>(id.LowPart);
+    };
 
-    // First pass: identify which path indices we want to enable
-    // We need to assign unique source IDs for extend mode
-    std::vector<std::pair<UINT32, DisplayConfigRequest>> pathsToEnable;
+    struct PathCandidate {
+        UINT32 pathIdx;
+        uint64_t adapterKey;
+        UINT32 sourceId;
+    };
+
+    // candidatesPerWanted[j] = all path entries that could serve wantedList[j]
+    std::vector<std::vector<PathCandidate>> candidatesPerWanted(wantedList.size());
 
     for (UINT32 i = 0; i < pathCount; i++) {
-        // Get monitor device path for this target
         DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
         targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
         targetName.header.size = sizeof(targetName);
         targetName.header.adapterId = paths[i].targetInfo.adapterId;
         targetName.header.id = paths[i].targetInfo.id;
 
-        std::wstring monitorPath;
+        UINT16 curMfgId = 0, curProdId = 0;
+        std::string curSerial;
         if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
-            monitorPath = std::wstring(targetName.monitorDevicePath);
+            curMfgId = targetName.edidManufactureId;
+            curProdId = targetName.edidProductCodeId;
+            auto edid = ReadEdidFromRegistry(targetName.monitorDevicePath);
+            curSerial = ParseEdidSerial(edid);
         }
+        if (curMfgId == 0 && curProdId == 0) continue;
 
-        auto wantedIt = wantedConfigs.find(monitorPath);
-        bool isWanted = !monitorPath.empty() && wantedIt != wantedConfigs.end();
-        bool alreadyEnabled = enabledMonitors.count(monitorPath) > 0;
+        for (size_t j = 0; j < wantedList.size(); j++) {
+            auto& w = wantedList[j];
+            if (w.edidManufactureId != curMfgId || w.edidProductCodeId != curProdId) continue;
+            if (!w.edidSerialNumber.empty() && !curSerial.empty()
+                && w.edidSerialNumber != curSerial) continue;
 
-        if (isWanted && !alreadyEnabled) {
-            pathsToEnable.push_back({i, wantedIt->second});
-            enabledMonitors.insert(monitorPath);
-        } else {
-            // Disable paths that aren't wanted or already handled
-            paths[i].flags &= ~DISPLAYCONFIG_PATH_ACTIVE;
+            PathCandidate pc;
+            pc.pathIdx = i;
+            pc.adapterKey = luidKey(paths[i].sourceInfo.adapterId);
+            pc.sourceId = paths[i].sourceInfo.id;
+            candidatesPerWanted[j].push_back(pc);
         }
     }
 
-    // Build new modes array - we'll create fresh source/target modes for each enabled path
-    // This ensures unique source IDs (extend mode) and correct positions
-    std::vector<DISPLAYCONFIG_MODE_INFO> newModes;
+    // Greedily select one path per wanted display with non-conflicting source IDs.
+    std::set<std::pair<uint64_t, UINT32>> usedSources;
+    std::vector<std::pair<UINT32, DisplayConfigRequest>> pathsToEnable;
 
-    // Assign sequential source IDs starting from 0
-    UINT32 nextSourceId = 0;
+    for (size_t j = 0; j < wantedList.size(); j++) {
+        for (auto& pc : candidatesPerWanted[j]) {
+            auto key = std::make_pair(pc.adapterKey, pc.sourceId);
+            if (usedSources.count(key) == 0) {
+                usedSources.insert(key);
+                pathsToEnable.push_back({pc.pathIdx, wantedList[j]});
+                break;
+            }
+        }
+    }
 
+    // Apply using SDC_TOPOLOGY_SUPPLIED — tells Windows which paths to activate.
+    // Windows restores full config (positions, resolution, rotation) from its topology database.
+    // Step 1: SDC_TOPOLOGY_SUPPLIED activates the right monitors across adapters
+    // Step 2: Query active config, patch source modes with saved positions, re-apply
+
+    // Step 1: Build compact active paths for topology activation
+    std::vector<DISPLAYCONFIG_PATH_INFO> topoPaths;
     for (auto& [pathIdx, config] : pathsToEnable) {
-        auto& path = paths[pathIdx];
-
-        // Assign a unique source ID for this path (critical for extend mode)
-        UINT32 sourceId = nextSourceId++;
-        path.sourceInfo.id = sourceId;
-
-        // Create source mode with correct resolution and position
-        DISPLAYCONFIG_MODE_INFO sourceMode = {};
-        sourceMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE;
-        sourceMode.adapterId = path.sourceInfo.adapterId;
-        sourceMode.id = sourceId;
-        sourceMode.sourceMode.width = config.width;
-        sourceMode.sourceMode.height = config.height;
-        sourceMode.sourceMode.pixelFormat = DISPLAYCONFIG_PIXELFORMAT_32BPP;
-        sourceMode.sourceMode.position.x = config.positionX;
-        sourceMode.sourceMode.position.y = config.positionY;
-
-        newModes.push_back(sourceMode);
-        path.sourceInfo.modeInfoIdx = static_cast<UINT32>(newModes.size() - 1);
-
-        // Create target mode with correct refresh rate
-        DISPLAYCONFIG_MODE_INFO targetMode = {};
-        targetMode.infoType = DISPLAYCONFIG_MODE_INFO_TYPE_TARGET;
-        targetMode.adapterId = path.targetInfo.adapterId;
-        targetMode.id = path.targetInfo.id;
-        // Set refresh rate (convert Hz to rational)
-        auto refreshNumerator = static_cast<UINT32>(config.refreshRate * 1000);
-        targetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Numerator = refreshNumerator;
-        targetMode.targetMode.targetVideoSignalInfo.vSyncFreq.Denominator = 1000;
-        targetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Numerator = 0;
-        targetMode.targetMode.targetVideoSignalInfo.hSyncFreq.Denominator = 0;
-        // Active size matches resolution
-        targetMode.targetMode.targetVideoSignalInfo.activeSize.cx = config.width;
-        targetMode.targetMode.targetVideoSignalInfo.activeSize.cy = config.height;
-        targetMode.targetMode.targetVideoSignalInfo.totalSize.cx = config.width;
-        targetMode.targetMode.targetVideoSignalInfo.totalSize.cy = config.height;
-        targetMode.targetMode.targetVideoSignalInfo.videoStandard = 255; // D3DKMDT_VSS_OTHER
-        targetMode.targetMode.targetVideoSignalInfo.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
-
-        newModes.push_back(targetMode);
-        path.targetInfo.modeInfoIdx = static_cast<UINT32>(newModes.size() - 1);
-
-        // Set rotation (convert degrees to enum)
-        switch (config.rotation) {
-            case 90:  path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE90;  break;
-            case 180: path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE180; break;
-            case 270: path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE270; break;
-            default:  path.targetInfo.rotation = DISPLAYCONFIG_ROTATION_IDENTITY;  break;
-        }
-
-        // Enable this path
-        path.flags |= DISPLAYCONFIG_PATH_ACTIVE;
+        auto p = paths[pathIdx];
+        p.flags |= DISPLAYCONFIG_PATH_ACTIVE;
+        p.sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
+        p.targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
+        topoPaths.push_back(p);
     }
 
-    // Update mode indices for disabled paths to invalid
-    for (UINT32 i = 0; i < pathCount; i++) {
-        if (!(paths[i].flags & DISPLAYCONFIG_PATH_ACTIVE)) {
-            paths[i].sourceInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
-            paths[i].targetInfo.modeInfoIdx = DISPLAYCONFIG_PATH_MODE_IDX_INVALID;
-        }
-    }
+    auto topoCount = static_cast<UINT32>(topoPaths.size());
+    result = SetDisplayConfig(topoCount, topoPaths.data(), 0, nullptr,
+        SDC_APPLY | SDC_TOPOLOGY_SUPPLIED | SDC_ALLOW_PATH_ORDER_CHANGES);
 
-    // Apply the configuration with our new modes array
-    auto modeCount2 = static_cast<UINT32>(newModes.size());
-    DWORD flags = SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES;
-    result = SetDisplayConfig(pathCount, paths.data(), modeCount2, newModes.data(), flags);
+    // SDC_TOPOLOGY_SUPPLIED restores the full configuration (positions, resolution,
+    // rotation, refresh rate) from the Windows topology database. No further patching needed.
 
     if (result != ERROR_SUCCESS) {
         return -300 - static_cast<int>(result);

@@ -26,12 +26,15 @@ public class DisplayProfileService
     {
         var currentDisplays = DisplayManager.GetAllDisplays();
         var activeDisplayConfigs = currentDisplays
-            .Where(d => d.IsActive && !string.IsNullOrEmpty(d.MonitorDevicePath))
+            .Where(d => d.IsActive && (d.EdidManufactureId != 0 || d.EdidProductCodeId != 0))
             .Select(d => new SavedDisplayConfig
             {
-                MonitorDevicePath = d.MonitorDevicePath,
                 MonitorName = d.MonitorName,
-                DeviceName = d.DeviceName,
+                EdidManufactureId = d.EdidManufactureId,
+                EdidProductCodeId = d.EdidProductCodeId,
+                EdidSerialNumber = d.EdidSerialNumber,
+                EdidManufactureDate = d.EdidManufactureDate,
+                EdidContainerId = d.EdidContainerId,
                 Width = d.Width,
                 Height = d.Height,
                 PositionX = d.PositionX,

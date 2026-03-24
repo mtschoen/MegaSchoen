@@ -84,7 +84,20 @@ async Task SaveProfile(string[] args)
 
     try
     {
+        var profiles = await profileService.GetAllProfilesAsync();
+        var existing = profiles.FirstOrDefault(p =>
+            string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+
         var profile = profileService.CaptureCurrentConfiguration(name, description);
+
+        // Preserve the ID and hotkey of an existing profile so we overwrite rather than duplicate
+        if (existing != null)
+        {
+            profile.Id = existing.Id;
+            profile.Hotkey = existing.Hotkey;
+            profile.Created = existing.Created;
+        }
+
         await profileService.SaveProfileAsync(profile);
 
         Console.WriteLine($"Saved profile '{name}'");

@@ -296,10 +296,23 @@ public class MainPageViewModel : INotifyPropertyChanged
         {
             IsLoading = true;
 
+            var name = NewProfileName.Trim();
+            var profiles = await _profileService.GetAllProfilesAsync();
+            var existing = profiles.FirstOrDefault(p =>
+                string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+
             var profile = _profileService.CaptureCurrentConfiguration(
-                NewProfileName.Trim(),
+                name,
                 $"Captured on {DateTime.Now:g}"
             );
+
+            // Preserve the ID and hotkey of an existing profile so we overwrite rather than duplicate
+            if (existing != null)
+            {
+                profile.Id = existing.Id;
+                profile.Hotkey = existing.Hotkey;
+                profile.Created = existing.Created;
+            }
 
             await _profileService.SaveProfileAsync(profile);
 
