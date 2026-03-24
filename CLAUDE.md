@@ -63,32 +63,32 @@ Do NOT use `dotnet build` - it cannot build the native C++ dependency.
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw               # Show raw JSON
 ```
 
-## Current Status (Last updated: 2026-01-20)
+## Current Status (Last updated: 2026-03-24)
 
 ### ✅ Display Toggle Working
 
 **What's Working:**
 - Display detection and listing via CCD API (QueryDisplayConfig)
-- Full display enable/disable including displays on secondary GPUs
-- Position, resolution, and refresh rate restoration when re-enabling displays
-- Profile save/load with full display configuration
+- Cross-adapter display switching (multi-GPU) via SDC_TOPOLOGY_SUPPLIED
+- EDID-based monitor matching (survives GPU swaps and port changes)
+- Profile save/load with hotkey preservation on overwrite
+- Global hotkeys, system tray, and startup support (MAUI app)
 - Profiles stored in `%APPDATA%\MegaSchoen\configs.json`
 
 **Key Implementation Details:**
-- Profiles store full `SavedDisplayConfig` objects (monitorDevicePath, resolution, position, refresh rate)
-- `monitorDevicePath` is used for reliable display matching (stable across reboots)
-- When re-enabling a display with cleared mode info, native code creates mode entries from saved profile data
-- Works across multiple GPUs (tested with displays on different adapters)
+- Profiles store EDID hardware IDs (manufacturerId, productCodeId, serialNumber) — no unstable system handles
+- Display matching: cascading EDID match (container ID → model+serial → model+date)
+- Apply uses `SDC_TOPOLOGY_SUPPLIED | SDC_ALLOW_PATH_ORDER_CHANGES` — Windows restores full config from its topology database
+- Path selection picks non-conflicting (adapter, sourceId) pairs to avoid clone conflicts
+- Requires each profile's layout to have been manually configured at least once via Windows Display Settings
 
 ### 🎯 Next Steps
 
-**Priority 1: Test Audio Preservation**
-- The CCD API approach should be less disruptive than ChangeDisplaySettingsEx
-- Need to test if YouTube Music (etc.) keeps playing during display switches
+**Priority 1: Test GPU Swap Survival**
+- Verify EDID matching and topology database survive adapter LUID changes after GPU swap
 
-**Priority 2: Global Hotkey Support**
-- RegisterHotKey Win32 API for hotkey registration
-- HotkeyDefinition model exists in SavedDisplayProfile
+**Priority 2: Identical Model Disambiguation**
+- Handle case where user has multiple monitors of the same model (deferred)
 
 ## Architecture Overview
 
@@ -114,15 +114,14 @@ Do NOT use `dotnet build` - it cannot build the native C++ dependency.
 ### Native API Functions
 
 ```cpp
-// Get all display paths as JSON array
+// Get all display paths as JSON array (includes EDID fields)
 int GetAllDisplaysJson(char* buffer, int bufferSize);
 
-// Apply a full display configuration
+// Apply a display configuration
 // Takes JSON array of SavedDisplayConfig objects with:
-//   - monitorDevicePath (for matching)
-//   - width, height, positionX, positionY, refreshRate (for mode creation)
-// Displays in array are enabled; all others are disabled
-// Creates mode entries from saved config if path lacks mode info
+//   - EDID fields (edidManufactureId, edidProductCodeId, edidSerialNumber) for matching
+//   - width, height, positionX, positionY, refreshRate, rotation
+// Matches by EDID, selects non-conflicting CCD paths, applies via SDC_TOPOLOGY_SUPPLIED
 int ApplyConfiguration(const char* configJson);
 ```
 
