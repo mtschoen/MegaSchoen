@@ -11,3 +11,4 @@
   - Allow main window to close while tray stays active (not sure how this works with MAUI)
 - Update UI for assigning hotkeys to profiles
 - Add option to start at launch
+- Add button to overwrite an existing profile with current configuration
