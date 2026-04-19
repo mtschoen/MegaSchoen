@@ -19,6 +19,7 @@ public static class Program
             {
                 "status" => Commands.StatusCommand.Run(),
                 "logs" => Commands.LogsCommand.Run(),
+                "check" => Commands.CheckCommand.Run(),
                 _ => PrintUnknownCommand(arguments[0])
             };
         }
