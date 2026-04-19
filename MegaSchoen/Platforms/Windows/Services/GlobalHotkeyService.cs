@@ -10,6 +10,7 @@ sealed class GlobalHotkeyService : IDisposable
 {
     readonly MessageWindow _messageWindow;
     readonly Dictionary<int, Guid> _hotkeyToProfile = new();
+    readonly Dictionary<int, string> _hotkeyToName = new();
     int _nextHotkeyId = 1;
     bool _disposed;
 
@@ -17,6 +18,8 @@ sealed class GlobalHotkeyService : IDisposable
     /// Fired when a registered hotkey is pressed. Parameter is the profile ID.
     /// </summary>
     public event EventHandler<Guid>? HotkeyTriggered;
+
+    public event EventHandler<string>? NamedHotkeyTriggered;
 
     public GlobalHotkeyService(MessageWindow messageWindow)
     {
@@ -80,16 +83,48 @@ sealed class GlobalHotkeyService : IDisposable
         return success;
     }
 
+    public bool RegisterNamedHotkey(string name, string key, IEnumerable<string> modifiers)
+    {
+        var vk = KeyToVirtualKey(key);
+        if (vk == 0)
+        {
+            System.Diagnostics.Debug.WriteLine($"Unknown key: {key}");
+            return false;
+        }
+
+        uint modifiersMask = MOD_NOREPEAT;
+        foreach (var mod in modifiers)
+        {
+            modifiersMask |= ModifierToFlag(mod);
+        }
+
+        var hotkeyId = _nextHotkeyId++;
+        var success = RegisterHotKey(_messageWindow.Handle, hotkeyId, modifiersMask, vk);
+
+        if (success)
+        {
+            _hotkeyToName[hotkeyId] = name;
+            System.Diagnostics.Debug.WriteLine($"Registered named hotkey {hotkeyId} for \"{name}\"");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to register named hotkey \"{name}\": error {GetLastError()}");
+        }
+
+        return success;
+    }
+
     /// <summary>
     /// Unregisters all hotkeys.
     /// </summary>
     public void UnregisterAll()
     {
-        foreach (var hotkeyId in _hotkeyToProfile.Keys.ToList())
+        foreach (var hotkeyId in _hotkeyToProfile.Keys.Concat(_hotkeyToName.Keys).ToList())
         {
             UnregisterHotKey(_messageWindow.Handle, hotkeyId);
         }
         _hotkeyToProfile.Clear();
+        _hotkeyToName.Clear();
     }
 
     void OnHotkeyPressed(object? sender, int hotkeyId)
@@ -98,6 +133,13 @@ sealed class GlobalHotkeyService : IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"Hotkey {hotkeyId} pressed, triggering profile {profileId}");
             HotkeyTriggered?.Invoke(this, profileId);
+            return;
+        }
+
+        if (_hotkeyToName.TryGetValue(hotkeyId, out var name))
+        {
+            System.Diagnostics.Debug.WriteLine($"Hotkey {hotkeyId} pressed, triggering named hotkey \"{name}\"");
+            NamedHotkeyTriggered?.Invoke(this, name);
         }
     }
 
