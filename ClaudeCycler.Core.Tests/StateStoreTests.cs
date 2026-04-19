@@ -57,4 +57,56 @@ public class StateStoreTests
         Assert.AreEqual("C:\\foo", file.Sessions["abc"].Cwd);
         Assert.AreEqual("hi", file.Sessions["abc"].Message);
     }
+
+    [TestMethod]
+    public void Upsert_NewSession_PersistsEntry()
+    {
+        var store = new StateStore(_tempFile);
+        store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow, Message = "hi" });
+
+        var file = store.Read();
+        Assert.AreEqual(1, file.Sessions.Count);
+        Assert.AreEqual("C:\\foo", file.Sessions["sess1"].Cwd);
+    }
+
+    [TestMethod]
+    public void Upsert_ExistingSession_Overwrites()
+    {
+        var store = new StateStore(_tempFile);
+        store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("sess1", new SessionEntry { Cwd = "C:\\bar", NotifiedAt = DateTimeOffset.UtcNow });
+
+        var file = store.Read();
+        Assert.AreEqual("C:\\bar", file.Sessions["sess1"].Cwd);
+    }
+
+    [TestMethod]
+    public void Delete_ExistingSession_RemovesEntry()
+    {
+        var store = new StateStore(_tempFile);
+        store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Delete("sess1");
+
+        var file = store.Read();
+        Assert.AreEqual(0, file.Sessions.Count);
+    }
+
+    [TestMethod]
+    public void Delete_MissingSession_IsNoop()
+    {
+        var store = new StateStore(_tempFile);
+        store.Delete("nope"); // should not throw
+        var file = store.Read();
+        Assert.AreEqual(0, file.Sessions.Count);
+    }
+
+    [TestMethod]
+    public void Write_UsesTempFileThenRename()
+    {
+        var store = new StateStore(_tempFile);
+        store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+
+        Assert.IsTrue(File.Exists(_tempFile));
+        Assert.IsFalse(File.Exists(_tempFile + ".tmp"), "tmp file should have been renamed away");
+    }
 }

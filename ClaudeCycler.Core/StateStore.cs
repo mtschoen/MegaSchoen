@@ -38,4 +38,31 @@ public sealed class StateStore
             }
         }
     }
+
+    public void Write(NeedySessionsFile file)
+    {
+        lock (_lock)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            var tempPath = _path + ".tmp";
+            File.WriteAllText(tempPath, JsonSerializer.Serialize(file, JsonOptions));
+            File.Move(tempPath, _path, overwrite: true);
+        }
+    }
+
+    public void Upsert(string sessionId, SessionEntry entry)
+    {
+        var file = Read();
+        file.Sessions[sessionId] = entry;
+        Write(file);
+    }
+
+    public void Delete(string sessionId)
+    {
+        var file = Read();
+        if (file.Sessions.Remove(sessionId))
+        {
+            Write(file);
+        }
+    }
 }
