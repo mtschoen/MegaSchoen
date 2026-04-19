@@ -101,6 +101,19 @@ public partial class App : MauiWinUIApplication
             }
         };
 
+        tray.CycleClaudeRequested += (s, e) =>
+        {
+            try
+            {
+                claudeWindowService.CycleToNext();
+            }
+            catch (Exception exception)
+            {
+                ClaudeCycler.Core.Logger.Log($"CycleClaudeRequested threw: {exception}");
+                tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
+            }
+        };
+
         // Wire up hotkey events
         hotkeys.HotkeyTriggered += (s, profileId) =>
         {
@@ -119,12 +132,33 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        hotkeys.RegisterNamedHotkey("claude-cycle", "C", new[] { "Control", "Alt", "Shift" });
+        var claudeCycleRegistered = hotkeys.RegisterNamedHotkey("claude-cycle", "9", new[] { "Control", "Alt" });
+        ClaudeCycler.Core.Logger.Log($"Hotkey registration Ctrl+Alt+9: {claudeCycleRegistered}");
+        tray.ShowNotification(
+            "MegaSchoen",
+            claudeCycleRegistered
+                ? "Claude cycler armed on Ctrl+Alt+9"
+                : "Ctrl+Alt+9 registration FAILED (another app owns it)",
+            claudeCycleRegistered ? NotificationIcon.Info : NotificationIcon.Warning);
         hotkeys.NamedHotkeyTriggered += (s, name) =>
         {
+            ClaudeCycler.Core.Logger.Log($"NamedHotkeyTriggered fired: {name}");
             if (name == "claude-cycle")
             {
-                claudeWindowService.CycleToNext();
+                Win32Interop.MessageBox(
+                    IntPtr.Zero,
+                    "Claude cycle hotkey pressed",
+                    "MegaSchoen",
+                    Win32Interop.MB_OK | Win32Interop.MB_ICONINFORMATION | Win32Interop.MB_TOPMOST);
+                try
+                {
+                    claudeWindowService.CycleToNext();
+                }
+                catch (Exception exception)
+                {
+                    ClaudeCycler.Core.Logger.Log($"CycleToNext threw: {exception}");
+                    tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
+                }
             }
         };
 

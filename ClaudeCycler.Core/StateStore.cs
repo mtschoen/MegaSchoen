@@ -65,19 +65,4 @@ public sealed class StateStore
             Write(file);
         }
     }
-
-    public NeedySessionsFile ReadFresh(TimeSpan maxAge)
-    {
-        var file = Read();
-        var cutoff = DateTimeOffset.UtcNow - maxAge;
-        var filtered = new NeedySessionsFile { Version = file.Version };
-        foreach (var (id, entry) in file.Sessions)
-        {
-            if (entry.NotifiedAt >= cutoff)
-            {
-                filtered.Sessions[id] = entry;
-            }
-        }
-        return filtered;
-    }
 }

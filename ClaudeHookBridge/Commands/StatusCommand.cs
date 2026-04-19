@@ -9,7 +9,6 @@ public static class StatusCommand
         var store = new StateStore();
         var file = store.Read();
         var now = DateTimeOffset.UtcNow;
-        var staleCutoff = TimeSpan.FromMinutes(30);
 
         Console.WriteLine($"State file: {Paths.NeedySessionsFile}");
         Console.WriteLine($"Version: {file.Version}");
@@ -19,8 +18,7 @@ public static class StatusCommand
         foreach (var (id, entry) in file.Sessions)
         {
             var age = now - entry.NotifiedAt;
-            var stale = age > staleCutoff ? " [STALE]" : "";
-            Console.WriteLine($"  {id}{stale}");
+            Console.WriteLine($"  {id}");
             Console.WriteLine($"    cwd:        {entry.Cwd}");
             Console.WriteLine($"    notifiedAt: {entry.NotifiedAt:O} ({age.TotalMinutes:F1} min ago)");
             Console.WriteLine($"    message:    {entry.Message ?? "(none)"}");

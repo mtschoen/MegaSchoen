@@ -7,9 +7,9 @@ public static class ResolveCommand
     public static int Run()
     {
         var store = new StateStore();
-        var file = store.ReadFresh(TimeSpan.FromMinutes(30));
+        var file = store.Read();
 
-        Console.WriteLine($"Fresh sessions: {file.Sessions.Count}");
+        Console.WriteLine($"Sessions: {file.Sessions.Count}");
         var windows = ProcessResolver.EnumerateCmdExeWindows();
         Console.WriteLine($"cmd.exe windows: {windows.Count}");
         Console.WriteLine();

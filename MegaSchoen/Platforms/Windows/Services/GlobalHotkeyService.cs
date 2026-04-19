@@ -129,6 +129,7 @@ sealed class GlobalHotkeyService : IDisposable
 
     void OnHotkeyPressed(object? sender, int hotkeyId)
     {
+        ClaudeCycler.Core.Logger.Log($"OnHotkeyPressed: id={hotkeyId} profileKnown={_hotkeyToProfile.ContainsKey(hotkeyId)} nameKnown={_hotkeyToName.ContainsKey(hotkeyId)}");
         if (_hotkeyToProfile.TryGetValue(hotkeyId, out var profileId))
         {
             System.Diagnostics.Debug.WriteLine($"Hotkey {hotkeyId} pressed, triggering profile {profileId}");

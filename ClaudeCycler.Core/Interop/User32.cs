@@ -22,4 +22,10 @@ public static partial class User32
 
     [LibraryImport("user32.dll")]
     public static partial int GetWindowTextLengthW(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetAncestor(IntPtr hWnd, uint flags);
+
+    public const uint GA_ROOT = 2;
+    public const uint GA_ROOTOWNER = 3;
 }

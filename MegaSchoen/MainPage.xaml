@@ -214,6 +214,25 @@
                 </VerticalStackLayout>
             </Frame>
 
+            <!-- Claude Cycler Debug Section -->
+            <Frame BorderColor="{StaticResource Primary}"
+                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
+                   Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🤖 Claude Cycler (debug)"
+                           FontSize="20"
+                           FontAttributes="Bold"/>
+                    <Button x:Name="CycleClaudeNowButton"
+                            Text="Cycle Claude Now"
+                            Clicked="OnCycleClaudeNowClicked"
+                            BackgroundColor="{StaticResource Primary}"/>
+                    <Label x:Name="CycleClaudeStatusLabel"
+                           Text=""
+                           FontSize="12"
+                           TextColor="{StaticResource Gray600}"/>
+                </VerticalStackLayout>
+            </Frame>
+
             <!-- Settings Section -->
             <Frame BorderColor="{StaticResource Primary}"
                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"

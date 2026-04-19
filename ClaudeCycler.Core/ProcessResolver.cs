@@ -1,4 +1,4 @@
-using System.Management;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using ClaudeCycler.Core.Interop;
 
@@ -13,17 +13,28 @@ public static class ProcessResolver
         var cmdPids = GetCmdExePids();
         var results = new List<CmdWindow>();
 
+        // Modern cmd.exe instances run under ConPTY, so their HWNDs are
+        // invisible PseudoConsoleWindow helpers (1x1, not user-facing).
+        // The real visible terminal window is the ConPTY's ancestor — an
+        // OpenConsole/conhost/WindowsTerminal window. Walk up to it.
+        var seenRoots = new HashSet<IntPtr>();
         User32.EnumWindowsProc callback = (hwnd, _) =>
         {
-            if (!User32.IsWindowVisible(hwnd)) return true;
-
             User32.GetWindowThreadProcessId(hwnd, out var pid);
             if (!cmdPids.Contains(pid)) return true;
 
-            var title = GetWindowTitle(hwnd);
+            // GA_ROOTOWNER follows the owner chain (what GetParent returns for
+            // top-level owned windows), so a ConPTY PseudoConsoleWindow walks
+            // up to its user-facing host (WindowsTerminal / conhost / OpenConsole).
+            var root = User32.GetAncestor(hwnd, User32.GA_ROOTOWNER);
+            if (root == IntPtr.Zero) root = hwnd;
+            if (!seenRoots.Add(root)) return true;
+            if (!User32.IsWindowVisible(root)) return true;
+
+            var title = GetWindowTitle(root);
             var cwd = TryGetProcessCwd(pid);
 
-            results.Add(new CmdWindow(pid, hwnd, title, cwd));
+            results.Add(new CmdWindow(pid, root, title, cwd));
             return true;
         };
 
@@ -36,10 +47,12 @@ public static class ProcessResolver
         var pids = new HashSet<uint>();
         try
         {
-            using var searcher = new ManagementObjectSearcher("SELECT ProcessId FROM Win32_Process WHERE Name = 'cmd.exe'");
-            foreach (ManagementObject obj in searcher.Get())
+            foreach (var process in Process.GetProcessesByName("cmd"))
             {
-                pids.Add(Convert.ToUInt32(obj["ProcessId"]));
+                using (process)
+                {
+                    pids.Add((uint)process.Id);
+                }
             }
         }
         catch (Exception exception)

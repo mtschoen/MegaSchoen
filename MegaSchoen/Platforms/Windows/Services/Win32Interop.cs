@@ -467,4 +467,28 @@ static partial class Win32Interop
     public static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     public const int SW_RESTORE = 9;
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsIconic(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BringWindowToTop(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr SetFocus(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int MessageBox(IntPtr hWnd, string text, string caption, uint type);
+
+    public const uint MB_OK = 0x0;
+    public const uint MB_ICONINFORMATION = 0x40;
+    public const uint MB_TOPMOST = 0x40000;
+
+    public const uint KEYEVENTF_KEYUP = 0x0002;
+    public const byte VK_MENU = 0x12;
 }

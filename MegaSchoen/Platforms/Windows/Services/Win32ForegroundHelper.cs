@@ -4,26 +4,46 @@ namespace MegaSchoen.Platforms.Windows.Services;
 
 static class Win32ForegroundHelper
 {
-    public static void BringToFront(IntPtr targetHwnd)
+    public static bool BringToFront(IntPtr targetHwnd)
     {
-        if (targetHwnd == IntPtr.Zero) return;
+        if (targetHwnd == IntPtr.Zero) return false;
 
-        ShowWindow(targetHwnd, SW_RESTORE);
+        if (IsIconic(targetHwnd))
+        {
+            ShowWindow(targetHwnd, SW_RESTORE);
+        }
 
+        // Three-way AttachThreadInput: let our thread, the target's thread, and
+        // the current foreground thread share an input queue, so SetForegroundWindow
+        // is allowed to hand focus to the target. Standard workaround for the
+        // foreground-lock restriction on modern Windows.
         var currentThread = GetCurrentThreadId();
         var foregroundHwnd = GetForegroundWindow();
         var foregroundThread = GetWindowThreadProcessId(foregroundHwnd, out _);
-        var targetThread = GetWindowThreadProcessId(targetHwnd, out var targetPid);
+        var targetThread = GetWindowThreadProcessId(targetHwnd, out _);
 
-        if (currentThread != foregroundThread)
+        var attachedCurrent = false;
+        var attachedTarget = false;
+        try
         {
-            AttachThreadInput(currentThread, foregroundThread, true);
+            if (foregroundThread != 0 && foregroundThread != currentThread)
+            {
+                attachedCurrent = AttachThreadInput(currentThread, foregroundThread, true);
+            }
+            if (foregroundThread != 0 && foregroundThread != targetThread)
+            {
+                attachedTarget = AttachThreadInput(targetThread, foregroundThread, true);
+            }
+
+            BringWindowToTop(targetHwnd);
+            var result = SetForegroundWindow(targetHwnd);
+            SetFocus(targetHwnd);
+            return result;
         }
-        AllowSetForegroundWindow(targetPid);
-        SetForegroundWindow(targetHwnd);
-        if (currentThread != foregroundThread)
+        finally
         {
-            AttachThreadInput(currentThread, foregroundThread, false);
+            if (attachedTarget) AttachThreadInput(targetThread, foregroundThread, false);
+            if (attachedCurrent) AttachThreadInput(currentThread, foregroundThread, false);
         }
     }
 }
