@@ -37,6 +37,10 @@ public sealed class SettingsJsonInstaller
 
     public void Install(string bridgeExePath)
     {
+        // Claude Code passes hook commands to /usr/bin/bash which eats backslashes
+        // as escapes. Forward slashes work on Windows in both JSON and bash contexts.
+        var normalizedPath = bridgeExePath.Replace('\\', '/');
+
         Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
 
         JsonObject root;
@@ -74,7 +78,7 @@ public sealed class SettingsJsonInstaller
                     {
                         if (handler is JsonObject h
                             && h["type"]?.GetValue<string>() == "command"
-                            && PathsEqual(h["command"]?.GetValue<string>(), bridgeExePath))
+                            && PathsEqual(h["command"]?.GetValue<string>(), normalizedPath))
                         {
                             alreadyInstalled = true;
                             break;
@@ -91,7 +95,7 @@ public sealed class SettingsJsonInstaller
                     ["hooks"] = new JsonArray(new JsonObject
                     {
                         ["type"] = "command",
-                        ["command"] = bridgeExePath
+                        ["command"] = normalizedPath
                     })
                 });
             }
