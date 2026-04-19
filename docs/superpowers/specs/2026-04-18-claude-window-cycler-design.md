@@ -32,9 +32,11 @@ Filtering: the `Notification` hook fires with a `notification_type` field; v1 ma
 
 Three pieces:
 
-### 1. `ClaudeHookBridge.exe` — hook handler
+### 1. `ClaudeHookBridge.exe` — hook handler + inspection CLI
 
-New .NET 10 console project in the MegaSchoen solution. Reads hook JSON from stdin, dispatches on `hook_event_name`, and updates a shared state file. Always exits 0; internal errors go to a log file, never to Claude.
+New .NET 10 console project in the MegaSchoen solution. Two modes, disambiguated by argv:
+
+**Hook mode (no args):** reads hook JSON from stdin, dispatches on `hook_event_name`, updates the state file. Always exits 0; internal errors go to a log file, never to Claude.
 
 Dispatch:
 
@@ -42,6 +44,13 @@ Dispatch:
 - `UserPromptSubmit` → delete entry for `session_id`
 - `Stop` → delete entry for `session_id`
 - Anything else → no-op
+
+**Inspection mode (subcommands):** developer / user tool for checking the internals without a GUI.
+
+- `ClaudeHookBridge.exe status` — prints the current needy-sessions state file, pretty-printed, with stale entries flagged.
+- `ClaudeHookBridge.exe resolve` — runs the same cwd→HWND pipeline `ClaudeWindowService` uses, but prints each resolution (sessionId, cwd, cmd.exe pid, HWND, window title) rather than focusing. Primary debug tool when the hotkey "doesn't work."
+- `ClaudeHookBridge.exe check` — reads `~/.claude/settings.json`, reports which of the three hooks are installed, at what path, and whether that matches the current `ClaudeHookBridge.exe` location.
+- `ClaudeHookBridge.exe logs [-f]` — prints `hook-bridge.log`; `-f` tails.
 
 Logs go to `%LOCALAPPDATA%\MegaSchoen\hook-bridge.log`.
 
@@ -158,11 +167,13 @@ ClaudeHookBridge.exe deletes session entry
 
 **Manual smoke test:**
 
-1. Install hooks. Open three cmd.exe Claude sessions in different directories.
-2. Trigger a permission prompt in one; press hotkey; verify that window comes forward.
-3. Approve the prompt; press hotkey again; verify "none waiting."
-4. Trigger prompts in two sessions; verify hotkey cycles between both.
-5. Kill a Claude session mid-wait; verify hotkey skips it cleanly and eventually reports "none waiting."
+1. Install hooks. Run `ClaudeHookBridge.exe check`; verify the three hooks point at the current binary.
+2. Open three cmd.exe Claude sessions in different directories.
+3. Trigger a permission prompt in one. Run `ClaudeHookBridge.exe status`; verify entry appears. Run `resolve`; verify cwd resolves to the correct HWND and window title.
+4. Press hotkey; verify that window comes forward.
+5. Approve the prompt; `status` should show no entries; press hotkey; verify "none waiting."
+6. Trigger prompts in two sessions; verify hotkey cycles between both.
+7. Kill a Claude session mid-wait; verify hotkey skips it cleanly and `resolve` shows the orphaned entry as unresolved.
 
 ## Open implementation questions (spike early)
 
