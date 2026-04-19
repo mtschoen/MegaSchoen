@@ -18,6 +18,7 @@ public static class Program
             return arguments[0] switch
             {
                 "status" => Commands.StatusCommand.Run(),
+                "logs" => Commands.LogsCommand.Run(),
                 _ => PrintUnknownCommand(arguments[0])
             };
         }
