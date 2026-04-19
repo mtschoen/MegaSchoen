@@ -69,6 +69,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\DisplayManager.Core\DisplayManager.Core.csproj" />
 		<ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj" />
+		<ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" Condition="$(TargetFramework.Contains('windows'))" />
 	</ItemGroup>
 
 	<!-- Copy native DLL to Windows output directory after build -->
