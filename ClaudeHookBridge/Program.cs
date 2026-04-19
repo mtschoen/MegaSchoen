@@ -15,15 +15,24 @@ public static class Program
                 return RunHookMode();
             }
 
-            // Inspection-mode dispatch added in later tasks.
-            Console.Error.WriteLine($"Unknown subcommand: {arguments[0]}");
-            return 1;
+            return arguments[0] switch
+            {
+                "status" => Commands.StatusCommand.Run(),
+                _ => PrintUnknownCommand(arguments[0])
+            };
         }
         catch (Exception exception)
         {
             Logger.Log($"Program.Main unhandled: {exception}");
             return 0; // hook mode must never fail Claude
         }
+    }
+
+    static int PrintUnknownCommand(string name)
+    {
+        Console.Error.WriteLine($"Unknown subcommand: {name}");
+        Console.Error.WriteLine("Available: status, logs, check, resolve");
+        return 1;
     }
 
     static int RunHookMode()
