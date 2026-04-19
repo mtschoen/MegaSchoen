@@ -82,4 +82,11 @@
 			  Condition="Exists('..\bin\Debug\DisplayManagerNative.pdb')" />
 	</Target>
 
+	<Target Name="CopyClaudeHookBridge" AfterTargets="Build" Condition="$(TargetFramework.Contains('windows'))">
+		<ItemGroup>
+			<ClaudeHookBridgeFiles Include="..\ClaudeHookBridge\bin\$(Configuration)\net10.0-windows10.0.26100.0\*.*" />
+		</ItemGroup>
+		<Copy SourceFiles="@(ClaudeHookBridgeFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+	</Target>
+
 </Project>
