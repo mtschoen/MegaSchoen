@@ -3,7 +3,10 @@ namespace ClaudeCycler.Core;
 public static class Paths
 {
     public static string AppDataDirectory { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MegaSchoen");
+        Path.Combine(
+            Environment.GetEnvironmentVariable("LOCALAPPDATA")
+                ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "MegaSchoen");
 
     public static string NeedySessionsFile { get; } =
         Path.Combine(AppDataDirectory, "needy-sessions.json");
