@@ -9,6 +9,9 @@
     <AssemblyName>ClaudeHookBridge</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />
   </ItemGroup>
 </Project>
