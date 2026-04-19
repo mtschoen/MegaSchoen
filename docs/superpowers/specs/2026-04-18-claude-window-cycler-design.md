@@ -179,3 +179,9 @@ ClaudeHookBridge.exe deletes session entry
 ## Cross-platform note
 
 Pieces 1, 2, and 4 (hook bridge, state file, installer) are pure .NET and portable. Piece 3 (cwd→HWND resolution and window focusing) is Windows-specific. If cross-platform support is ever wanted, the reduced-scope first step for macOS/Linux would be: show a system notification with the session's cwd and an "activate" button, rather than attempting to map to a window handle. That's additive; no architectural change required.
+
+## Follow-ups (not in v1 scope)
+
+- **Dedicated GUI surface inside MegaSchoen.** MegaSchoen's current UI is dominated by the display-profile switcher. The longer-term direction is a tool-suite layout (tabs / navigation) rather than one-UI-per-tool. A Claude-cycler tab would show: live list of currently-waiting sessions (session id, cwd, time waiting, the notification message), a "focus" button per row, hook install status, and the hotkey binding. The v1 state file already makes this straightforward — the GUI is purely a reader. No v1 architectural change is required to accommodate it.
+- **Supporting PowerShell / Windows Terminal / WSL.** Same hook bridge, same state file; only the window-resolution step changes. Extend `ClaudeWindowService` to enumerate more shell hosts.
+- **Cross-platform window focusing.** Per the cross-platform note above.
