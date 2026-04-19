@@ -86,6 +86,21 @@ public partial class App : MauiWinUIApplication
             Environment.Exit(0);
         };
 
+        tray.InstallClaudeHooksRequested += (s, e) =>
+        {
+            try
+            {
+                var bridgePath = Path.Combine(AppContext.BaseDirectory, "ClaudeHookBridge.exe");
+                var installer = new ClaudeCycler.Core.SettingsJsonInstaller();
+                installer.Install(bridgePath);
+                tray.ShowNotification("MegaSchoen", "Claude hooks installed");
+            }
+            catch (Exception exception)
+            {
+                tray.ShowNotification("MegaSchoen", $"Install failed: {exception.Message}", NotificationIcon.Error);
+            }
+        };
+
         // Wire up hotkey events
         hotkeys.HotkeyTriggered += (s, profileId) =>
         {
