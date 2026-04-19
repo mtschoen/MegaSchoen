@@ -109,4 +109,19 @@ public class StateStoreTests
         Assert.IsTrue(File.Exists(_tempFile));
         Assert.IsFalse(File.Exists(_tempFile + ".tmp"), "tmp file should have been renamed away");
     }
+
+    [TestMethod]
+    public void ReadFresh_OmitsEntriesOlderThanCutoff()
+    {
+        var store = new StateStore(_tempFile);
+        var now = DateTimeOffset.UtcNow;
+        store.Upsert("fresh", new SessionEntry { Cwd = "C:\\a", NotifiedAt = now });
+        store.Upsert("stale", new SessionEntry { Cwd = "C:\\b", NotifiedAt = now - TimeSpan.FromMinutes(45) });
+
+        var file = store.ReadFresh(TimeSpan.FromMinutes(30));
+
+        Assert.AreEqual(1, file.Sessions.Count);
+        Assert.IsTrue(file.Sessions.ContainsKey("fresh"));
+        Assert.IsFalse(file.Sessions.ContainsKey("stale"));
+    }
 }
