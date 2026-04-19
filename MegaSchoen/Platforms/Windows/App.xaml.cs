@@ -45,6 +45,7 @@ public partial class App : MauiWinUIApplication
         var messageWindow = services.GetRequiredService<MessageWindow>();
         var tray = services.GetRequiredService<TrayIconService>();
         var hotkeys = services.GetRequiredService<GlobalHotkeyService>();
+        var claudeWindowService = services.GetRequiredService<ClaudeWindowService>();
         var profileService = services.GetRequiredService<DisplayProfileService>();
 
         // Load profiles synchronously (Task.Run avoids UI thread deadlock)
@@ -100,6 +101,15 @@ public partial class App : MauiWinUIApplication
                 {
                     tray.ShowNotification("Profile Failed", $"Failed to apply '{profile.Name}'.", NotificationIcon.Error);
                 }
+            }
+        };
+
+        hotkeys.RegisterNamedHotkey("claude-cycle", "C", new[] { "Control", "Alt", "Shift" });
+        hotkeys.NamedHotkeyTriggered += (s, name) =>
+        {
+            if (name == "claude-cycle")
+            {
+                claudeWindowService.CycleToNext();
             }
         };
 

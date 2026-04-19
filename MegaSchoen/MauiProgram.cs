@@ -29,6 +29,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<GlobalHotkeyService>();
         builder.Services.AddSingleton<KeyCaptureService>();
         builder.Services.AddSingleton<StartupService>();
+        builder.Services.AddSingleton<ClaudeWindowService>();
 #endif
 
 #if DEBUG
