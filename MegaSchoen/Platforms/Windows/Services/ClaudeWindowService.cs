@@ -15,9 +15,7 @@ sealed class ClaudeWindowService
 
     public void CycleToNext()
     {
-        Logger.Log("CycleToNext: start");
         var file = _store.Read();
-        Logger.Log($"CycleToNext: state has {file.Sessions.Count} session(s)");
         if (file.Sessions.Count == 0)
         {
             _tray.ShowNotification("MegaSchoen", "No Claude windows waiting", NotificationIcon.Info);
@@ -25,7 +23,6 @@ sealed class ClaudeWindowService
         }
 
         var windows = ProcessResolver.EnumerateCmdExeWindows();
-        Logger.Log($"CycleToNext: enumerated {windows.Count} cmd.exe window(s)");
         var candidates = new List<(string SessionId, CmdWindow Window, DateTimeOffset NotifiedAt)>();
         var matchedSessionIds = new HashSet<string>();
         foreach (var (id, entry) in file.Sessions)
@@ -39,13 +36,11 @@ sealed class ClaudeWindowService
                 }
             }
         }
-        Logger.Log($"CycleToNext: built {candidates.Count} candidate(s) after cwd match");
 
         foreach (var id in file.Sessions.Keys)
         {
             if (!matchedSessionIds.Contains(id))
             {
-                Logger.Log($"CycleToNext: pruning zombie session {id}");
                 _store.Delete(id);
             }
         }
@@ -61,10 +56,8 @@ sealed class ClaudeWindowService
         var lastIndex = candidates.FindIndex(c => c.Window.WindowHandle == _lastFocused);
         var nextIndex = (lastIndex + 1) % candidates.Count;
         var next = candidates[nextIndex];
-        Logger.Log($"CycleToNext: picked index {nextIndex} of {candidates.Count}: pid={next.Window.ProcessId} hwnd=0x{next.Window.WindowHandle:X}");
 
-        var brought = Win32ForegroundHelper.BringToFront(next.Window.WindowHandle);
-        Logger.Log($"CycleToNext: SetForegroundWindow returned {brought}");
+        Win32ForegroundHelper.BringToFront(next.Window.WindowHandle);
         _lastFocused = next.Window.WindowHandle;
     }
 

@@ -132,24 +132,11 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        var claudeCycleRegistered = hotkeys.RegisterNamedHotkey("claude-cycle", "9", new[] { "Control", "Alt" });
-        ClaudeCycler.Core.Logger.Log($"Hotkey registration Ctrl+Alt+9: {claudeCycleRegistered}");
-        tray.ShowNotification(
-            "MegaSchoen",
-            claudeCycleRegistered
-                ? "Claude cycler armed on Ctrl+Alt+9"
-                : "Ctrl+Alt+9 registration FAILED (another app owns it)",
-            claudeCycleRegistered ? NotificationIcon.Info : NotificationIcon.Warning);
+        hotkeys.RegisterNamedHotkey("claude-cycle", "9", new[] { "Control", "Alt" });
         hotkeys.NamedHotkeyTriggered += (s, name) =>
         {
-            ClaudeCycler.Core.Logger.Log($"NamedHotkeyTriggered fired: {name}");
             if (name == "claude-cycle")
             {
-                Win32Interop.MessageBox(
-                    IntPtr.Zero,
-                    "Claude cycle hotkey pressed",
-                    "MegaSchoen",
-                    Win32Interop.MB_OK | Win32Interop.MB_ICONINFORMATION | Win32Interop.MB_TOPMOST);
                 try
                 {
                     claudeWindowService.CycleToNext();

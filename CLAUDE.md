@@ -42,17 +42,26 @@ internal class MyService
 
 ## Build Commands
 
-**ALWAYS use MSBuild with `-p:Platform=x64`** - the native DLL must be 64-bit.
+Use MSBuild (not `dotnet build` — it can't build the native C++ dependency).
 
 ```bash
 # Build the CLI
-MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug -p:Platform=x64
+MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug
 
 # Build entire solution
-MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64
+MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
 ```
 
-Do NOT use `dotnet build` - it cannot build the native C++ dependency.
+**`-p:Platform=x64` is no longer required.** The `.sln` maps every solution-level platform selection correctly: MegaSchoen (MAUI) always builds as `x64` (needed by `WindowsAppSDKSelfContained`), library projects always build as `AnyCPU`, and `DisplayManagerNative` always builds as `x64`. Passing the flag is harmless but redundant. IDE F5 also produces the right outputs without any config tweaks.
+
+Output locations after a successful build:
+
+- `MegaSchoen\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\MegaSchoen.exe` — **the MAUI app (authoritative path)**
+- `DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe` — CLI (AnyCPU)
+- `ClaudeHookBridge\bin\Debug\net10.0-windows10.0.26100.0\ClaudeHookBridge.exe` — hook bridge (AnyCPU)
+- Library DLLs at `<project>\bin\Debug\...` (AnyCPU)
+
+If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution mappings (e.g., a direct `dotnet build MegaSchoen.csproj`). It should not be produced by any normal workflow.
 
 ### Running the CLI
 ```bash
@@ -127,7 +136,8 @@ int ApplyConfiguration(const char* configJson);
 
 ### Build Configuration Notes
 
-- Native C++ project has both Win32 and x64 configurations - **always use x64**
+- Native C++ project has both Win32 and x64 configurations; solution mappings always select x64
 - Post-build events copy DLL to dependent project output directories
 - All .NET projects target .NET 10
 - C++ project requires Visual Studio 2022+ with Windows 10 SDK
+- Solution-level platform selection (`Any CPU` / `x64` / `x86`) is honored by the `.sln`: MegaSchoen always → x64, libraries always → AnyCPU, native always → x64

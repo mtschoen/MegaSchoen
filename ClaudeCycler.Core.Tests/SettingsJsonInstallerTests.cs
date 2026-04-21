@@ -39,7 +39,7 @@ public class SettingsJsonInstallerTests
         installer.Install("C:\\Program Files\\Foo\\bridge.exe");
 
         var contents = File.ReadAllText(_tempSettings);
-        Assert.IsFalse(contents.Contains("\\\\"), "settings JSON must not contain escaped backslashes in the command path");
+        Assert.DoesNotContain("\\\\", contents, "settings JSON must not contain escaped backslashes in the command path");
         StringAssert.Contains(contents, "C:/Program Files/Foo/bridge.exe");
     }
 

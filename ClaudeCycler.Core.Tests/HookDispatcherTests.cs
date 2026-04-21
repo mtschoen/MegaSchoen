@@ -52,7 +52,7 @@ public class HookDispatcherTests
             Cwd = "C:\\foo"
         });
 
-        Assert.AreEqual(0, _store.Read().Sessions.Count);
+        Assert.IsEmpty(_store.Read().Sessions);
     }
 
     [TestMethod]
@@ -61,7 +61,7 @@ public class HookDispatcherTests
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
 
-        Assert.AreEqual(0, _store.Read().Sessions.Count);
+        Assert.IsEmpty(_store.Read().Sessions);
     }
 
     [TestMethod]
@@ -70,14 +70,14 @@ public class HookDispatcherTests
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "Stop", SessionId = "s1" });
 
-        Assert.AreEqual(0, _store.Read().Sessions.Count);
+        Assert.IsEmpty(_store.Read().Sessions);
     }
 
     [TestMethod]
     public void UnknownEvent_IsNoop()
     {
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SomeOtherEvent", SessionId = "s1" });
-        Assert.AreEqual(0, _store.Read().Sessions.Count);
+        Assert.IsEmpty(_store.Read().Sessions);
     }
 
     [TestMethod]
@@ -89,6 +89,6 @@ public class HookDispatcherTests
             NotificationType = "permission_prompt"
             // SessionId deliberately null
         });
-        Assert.AreEqual(0, _store.Read().Sessions.Count);
+        Assert.IsEmpty(_store.Read().Sessions);
     }
 }

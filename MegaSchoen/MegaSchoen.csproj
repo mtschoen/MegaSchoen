@@ -3,6 +3,10 @@
 	<PropertyGroup>
 		<TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
 		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.26100.0</TargetFrameworks>
+
+		<!-- Both AnyCPU and x64 are declared so the .sln mapping (AnyCPU/x64/x86 selections all -->
+		<!-- route to Debug|x64) can resolve. Actual builds produced by our .sln mapping are x64. -->
+		<Platforms>AnyCPU;x64</Platforms>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
 
@@ -51,7 +55,6 @@
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
@@ -72,14 +75,14 @@
 		<ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" Condition="$(TargetFramework.Contains('windows'))" />
 	</ItemGroup>
 
-	<!-- Copy native DLL to Windows output directory after build -->
+	<!-- Copy native DLL to Windows output directory after build. -->
+	<!-- Native project only ever builds x64 (enforced by .sln). -->
 	<Target Name="CopyNativeDllToOutput" AfterTargets="Build" Condition="$(TargetFramework.Contains('windows'))">
-		<Copy SourceFiles="..\bin\Debug\DisplayManagerNative.dll"
-			  DestinationFolder="$(OutputPath)"
-			  Condition="Exists('..\bin\Debug\DisplayManagerNative.dll')" />
-		<Copy SourceFiles="..\bin\Debug\DisplayManagerNative.pdb"
-			  DestinationFolder="$(OutputPath)"
-			  Condition="Exists('..\bin\Debug\DisplayManagerNative.pdb')" />
+		<ItemGroup>
+			<_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.dll" />
+			<_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.pdb" />
+		</ItemGroup>
+		<Copy SourceFiles="@(_NativeArtifact)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(FullPath)')" />
 	</Target>
 
 	<Target Name="CopyClaudeHookBridge" AfterTargets="Build" Condition="$(TargetFramework.Contains('windows'))">

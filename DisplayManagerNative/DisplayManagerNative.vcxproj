@@ -51,8 +51,8 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)obj\$(ProjectName)\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -63,16 +63,6 @@
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
-    <PostBuildEvent>
-      <Command>xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManager.Core\bin\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManager.Core\bin\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManagerCLI\bin\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManagerCLI\bin\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManager.Core\bin\x64\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManager.Core\bin\x64\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.dll" "$(ProjectDir)..\DisplayManagerCLI\bin\x64\$(Configuration)\net10.0\"
-xcopy /Y "$(TargetDir)DisplayManagerNative.pdb" "$(ProjectDir)..\DisplayManagerCLI\bin\x64\$(Configuration)\net10.0\"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="DisplayManagerNative.h" />

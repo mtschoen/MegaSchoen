@@ -18,7 +18,7 @@ public class MainPageViewModel : INotifyPropertyChanged
     bool _hideInactiveDisplays = true;
     bool _minimizeToTray = true;
     bool _startWithWindows;
-    SavedDisplayProfile? _hotkeyCapturingProfile;
+    SavedDisplayProfile? _hotkeyCapturingProfile = null;
 
 #if WINDOWS
     KeyCaptureService? _keyCaptureService;

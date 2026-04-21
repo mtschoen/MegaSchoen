@@ -7,7 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj" />
+    <ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
   </ItemGroup>
+
+  <Target Name="CopyDisplayManagerNative" AfterTargets="Build">
+    <ItemGroup>
+      <_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.dll" />
+      <_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.pdb" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_NativeArtifact)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(FullPath)')" />
+  </Target>
 
 </Project>

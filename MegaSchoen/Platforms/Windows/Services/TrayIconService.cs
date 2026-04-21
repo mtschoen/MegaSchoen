@@ -118,7 +118,22 @@ sealed class TrayIconService : IDisposable
 
     IntPtr LoadApplicationIcon()
     {
-        // Try to load from the application's exe
+        // Preferred: load the MAUI-generated appicon.ico that sits next to the exe.
+        // Unpackaged MAUI builds don't embed the icon as a Win32 resource in the exe,
+        // so ExtractIconEx against Environment.ProcessPath returns nothing — we'd
+        // end up with the shell32 monitor fallback. Loading the .ico file directly
+        // lets Windows pick the right size from its multi-resolution frames.
+        var icoPath = Path.Combine(AppContext.BaseDirectory, "appicon.ico");
+        if (File.Exists(icoPath))
+        {
+            var hIcon = LoadImage(IntPtr.Zero, icoPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+            if (hIcon != IntPtr.Zero)
+            {
+                return hIcon;
+            }
+        }
+
+        // Fallback: extract from the exe (works if a future packaged build embeds the icon).
         var exePath = Environment.ProcessPath;
         if (!string.IsNullOrEmpty(exePath))
         {
@@ -135,7 +150,7 @@ sealed class TrayIconService : IDisposable
             }
         }
 
-        // Fallback to shell32.dll default icon
+        // Last resort: shell32.dll default icon
         var shell32Icons = new IntPtr[1];
         ExtractIconEx("shell32.dll", 15, shell32Icons, null!, 1); // Monitor icon
         return shell32Icons[0];

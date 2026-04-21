@@ -27,7 +27,7 @@ public class StateStoreTests
     {
         var store = new StateStore(_tempFile);
         var file = store.Read();
-        Assert.AreEqual(0, file.Sessions.Count);
+        Assert.IsEmpty(file.Sessions);
         Assert.AreEqual(1, file.Version);
     }
 
@@ -37,7 +37,7 @@ public class StateStoreTests
         File.WriteAllText(_tempFile, "{ not valid json");
         var store = new StateStore(_tempFile);
         var file = store.Read();
-        Assert.AreEqual(0, file.Sessions.Count);
+        Assert.IsEmpty(file.Sessions);
     }
 
     [TestMethod]
@@ -53,7 +53,7 @@ public class StateStoreTests
         """);
         var store = new StateStore(_tempFile);
         var file = store.Read();
-        Assert.AreEqual(1, file.Sessions.Count);
+        Assert.HasCount(1, file.Sessions);
         Assert.AreEqual("C:\\foo", file.Sessions["abc"].Cwd);
         Assert.AreEqual("hi", file.Sessions["abc"].Message);
     }
@@ -65,7 +65,7 @@ public class StateStoreTests
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow, Message = "hi" });
 
         var file = store.Read();
-        Assert.AreEqual(1, file.Sessions.Count);
+        Assert.HasCount(1, file.Sessions);
         Assert.AreEqual("C:\\foo", file.Sessions["sess1"].Cwd);
     }
 
@@ -88,7 +88,7 @@ public class StateStoreTests
         store.Delete("sess1");
 
         var file = store.Read();
-        Assert.AreEqual(0, file.Sessions.Count);
+        Assert.IsEmpty(file.Sessions);
     }
 
     [TestMethod]
@@ -97,7 +97,7 @@ public class StateStoreTests
         var store = new StateStore(_tempFile);
         store.Delete("nope"); // should not throw
         var file = store.Read();
-        Assert.AreEqual(0, file.Sessions.Count);
+        Assert.IsEmpty(file.Sessions);
     }
 
     [TestMethod]
