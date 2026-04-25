@@ -93,6 +93,22 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void PostToolUse_DeletesSession()
+    {
+        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1" });
+
+        Assert.IsEmpty(_store.Read().Sessions);
+    }
+
+    [TestMethod]
+    public void PostToolUse_NoMatchingEntry_IsNoop()
+    {
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "unrelated" });
+        Assert.IsEmpty(_store.Read().Sessions);
+    }
+
+    [TestMethod]
     public void UnknownEvent_IsNoop()
     {
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SomeOtherEvent", SessionId = "s1" });
