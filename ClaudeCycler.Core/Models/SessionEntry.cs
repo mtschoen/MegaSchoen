@@ -12,4 +12,7 @@ public sealed class SessionEntry
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }
+
+    [JsonPropertyName("transcriptPath")]
+    public string? TranscriptPath { get; set; }
 }
