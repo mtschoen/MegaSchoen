@@ -6,6 +6,7 @@ sealed class ClaudeWindowService
 {
     readonly TrayIconService _tray;
     readonly StateStore _store = new();
+    readonly SessionLivenessVerifier _verifier = new();
     IntPtr _lastFocused = IntPtr.Zero;
 
     public ClaudeWindowService(TrayIconService tray)
@@ -27,6 +28,12 @@ sealed class ClaudeWindowService
         var matchedSessionIds = new HashSet<string>();
         foreach (var (id, entry) in file.Sessions)
         {
+            if (!_verifier.IsStillWaiting(entry))
+            {
+                _store.Delete(id);
+                continue;
+            }
+
             foreach (var window in windows)
             {
                 if (CwdMatches(window.WorkingDirectory, entry.Cwd))
