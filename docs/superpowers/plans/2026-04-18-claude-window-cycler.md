@@ -1,6 +1,6 @@
 # Claude Window Cycler Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a global hotkey to MegaSchoen that cycles focus through Claude cmd.exe sessions currently waiting on a permission prompt, using Claude Code's own `Notification` hook as the state source.
 
@@ -76,7 +76,7 @@ MegaSchoen.sln                         (modified — add new projects)
 - Create: `ClaudeCycler.Core/ClaudeCycler.Core.csproj`
 - Modify: `MegaSchoen.sln`
 
-- [ ] **Step 1: Create csproj**
+- [x] **Step 1: Create csproj**
 
 `ClaudeCycler.Core/ClaudeCycler.Core.csproj`:
 
@@ -95,16 +95,16 @@ MegaSchoen.sln                         (modified — add new projects)
 </Project>
 ```
 
-- [ ] **Step 2: Add project to solution**
+- [x] **Step 2: Add project to solution**
 
 Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeCycler.Core\ClaudeCycler.Core.csproj"`
 
-- [ ] **Step 3: Build and verify**
+- [x] **Step 3: Build and verify**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64 -t:ClaudeCycler_Core:Build`
 Expected: build succeeds.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeCycler.Core/ClaudeCycler.Core.csproj MegaSchoen.sln
@@ -119,7 +119,7 @@ git commit -m "Add ClaudeCycler.Core project"
 - Create: `ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj`
 - Modify: `MegaSchoen.sln`
 
-- [ ] **Step 1: Create csproj**
+- [x] **Step 1: Create csproj**
 
 `ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj`:
 
@@ -144,16 +144,16 @@ git commit -m "Add ClaudeCycler.Core project"
 </Project>
 ```
 
-- [ ] **Step 2: Add to solution**
+- [x] **Step 2: Add to solution**
 
 Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeCycler.Core.Tests\ClaudeCycler.Core.Tests.csproj"`
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: build succeeds.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeCycler.Core.Tests/ MegaSchoen.sln
@@ -168,7 +168,7 @@ git commit -m "Add ClaudeCycler.Core.Tests project"
 - Create: `ClaudeCycler.Core/Paths.cs`
 - Test: `ClaudeCycler.Core.Tests/PathsTests.cs`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 `ClaudeCycler.Core.Tests/PathsTests.cs`:
 
@@ -206,12 +206,12 @@ public class PathsTests
 }
 ```
 
-- [ ] **Step 2: Run — verify failure**
+- [x] **Step 2: Run — verify failure**
 
 Run: `dotnet test ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj`
 Expected: compile error (`Paths` does not exist).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `ClaudeCycler.Core/Paths.cs`:
 
@@ -237,12 +237,12 @@ public static class Paths
 }
 ```
 
-- [ ] **Step 4: Run — verify pass**
+- [x] **Step 4: Run — verify pass**
 
 Run: `dotnet test ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj`
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/Paths.cs ClaudeCycler.Core.Tests/PathsTests.cs
@@ -258,7 +258,7 @@ git commit -m "Add Paths helper for ClaudeCycler"
 - Create: `ClaudeCycler.Core/Models/NeedySessionsFile.cs`
 - Create: `ClaudeCycler.Core/Models/HookPayload.cs`
 
-- [ ] **Step 1: Implement models**
+- [x] **Step 1: Implement models**
 
 `ClaudeCycler.Core/Models/SessionEntry.cs`:
 
@@ -326,12 +326,12 @@ public sealed class HookPayload
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: build succeeds.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add ClaudeCycler.Core/Models/
@@ -345,7 +345,7 @@ git commit -m "Add ClaudeCycler data models"
 **Files:**
 - Create: `ClaudeCycler.Core/Logger.cs`
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 Logger is small enough and has filesystem side-effects; we smoke-test via HookDispatcher tests rather than isolate.
 
@@ -377,7 +377,7 @@ public static class Logger
 }
 ```
 
-- [ ] **Step 2: Build + commit**
+- [x] **Step 2: Build + commit**
 
 ```bash
 git add ClaudeCycler.Core/Logger.cs
@@ -392,7 +392,7 @@ git commit -m "Add Logger for hook bridge"
 - Create: `ClaudeCycler.Core/StateStore.cs`
 - Test: `ClaudeCycler.Core.Tests/StateStoreTests.cs`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 `ClaudeCycler.Core.Tests/StateStoreTests.cs`:
 
@@ -459,12 +459,12 @@ public class StateStoreTests
 }
 ```
 
-- [ ] **Step 2: Run — verify failure**
+- [x] **Step 2: Run — verify failure**
 
 Run: `dotnet test ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj --filter "FullyQualifiedName~StateStoreTests"`
 Expected: compile error (`StateStore` does not exist).
 
-- [ ] **Step 3: Implement read**
+- [x] **Step 3: Implement read**
 
 `ClaudeCycler.Core/StateStore.cs`:
 
@@ -512,12 +512,12 @@ public sealed class StateStore
 }
 ```
 
-- [ ] **Step 4: Run — verify pass**
+- [x] **Step 4: Run — verify pass**
 
 Run: `dotnet test ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj --filter "FullyQualifiedName~StateStoreTests"`
 Expected: 3 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/StateStore.cs ClaudeCycler.Core.Tests/StateStoreTests.cs
@@ -532,7 +532,7 @@ git commit -m "Add StateStore.Read with corruption recovery"
 - Modify: `ClaudeCycler.Core/StateStore.cs`
 - Modify: `ClaudeCycler.Core.Tests/StateStoreTests.cs`
 
-- [ ] **Step 1: Add failing tests**
+- [x] **Step 1: Add failing tests**
 
 Append to `StateStoreTests.cs`:
 
@@ -590,11 +590,11 @@ Append to `StateStoreTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run — verify failure**
+- [x] **Step 2: Run — verify failure**
 
 Expected: compile errors — `Upsert` / `Delete` / `Write` missing.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `StateStore.cs` inside the class:
 
@@ -627,11 +627,11 @@ Add to `StateStore.cs` inside the class:
     }
 ```
 
-- [ ] **Step 4: Run — verify pass**
+- [x] **Step 4: Run — verify pass**
 
 Expected: 8 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/StateStore.cs ClaudeCycler.Core.Tests/StateStoreTests.cs
@@ -646,7 +646,7 @@ git commit -m "Add StateStore atomic write + upsert + delete"
 - Modify: `ClaudeCycler.Core/StateStore.cs`
 - Modify: `ClaudeCycler.Core.Tests/StateStoreTests.cs`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Append:
 
@@ -667,9 +667,9 @@ Append:
     }
 ```
 
-- [ ] **Step 2: Run — fails**
+- [x] **Step 2: Run — fails**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add to `StateStore.cs`:
 
@@ -690,9 +690,9 @@ Add to `StateStore.cs`:
     }
 ```
 
-- [ ] **Step 4: Run — pass**
+- [x] **Step 4: Run — pass**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/StateStore.cs ClaudeCycler.Core.Tests/StateStoreTests.cs
@@ -707,7 +707,7 @@ git commit -m "Add StateStore stale-entry filter"
 - Create: `ClaudeCycler.Core/HookDispatcher.cs`
 - Test: `ClaudeCycler.Core.Tests/HookDispatcherTests.cs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `ClaudeCycler.Core.Tests/HookDispatcherTests.cs`:
 
@@ -808,9 +808,9 @@ public class HookDispatcherTests
 }
 ```
 
-- [ ] **Step 2: Run — fails (compile errors)**
+- [x] **Step 2: Run — fails (compile errors)**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `ClaudeCycler.Core/HookDispatcher.cs`:
 
@@ -867,11 +867,11 @@ public sealed class HookDispatcher
 }
 ```
 
-- [ ] **Step 4: Run — pass**
+- [x] **Step 4: Run — pass**
 
 Expected: 6 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/HookDispatcher.cs ClaudeCycler.Core.Tests/HookDispatcherTests.cs
@@ -887,7 +887,7 @@ git commit -m "Add HookDispatcher routing notification/submit/stop events"
 - Create: `ClaudeHookBridge/Program.cs` (stub)
 - Modify: `MegaSchoen.sln`
 
-- [ ] **Step 1: Create csproj**
+- [x] **Step 1: Create csproj**
 
 `ClaudeHookBridge/ClaudeHookBridge.csproj`:
 
@@ -908,7 +908,7 @@ git commit -m "Add HookDispatcher routing notification/submit/stop events"
 </Project>
 ```
 
-- [ ] **Step 2: Create stub Program.cs**
+- [x] **Step 2: Create stub Program.cs**
 
 ```csharp
 namespace ClaudeHookBridge;
@@ -919,13 +919,13 @@ public static class Program
 }
 ```
 
-- [ ] **Step 3: Add to solution and build**
+- [x] **Step 3: Add to solution and build**
 
 Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeHookBridge\ClaudeHookBridge.csproj"`
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: both new projects build.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeHookBridge/ MegaSchoen.sln
@@ -940,7 +940,7 @@ git commit -m "Add ClaudeHookBridge executable project (stub)"
 - Modify: `ClaudeHookBridge/Program.cs`
 - Test: `ClaudeCycler.Core.Tests/HookModeIntegrationTests.cs`
 
-- [ ] **Step 1: Write failing integration test**
+- [x] **Step 1: Write failing integration test**
 
 `ClaudeCycler.Core.Tests/HookModeIntegrationTests.cs`:
 
@@ -1005,7 +1005,7 @@ public class HookModeIntegrationTests
 }
 ```
 
-- [ ] **Step 2: Implement Program.cs hook mode**
+- [x] **Step 2: Implement Program.cs hook mode**
 
 Replace `ClaudeHookBridge/Program.cs`:
 
@@ -1069,16 +1069,16 @@ public static class Program
 }
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 4: Run test**
+- [x] **Step 4: Run test**
 
 Run: `dotnet test ClaudeCycler.Core.Tests/ClaudeCycler.Core.Tests.csproj --filter "FullyQualifiedName~HookModeIntegration"`
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeHookBridge/Program.cs ClaudeCycler.Core.Tests/HookModeIntegrationTests.cs
@@ -1093,7 +1093,7 @@ git commit -m "Wire ClaudeHookBridge hook mode to HookDispatcher"
 - Create: `ClaudeHookBridge/Commands/StatusCommand.cs`
 - Modify: `ClaudeHookBridge/Program.cs`
 
-- [ ] **Step 1: Implement StatusCommand**
+- [x] **Step 1: Implement StatusCommand**
 
 `ClaudeHookBridge/Commands/StatusCommand.cs`:
 
@@ -1131,7 +1131,7 @@ public static class StatusCommand
 }
 ```
 
-- [ ] **Step 2: Wire into Program.cs**
+- [x] **Step 2: Wire into Program.cs**
 
 Replace the "Unknown subcommand" branch:
 
@@ -1154,12 +1154,12 @@ Add helper method to `Program`:
     }
 ```
 
-- [ ] **Step 3: Manual verification**
+- [x] **Step 3: Manual verification**
 
 Run: `ClaudeHookBridge\bin\Debug\net10.0-windows10.0.26100.0\ClaudeHookBridge.exe status`
 Expected: prints "Sessions: 0" (file likely missing or empty; should not crash).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeHookBridge/Commands/StatusCommand.cs ClaudeHookBridge/Program.cs
@@ -1174,7 +1174,7 @@ git commit -m "Add ClaudeHookBridge status subcommand"
 - Create: `ClaudeHookBridge/Commands/LogsCommand.cs`
 - Modify: `ClaudeHookBridge/Program.cs`
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 `ClaudeHookBridge/Commands/LogsCommand.cs`:
 
@@ -1201,11 +1201,11 @@ public static class LogsCommand
 }
 ```
 
-- [ ] **Step 2: Wire into Program.cs**
+- [x] **Step 2: Wire into Program.cs**
 
 Add `"logs" => Commands.LogsCommand.Run(),` to the switch.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add ClaudeHookBridge/Commands/LogsCommand.cs ClaudeHookBridge/Program.cs
@@ -1220,7 +1220,7 @@ git commit -m "Add ClaudeHookBridge logs subcommand"
 - Create: `ClaudeCycler.Core/SettingsJsonInstaller.cs`
 - Test: `ClaudeCycler.Core.Tests/SettingsJsonInstallerTests.cs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `ClaudeCycler.Core.Tests/SettingsJsonInstallerTests.cs`:
 
@@ -1317,9 +1317,9 @@ public class SettingsJsonInstallerTests
 }
 ```
 
-- [ ] **Step 2: Run — fails (types missing)**
+- [x] **Step 2: Run — fails (types missing)**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `ClaudeCycler.Core/SettingsJsonInstaller.cs`:
 
@@ -1500,11 +1500,11 @@ public sealed class SettingsJsonInstaller
 }
 ```
 
-- [ ] **Step 4: Run — pass**
+- [x] **Step 4: Run — pass**
 
 Expected: 6 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/SettingsJsonInstaller.cs ClaudeCycler.Core.Tests/SettingsJsonInstallerTests.cs
@@ -1519,7 +1519,7 @@ git commit -m "Add SettingsJsonInstaller with backup + idempotent merge"
 - Create: `ClaudeHookBridge/Commands/CheckCommand.cs`
 - Modify: `ClaudeHookBridge/Program.cs`
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 `ClaudeHookBridge/Commands/CheckCommand.cs`:
 
@@ -1564,16 +1564,16 @@ public static class CheckCommand
 }
 ```
 
-- [ ] **Step 2: Wire into Program.cs**
+- [x] **Step 2: Wire into Program.cs**
 
 Add `"check" => Commands.CheckCommand.Run(),` to the switch.
 
-- [ ] **Step 3: Manual verify**
+- [x] **Step 3: Manual verify**
 
 Run: `ClaudeHookBridge\bin\Debug\net10.0-windows10.0.26100.0\ClaudeHookBridge.exe check`
 Expected: prints all three events as NOT INSTALLED, exit code 2.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeHookBridge/Commands/CheckCommand.cs ClaudeHookBridge/Program.cs
@@ -1589,7 +1589,7 @@ git commit -m "Add ClaudeHookBridge check subcommand"
 - Create: `ClaudeCycler.Core/Interop/Kernel32.cs`
 - Create: `ClaudeCycler.Core/Interop/NtDll.cs`
 
-- [ ] **Step 1: Create User32**
+- [x] **Step 1: Create User32**
 
 `ClaudeCycler.Core/Interop/User32.cs`:
 
@@ -1621,7 +1621,7 @@ public static partial class User32
 }
 ```
 
-- [ ] **Step 2: Create Kernel32**
+- [x] **Step 2: Create Kernel32**
 
 `ClaudeCycler.Core/Interop/Kernel32.cs`:
 
@@ -1648,7 +1648,7 @@ public static partial class Kernel32
 }
 ```
 
-- [ ] **Step 3: Create NtDll**
+- [x] **Step 3: Create NtDll**
 
 `ClaudeCycler.Core/Interop/NtDll.cs`:
 
@@ -1677,11 +1677,11 @@ public static partial class NtDll
 }
 ```
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ClaudeCycler.Core/Interop/
@@ -1695,7 +1695,7 @@ git commit -m "Add Win32/Nt interop declarations for process enumeration"
 **Files:**
 - Create: `ClaudeCycler.Core/ProcessResolver.cs`
 
-- [ ] **Step 1: Write the PEB-reading pipeline**
+- [x] **Step 1: Write the PEB-reading pipeline**
 
 `ClaudeCycler.Core/ProcessResolver.cs`:
 
@@ -1813,11 +1813,11 @@ public static class ProcessResolver
 
 > **PEB offsets note:** These offsets are for 64-bit Windows processes. MegaSchoen and ClaudeHookBridge must be built x64 (the solution already enforces this). If a future Windows update changes offsets, the impact is localized to `TryGetProcessCwd`.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 (Manual verification of the PEB pipeline happens in Task 18 once the `resolve` subcommand is wired in.)
 
@@ -1834,7 +1834,7 @@ git commit -m "Add ProcessResolver with cmd.exe enumeration and PEB-based cwd re
 - Create: `ClaudeHookBridge/Commands/ResolveCommand.cs`
 - Modify: `ClaudeHookBridge/Program.cs`
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 `ClaudeHookBridge/Commands/ResolveCommand.cs`:
 
@@ -1886,15 +1886,15 @@ public static class ResolveCommand
 }
 ```
 
-- [ ] **Step 2: Wire into Program.cs**
+- [x] **Step 2: Wire into Program.cs**
 
 Add `"resolve" => Commands.ResolveCommand.Run(),` to the switch.
 
-- [ ] **Step 3: Manual verify**
+- [x] **Step 3: Manual verify**
 
 Open two cmd.exe windows in distinct directories, run claude in one, trigger a permission prompt (or mock it by running the hook bridge manually with a crafted stdin JSON). Then run `resolve`. Expected: one session listed with one matching pid/hwnd.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add ClaudeHookBridge/Commands/ResolveCommand.cs ClaudeHookBridge/Program.cs
@@ -1909,7 +1909,7 @@ git commit -m "Add ClaudeHookBridge resolve subcommand"
 - Create: `MegaSchoen/Platforms/Windows/Services/Win32ForegroundHelper.cs`
 - Modify: `MegaSchoen/Platforms/Windows/Services/Win32Interop.cs`
 
-- [ ] **Step 1: Extend Win32Interop**
+- [x] **Step 1: Extend Win32Interop**
 
 Append to `MegaSchoen/Platforms/Windows/Services/Win32Interop.cs` (inside the partial class):
 
@@ -1938,7 +1938,7 @@ Append to `MegaSchoen/Platforms/Windows/Services/Win32Interop.cs` (inside the pa
     public const int SW_RESTORE = 9;
 ```
 
-- [ ] **Step 2: Create helper**
+- [x] **Step 2: Create helper**
 
 `MegaSchoen/Platforms/Windows/Services/Win32ForegroundHelper.cs`:
 
@@ -1974,11 +1974,11 @@ static class Win32ForegroundHelper
 }
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add MegaSchoen/Platforms/Windows/Services/Win32Interop.cs MegaSchoen/Platforms/Windows/Services/Win32ForegroundHelper.cs
@@ -1992,7 +1992,7 @@ git commit -m "Add Win32ForegroundHelper for focus-steal-safe activation"
 **Files:**
 - Modify: `MegaSchoen/Platforms/Windows/Services/GlobalHotkeyService.cs`
 
-- [ ] **Step 1: Add named-hotkey fields, method, and event**
+- [x] **Step 1: Add named-hotkey fields, method, and event**
 
 Modify `GlobalHotkeyService.cs`:
 
@@ -2077,12 +2077,12 @@ Modify `UnregisterAll` to include named hotkeys:
     }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: build succeeds, existing behavior untouched.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add MegaSchoen/Platforms/Windows/Services/GlobalHotkeyService.cs
@@ -2097,7 +2097,7 @@ git commit -m "Add named-hotkey support to GlobalHotkeyService"
 - Create: `MegaSchoen/Platforms/Windows/Services/ClaudeWindowService.cs`
 - Modify: `MegaSchoen/MegaSchoen.csproj`
 
-- [ ] **Step 1: Add ClaudeCycler.Core project reference**
+- [x] **Step 1: Add ClaudeCycler.Core project reference**
 
 In `MegaSchoen/MegaSchoen.csproj`, add to the existing `<ItemGroup>` that holds ProjectReferences:
 
@@ -2105,7 +2105,7 @@ In `MegaSchoen/MegaSchoen.csproj`, add to the existing `<ItemGroup>` that holds 
     <ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />
 ```
 
-- [ ] **Step 2: Implement ClaudeWindowService**
+- [x] **Step 2: Implement ClaudeWindowService**
 
 `MegaSchoen/Platforms/Windows/Services/ClaudeWindowService.cs`:
 
@@ -2172,11 +2172,11 @@ sealed class ClaudeWindowService
 }
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add MegaSchoen/Platforms/Windows/Services/ClaudeWindowService.cs MegaSchoen/MegaSchoen.csproj
@@ -2191,7 +2191,7 @@ git commit -m "Add ClaudeWindowService cycling focus through needy Claude sessio
 - Modify: `MegaSchoen/MauiProgram.cs`
 - Modify: `MegaSchoen/Platforms/Windows/App.xaml.cs`
 
-- [ ] **Step 1: Register in DI**
+- [x] **Step 1: Register in DI**
 
 In `MegaSchoen/MauiProgram.cs`, inside the `#if WINDOWS` block, add:
 
@@ -2199,7 +2199,7 @@ In `MegaSchoen/MauiProgram.cs`, inside the `#if WINDOWS` block, add:
         builder.Services.AddSingleton<ClaudeWindowService>();
 ```
 
-- [ ] **Step 2: Wire hotkey in App.xaml.cs**
+- [x] **Step 2: Wire hotkey in App.xaml.cs**
 
 In `MegaSchoen/Platforms/Windows/App.xaml.cs`, inside `InitializeWindowsServices()`:
 
@@ -2222,12 +2222,12 @@ Register the hotkey and its handler. Directly after the existing `hotkeys.Hotkey
         };
 ```
 
-- [ ] **Step 3: Build and run manually**
+- [x] **Step 3: Build and run manually**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Launch MegaSchoen. Press `Ctrl+Alt+Shift+C`. Expected: tray notification "No Claude windows waiting" (since hooks aren't installed yet).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add MegaSchoen/MauiProgram.cs MegaSchoen/Platforms/Windows/App.xaml.cs
@@ -2242,7 +2242,7 @@ git commit -m "Wire Ctrl+Alt+Shift+C to ClaudeWindowService.CycleToNext"
 - Modify: `MegaSchoen/Platforms/Windows/Services/TrayIconService.cs`
 - Modify: `MegaSchoen/Platforms/Windows/App.xaml.cs`
 
-- [ ] **Step 1: Add menu ID and event**
+- [x] **Step 1: Add menu ID and event**
 
 In `TrayIconService.cs`, add a new menu ID constant alongside `MenuIdOpen`:
 
@@ -2256,7 +2256,7 @@ Add an event alongside `ShowRequested`:
     public event EventHandler? InstallClaudeHooksRequested;
 ```
 
-- [ ] **Step 2: Insert menu item**
+- [x] **Step 2: Insert menu item**
 
 In `ShowContextMenu`, after the `InsertMenu(... MenuIdOpen, "Open MegaSchoen")` line and before the separator, add:
 
@@ -2264,7 +2264,7 @@ In `ShowContextMenu`, after the `InsertMenu(... MenuIdOpen, "Open MegaSchoen")` 
             InsertMenu(hMenu, position++, MF_STRING, MenuIdInstallClaudeHooks, "Install Claude Hooks");
 ```
 
-- [ ] **Step 3: Handle the command**
+- [x] **Step 3: Handle the command**
 
 In `HandleMenuCommand`, add:
 
@@ -2275,7 +2275,7 @@ In `HandleMenuCommand`, add:
         }
 ```
 
-- [ ] **Step 4: Wire handler in App.xaml.cs**
+- [x] **Step 4: Wire handler in App.xaml.cs**
 
 In `InitializeWindowsServices()`, after the existing `tray.ExitRequested += ...` block, add:
 
@@ -2296,11 +2296,11 @@ In `InitializeWindowsServices()`, after the existing `tray.ExitRequested += ...`
         };
 ```
 
-- [ ] **Step 5: Build**
+- [x] **Step 5: Build**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add MegaSchoen/Platforms/Windows/Services/TrayIconService.cs MegaSchoen/Platforms/Windows/App.xaml.cs
@@ -2314,7 +2314,7 @@ git commit -m "Add tray menu item to install Claude hooks"
 **Files:**
 - Modify: `MegaSchoen/MegaSchoen.csproj`
 
-- [ ] **Step 1: Add MSBuild target**
+- [x] **Step 1: Add MSBuild target**
 
 After the existing `CopyNativeDllToOutput` target in `MegaSchoen.csproj`, add:
 
@@ -2327,12 +2327,12 @@ After the existing `CopyNativeDllToOutput` target in `MegaSchoen.csproj`, add:
 	</Target>
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: `ClaudeHookBridge.exe` appears in MegaSchoen's output directory.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add MegaSchoen/MegaSchoen.csproj
