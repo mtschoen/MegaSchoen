@@ -46,7 +46,7 @@ sealed class ClaudeWindowService
 
         foreach (var id in file.Sessions.Keys)
         {
-            if (!matchedSessionIds.Contains(id) && file.Sessions.ContainsKey(id))
+            if (!matchedSessionIds.Contains(id))
             {
                 _store.Delete(id);
             }
