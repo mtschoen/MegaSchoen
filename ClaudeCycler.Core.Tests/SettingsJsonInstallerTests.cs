@@ -19,7 +19,7 @@ public class SettingsJsonInstallerTests
     }
 
     [TestMethod]
-    public void Install_MissingFile_CreatesWithThreeHooks()
+    public void Install_MissingFile_CreatesNotificationHook()
     {
         var installer = new SettingsJsonInstaller(_tempSettings);
         installer.Install("C:\\bridge.exe");
@@ -30,6 +30,34 @@ public class SettingsJsonInstallerTests
         StringAssert.Contains(contents, "UserPromptSubmit");
         StringAssert.Contains(contents, "Stop");
         StringAssert.Contains(contents, "C:/bridge.exe");
+    }
+
+    [TestMethod]
+    public void Install_MissingFile_CreatesAllFiveHooks()
+    {
+        var installer = new SettingsJsonInstaller(_tempSettings);
+        installer.Install("C:\\bridge.exe");
+
+        var contents = File.ReadAllText(_tempSettings);
+        StringAssert.Contains(contents, "Notification");
+        StringAssert.Contains(contents, "UserPromptSubmit");
+        StringAssert.Contains(contents, "Stop");
+        StringAssert.Contains(contents, "PostToolUse");
+        StringAssert.Contains(contents, "SessionEnd");
+    }
+
+    [TestMethod]
+    public void GetStatus_AfterInstall_ReportsAllFiveInstalledHere()
+    {
+        var installer = new SettingsJsonInstaller(_tempSettings);
+        installer.Install("C:\\bridge.exe");
+
+        var status = installer.GetStatus("C:\\bridge.exe");
+        Assert.AreEqual(InstallState.InstalledHere, status.Notification);
+        Assert.AreEqual(InstallState.InstalledHere, status.UserPromptSubmit);
+        Assert.AreEqual(InstallState.InstalledHere, status.Stop);
+        Assert.AreEqual(InstallState.InstalledHere, status.PostToolUse);
+        Assert.AreEqual(InstallState.InstalledHere, status.SessionEnd);
     }
 
     [TestMethod]
