@@ -178,12 +178,18 @@ CycleToNext
 
 ## Open implementation questions (spike early)
 
-1. **Transcript path encoding.** Confirm that `C:\Users\mtsch\source\repos\Foo` maps to `C--Users-mtsch-source-repos-Foo` (or whatever Claude Code actually uses). Read one live session's transcript path and verify the mapping. If the rule is more complex (e.g., lowercase, URL-escape, hash), encode it exactly.
-2. **Transcript write semantics.** Confirm Claude Code touches the transcript on every turn-progression event and not just on some internal buffer flush. One-line shell test: watch `LastWriteTimeUtc` while approving a permission in a live session.
-3. **`PostToolUse` payload shape.** Confirm `session_id` is on the payload for this event type. Failure mode: dispatcher logs "missing session_id" and no-ops — detectable via logs.
-4. **`Ctrl+Alt+Tab` registration.** Spike: try `RegisterHotKey` for `MOD_CONTROL | MOD_ALT | VK_TAB` on Windows 11. If refused, pick an alternative (`Ctrl+Shift+Tab`? `Ctrl+Alt+Space`?) and document.
+1. **Transcript path encoding.** ~~Confirm that `C:\Users\mtsch\source\repos\Foo` maps to `C--Users-mtsch-source-repos-Foo`...~~ **Resolved 2026-04-25:** obviated. `HookPayload.transcript_path` is already populated by Claude Code with the absolute file path. We store it on `SessionEntry` and pass it directly to the verifier — no encoding logic needed.
+2. **Transcript write semantics.** **Resolved 2026-04-25:** confirmed empirically. Claude Code appends to the transcript on every turn-progression event with sub-second latency. The 5s grace window in `SessionLivenessVerifier` is comfortably wider than observed lag.
+3. **`PostToolUse` payload shape.** **Resolved 2026-04-25:** dispatcher receives `session_id` correctly; tested by triggering a Bash tool in a live session, observing the entry gets cleared.
+4. **`Ctrl+Alt+Tab` registration.** **Resolved 2026-04-25:** `Ctrl+Alt+Tab` is reserved by Windows (`RegisterHotKey` returns `ERROR_HOTKEY_ALREADY_REGISTERED`). Probed alternatives; user picked `Ctrl+Alt+0`.
 
-All four are cheap (under 30 minutes each) and should be done before writing implementation code for the piece that depends on them.
+## Known issue — pre-existing, out of scope for this spec
+
+**Named-hotkey dispatch path is broken in `MegaSchoen/Platforms/Windows/Services/`.** The dedicated entry point for the cycler hotkey (`GlobalHotkeyService.RegisterNamedHotkey`) reports `RegisterHotKey` returning `success=true`, but the chord is not actually claimed system-wide and `WM_HOTKEY` never reaches the WndProc. **Profile hotkeys (`RegisterHotkey` overload, `Ctrl+Alt+1-5`) work correctly via the same code paths — the asymmetry is unexplained.** First documented in commit `d9bd245` ("WIP: Claude cycler functional via tray menu; hotkey path blocked"); the next commit (`0a84c1d`) cleaned up debugging instrumentation without fixing the root cause.
+
+**Workaround:** "Cycle Claude Now" tray menu item triggers the same `CycleToNext` code path and works correctly.
+
+**Suspected root cause:** WinUI's main-thread message pump may not dispatch `WM_HOTKEY` to non-WinUI windows. A spike attempt to give `MessageWindow` its own dedicated pump thread also broke profile hotkeys (constructor blocks waiting for window-ready signal that never arrives — likely a missing piece of the threading model). Real fix probably wants either a low-level keyboard hook (already wired for `KeyCaptureService`) or a correctly-architected dedicated pump thread. Tracked separately, not in this spec's scope.
 
 ## Risks & mitigations
 
