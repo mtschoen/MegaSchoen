@@ -7,6 +7,9 @@ public sealed class SessionEntry
     [JsonPropertyName("cwd")]
     public string Cwd { get; set; } = "";
 
+    [JsonPropertyName("transcriptPath")]
+    public string? TranscriptPath { get; set; }
+
     [JsonPropertyName("notifiedAt")]
     public DateTimeOffset NotifiedAt { get; set; }
 

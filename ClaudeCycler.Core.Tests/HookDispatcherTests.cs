@@ -65,6 +65,25 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void Notification_PermissionPrompt_CapturesTranscriptPath()
+    {
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Notification",
+            NotificationType = "permission_prompt",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\Users\\me\\.claude\\projects\\C--foo\\s1.jsonl",
+            Message = "Claude needs your permission"
+        });
+
+        var file = _store.Read();
+        Assert.AreEqual(
+            "C:\\Users\\me\\.claude\\projects\\C--foo\\s1.jsonl",
+            file.Sessions["s1"].TranscriptPath);
+    }
+
+    [TestMethod]
     public void Stop_DeletesSession()
     {
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
