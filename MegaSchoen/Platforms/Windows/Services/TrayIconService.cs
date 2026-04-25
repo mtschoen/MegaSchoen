@@ -14,6 +14,7 @@ sealed class TrayIconService : IDisposable
     const int MenuIdExit = 1001;
     const int MenuIdInstallClaudeHooks = 1002;
     const int MenuIdCycleClaude = 1003;
+    const int MenuIdClearNeedyClaude = 1004;
     const int MenuIdProfileBase = 2000;
 
     readonly MessageWindow _messageWindow;
@@ -42,6 +43,8 @@ sealed class TrayIconService : IDisposable
     public event EventHandler? InstallClaudeHooksRequested;
 
     public event EventHandler? CycleClaudeRequested;
+
+    public event EventHandler? ClearNeedyClaudeRequested;
 
     public TrayIconService(MessageWindow messageWindow)
     {
@@ -202,6 +205,7 @@ sealed class TrayIconService : IDisposable
             InsertMenu(hMenu, position++, MF_STRING, MenuIdOpen, "Open MegaSchoen");
             InsertMenu(hMenu, position++, MF_STRING, MenuIdCycleClaude, "Cycle Claude Now");
             InsertMenu(hMenu, position++, MF_STRING, MenuIdInstallClaudeHooks, "Install Claude Hooks");
+            InsertMenu(hMenu, position++, MF_STRING, MenuIdClearNeedyClaude, "Clear Needy Sessions");
             InsertMenu(hMenu, position++, MF_SEPARATOR, 0, null);
             InsertMenu(hMenu, position, MF_STRING, MenuIdExit, "Exit");
 
@@ -250,6 +254,10 @@ sealed class TrayIconService : IDisposable
         else if (cmd == MenuIdInstallClaudeHooks)
         {
             InstallClaudeHooksRequested?.Invoke(this, EventArgs.Empty);
+        }
+        else if (cmd == MenuIdClearNeedyClaude)
+        {
+            ClearNeedyClaudeRequested?.Invoke(this, EventArgs.Empty);
         }
         else if (cmd >= MenuIdProfileBase)
         {
