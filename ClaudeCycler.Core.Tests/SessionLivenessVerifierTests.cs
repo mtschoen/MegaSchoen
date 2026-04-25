@@ -95,4 +95,21 @@ public class SessionLivenessVerifierTests
 
         Assert.IsFalse(verifier.IsStillWaiting(entry));
     }
+
+    [TestMethod]
+    public void IsStillWaiting_TranscriptModTimeExactlyAtThreshold_ReturnsTrue()
+    {
+        File.WriteAllText(_tempTranscript, "{}");
+        var transcriptModTime = File.GetLastWriteTimeUtc(_tempTranscript);
+
+        var grace = TimeSpan.FromSeconds(5);
+        var verifier = new SessionLivenessVerifier(grace: grace);
+        var entry = new SessionEntry
+        {
+            TranscriptPath = _tempTranscript,
+            NotifiedAt = new DateTimeOffset(transcriptModTime - grace, TimeSpan.Zero)
+        };
+
+        Assert.IsTrue(verifier.IsStillWaiting(entry));
+    }
 }
