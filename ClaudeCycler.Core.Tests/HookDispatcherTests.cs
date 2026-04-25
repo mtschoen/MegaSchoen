@@ -109,6 +109,15 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void SessionEnd_DeletesSession()
+    {
+        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
+
+        Assert.IsEmpty(_store.Read().Sessions);
+    }
+
+    [TestMethod]
     public void UnknownEvent_IsNoop()
     {
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SomeOtherEvent", SessionId = "s1" });

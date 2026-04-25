@@ -36,6 +36,7 @@ public sealed class HookDispatcher
                 case "UserPromptSubmit":
                 case "Stop":
                 case "PostToolUse":
+                case "SessionEnd":
                     _store.Delete(payload.SessionId);
                     break;
 
