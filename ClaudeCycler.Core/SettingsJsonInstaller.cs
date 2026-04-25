@@ -149,6 +149,8 @@ public sealed class SettingsJsonInstaller
                     status.SessionEnd = state;
                     status.SessionEndPath = path;
                     break;
+                default:
+                    throw new InvalidOperationException($"Unhandled event name in GetStatus switch: {eventName}");
             }
         }
 

@@ -107,6 +107,8 @@ public class SettingsJsonInstallerTests
         Assert.AreEqual(InstallState.InstalledHere, status.Notification);
         Assert.AreEqual(InstallState.InstalledHere, status.UserPromptSubmit);
         Assert.AreEqual(InstallState.InstalledHere, status.Stop);
+        Assert.AreEqual(InstallState.InstalledHere, status.PostToolUse);
+        Assert.AreEqual(InstallState.InstalledHere, status.SessionEnd);
     }
 
     [TestMethod]
