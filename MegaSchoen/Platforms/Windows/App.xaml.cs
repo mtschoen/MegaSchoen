@@ -132,7 +132,7 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        hotkeys.RegisterNamedHotkey("claude-cycle", "9", new[] { "Control", "Alt" });
+        hotkeys.RegisterNamedHotkey("claude-cycle", "\\", new[] { "Control", "Alt" });
         hotkeys.NamedHotkeyTriggered += (s, name) =>
         {
             if (name == "claude-cycle")
