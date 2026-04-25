@@ -27,6 +27,7 @@ public sealed class HookDispatcher
                     _store.Upsert(payload.SessionId, new SessionEntry
                     {
                         Cwd = payload.Cwd ?? "",
+                        TranscriptPath = payload.TranscriptPath,
                         NotifiedAt = DateTimeOffset.UtcNow,
                         Message = payload.Message
                     });
@@ -34,6 +35,8 @@ public sealed class HookDispatcher
 
                 case "UserPromptSubmit":
                 case "Stop":
+                case "PostToolUse":
+                case "SessionEnd":
                     _store.Delete(payload.SessionId);
                     break;
 
