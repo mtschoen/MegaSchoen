@@ -16,11 +16,15 @@ public static class CheckCommand
         Print("Notification",     status.Notification,     status.NotificationPath);
         Print("UserPromptSubmit", status.UserPromptSubmit, status.UserPromptSubmitPath);
         Print("Stop",             status.Stop,             status.StopPath);
+        Print("PostToolUse",      status.PostToolUse,      status.PostToolUsePath);
+        Print("SessionEnd",       status.SessionEnd,       status.SessionEndPath);
 
         var allInstalled =
             status.Notification == InstallState.InstalledHere &&
             status.UserPromptSubmit == InstallState.InstalledHere &&
-            status.Stop == InstallState.InstalledHere;
+            status.Stop == InstallState.InstalledHere &&
+            status.PostToolUse == InstallState.InstalledHere &&
+            status.SessionEnd == InstallState.InstalledHere;
 
         return allInstalled ? 0 : 2;
     }
