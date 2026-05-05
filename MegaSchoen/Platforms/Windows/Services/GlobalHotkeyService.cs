@@ -28,11 +28,11 @@ sealed class GlobalHotkeyService : IDisposable
     }
 
     /// <summary>
-    /// Registers all hotkeys from the given profiles.
+    /// Registers all hotkeys from the given profiles. Leaves named hotkeys untouched.
     /// </summary>
     public void RefreshFromProfiles(List<SavedDisplayProfile> profiles)
     {
-        UnregisterAll();
+        UnregisterProfiles();
 
         foreach (var profile in profiles)
         {
@@ -41,6 +41,15 @@ sealed class GlobalHotkeyService : IDisposable
                 RegisterHotkey(profile.Id, profile.Hotkey);
             }
         }
+    }
+
+    void UnregisterProfiles()
+    {
+        foreach (var hotkeyId in _hotkeyToProfile.Keys.ToList())
+        {
+            UnregisterHotKey(_messageWindow.Handle, hotkeyId);
+        }
+        _hotkeyToProfile.Clear();
     }
 
     /// <summary>

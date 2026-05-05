@@ -183,13 +183,13 @@ CycleToNext
 3. **`PostToolUse` payload shape.** **Resolved 2026-04-25:** dispatcher receives `session_id` correctly; tested by triggering a Bash tool in a live session, observing the entry gets cleared.
 4. **`Ctrl+Alt+Tab` registration.** **Resolved 2026-04-25:** `Ctrl+Alt+Tab` is reserved by Windows (`RegisterHotKey` returns `ERROR_HOTKEY_ALREADY_REGISTERED`). Probed alternatives; user picked `Ctrl+Alt+0`.
 
-## Known issue — pre-existing, out of scope for this spec
+## Resolved — named-hotkey dispatch (2026-05-05)
 
-**Named-hotkey dispatch path is broken in `MegaSchoen/Platforms/Windows/Services/`.** The dedicated entry point for the cycler hotkey (`GlobalHotkeyService.RegisterNamedHotkey`) reports `RegisterHotKey` returning `success=true`, but the chord is not actually claimed system-wide and `WM_HOTKEY` never reaches the WndProc. **Profile hotkeys (`RegisterHotkey` overload, `Ctrl+Alt+1-5`) work correctly via the same code paths — the asymmetry is unexplained.** First documented in commit `d9bd245` ("WIP: Claude cycler functional via tray menu; hotkey path blocked"); the next commit (`0a84c1d`) cleaned up debugging instrumentation without fixing the root cause.
+Originally documented here (and in commit `d9bd245`) as "`WM_HOTKEY` never reaches WndProc" / "WinUI message pump may not dispatch to non-WinUI windows." Both diagnoses were wrong. The earlier "works under debugger / fails standalone" symptom was a wrong-build red herring.
 
-**Workaround:** "Cycle Claude Now" tray menu item triggers the same `CycleToNext` code path and works correctly.
+**Actual cause:** `GlobalHotkeyService.UnregisterAll` cleared *both* `_hotkeyToProfile` and `_hotkeyToName`, and `RefreshFromProfiles` called it on every refresh. `MainPageViewModel.cs:126` fires `RefreshAllAsync` → `RefreshGlobalHotkeys` → `RefreshFromProfiles` from the VM constructor, so the named cycle hotkey was getting unregistered within ~1s of every launch and never re-registered. Profile hotkeys 1–5 worked because they were rebuilt on every refresh.
 
-**Suspected root cause:** WinUI's main-thread message pump may not dispatch `WM_HOTKEY` to non-WinUI windows. A spike attempt to give `MessageWindow` its own dedicated pump thread also broke profile hotkeys (constructor blocks waiting for window-ready signal that never arrives — likely a missing piece of the threading model). Real fix probably wants either a low-level keyboard hook (already wired for `KeyCaptureService`) or a correctly-architected dedicated pump thread. Tracked separately, not in this spec's scope.
+**Fix:** split out `UnregisterProfiles()` for the refresh path; `UnregisterAll()` is unchanged and used only by `Dispose`. No external interceptor, no message-pump issue, no LL keyboard hook needed.
 
 ## Risks & mitigations
 
