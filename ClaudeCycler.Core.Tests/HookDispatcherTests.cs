@@ -66,6 +66,34 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void UserPromptSubmit_DeletesAwaitingInputSession()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
+
+        Assert.IsEmpty(_store.Read().Sessions);
+    }
+
+    [TestMethod]
+    public void SessionEnd_DeletesAwaitingInputSession()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
+
+        Assert.IsEmpty(_store.Read().Sessions);
+    }
+
+    [TestMethod]
     public void Notification_PermissionPrompt_CapturesTranscriptPath()
     {
         _dispatcher.Dispatch(new HookPayload

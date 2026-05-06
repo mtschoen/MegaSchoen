@@ -161,8 +161,14 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", new[] { "Control", "Alt" });
-        hotkeys.RegisterNamedHotkey("claude-cycle-any",   "0", new[] { "Control", "Alt" });
+        if (!hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", new[] { "Control", "Alt" }))
+        {
+            ClaudeCycler.Core.Logger.Log("Failed to register Ctrl+Alt+9 (claude-cycle-perms) — likely already bound system-wide");
+        }
+        if (!hotkeys.RegisterNamedHotkey("claude-cycle-any", "0", new[] { "Control", "Alt" }))
+        {
+            ClaudeCycler.Core.Logger.Log("Failed to register Ctrl+Alt+0 (claude-cycle-any) — likely already bound system-wide");
+        }
 
         hotkeys.NamedHotkeyTriggered += (s, name) =>
         {
