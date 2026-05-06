@@ -1,4 +1,5 @@
 using ClaudeCycler.Core;
+using ClaudeCycler.Core.Models;
 
 namespace MegaSchoen.Platforms.Windows.Services;
 
@@ -14,7 +15,7 @@ sealed class ClaudeWindowService
         _tray = tray;
     }
 
-    public void CycleToNext()
+    public void CycleToNext(WaitingReason? filter = null)
     {
         var file = _store.Read();
         if (file.Sessions.Count == 0)
@@ -34,12 +35,17 @@ sealed class ClaudeWindowService
                 continue;
             }
 
+            var includeInCycle = filter is null || entry.Reason == filter;
+
             foreach (var window in windows)
             {
                 if (CwdMatches(window.WorkingDirectory, entry.Cwd))
                 {
-                    candidates.Add((id, window, entry.NotifiedAt));
                     matchedSessionIds.Add(id);
+                    if (includeInCycle)
+                    {
+                        candidates.Add((id, window, entry.NotifiedAt));
+                    }
                 }
             }
         }
