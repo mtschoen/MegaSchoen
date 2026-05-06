@@ -113,54 +113,37 @@ public class StateStoreTests
     [TestMethod]
     public void Reason_RoundtripsThroughStore()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}.json");
-        try
+        var store = new StateStore(_tempFile);
+        store.Upsert("s1", new SessionEntry
         {
-            var store = new StateStore(path);
-            store.Upsert("s1", new SessionEntry
-            {
-                Cwd = "C:\\foo",
-                NotifiedAt = DateTimeOffset.UtcNow,
-                Reason = WaitingReason.AwaitingInput
-            });
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
 
-            var roundtripped = new StateStore(path).Read();
-            Assert.AreEqual(WaitingReason.AwaitingInput, roundtripped.Sessions["s1"].Reason);
-        }
-        finally
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
+        var roundtripped = new StateStore(_tempFile).Read();
+        Assert.AreEqual(WaitingReason.AwaitingInput, roundtripped.Sessions["s1"].Reason);
     }
 
     [TestMethod]
     public void Reason_LegacyEntryWithoutField_DefaultsToPermission()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}.json");
-        try
-        {
-            // Simulate a state file written by the previous version (no "reason" field).
-            File.WriteAllText(path, """
-                {
-                  "version": 1,
-                  "sessions": {
-                    "s1": {
-                      "cwd": "C:\\foo",
-                      "transcriptPath": null,
-                      "notifiedAt": "2026-04-01T00:00:00+00:00",
-                      "message": "old"
-                    }
-                  }
+        File.WriteAllText(_tempFile, """
+            {
+              "version": 1,
+              "sessions": {
+                "s1": {
+                  "cwd": "C:\\foo",
+                  "transcriptPath": null,
+                  "notifiedAt": "2026-04-01T00:00:00+00:00",
+                  "message": "old"
                 }
-                """);
+              }
+            }
+            """);
 
-            var loaded = new StateStore(path).Read();
-            Assert.AreEqual(WaitingReason.Permission, loaded.Sessions["s1"].Reason);
-        }
-        finally
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
+        var loaded = new StateStore(_tempFile).Read();
+        Assert.AreEqual(WaitingReason.Permission, loaded.Sessions["s1"].Reason);
     }
 
 }
