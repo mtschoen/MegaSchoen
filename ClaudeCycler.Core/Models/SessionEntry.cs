@@ -15,4 +15,7 @@ public sealed class SessionEntry
 
     [JsonPropertyName("message")]
     public string? Message { get; set; }
+
+    [JsonPropertyName("reason")]
+    public WaitingReason Reason { get; set; } = WaitingReason.Permission;
 }
