@@ -34,8 +34,18 @@ public sealed class HookDispatcher
                     });
                     break;
 
-                case "UserPromptSubmit":
                 case "Stop":
+                    _store.Upsert(payload.SessionId, new SessionEntry
+                    {
+                        Cwd = payload.Cwd ?? "",
+                        TranscriptPath = payload.TranscriptPath,
+                        NotifiedAt = DateTimeOffset.UtcNow,
+                        Message = null,
+                        Reason = WaitingReason.AwaitingInput
+                    });
+                    break;
+
+                case "UserPromptSubmit":
                 case "PostToolUse":
                 case "SessionEnd":
                     _store.Delete(payload.SessionId);

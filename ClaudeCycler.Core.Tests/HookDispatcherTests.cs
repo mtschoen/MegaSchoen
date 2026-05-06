@@ -85,12 +85,57 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
-    public void Stop_DeletesSession()
+    public void Stop_UpsertsSessionAsAwaitingInput()
     {
-        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "Stop", SessionId = "s1" });
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Stop",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\foo\\transcript.jsonl"
+        });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        var file = _store.Read();
+        Assert.IsTrue(file.Sessions.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.AwaitingInput, file.Sessions["s1"].Reason);
+        Assert.AreEqual("C:\\foo", file.Sessions["s1"].Cwd);
+        Assert.AreEqual("C:\\foo\\transcript.jsonl", file.Sessions["s1"].TranscriptPath);
+    }
+
+    [TestMethod]
+    public void Stop_AfterPermissionPrompt_OverwritesReason()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.Permission
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Stop",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
+        });
+
+        Assert.AreEqual(WaitingReason.AwaitingInput, _store.Read().Sessions["s1"].Reason);
+    }
+
+    [TestMethod]
+    public void Stop_RefreshesNotifiedAt()
+    {
+        var earlier = DateTimeOffset.UtcNow.AddMinutes(-10);
+        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = earlier });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Stop",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
+        });
+
+        Assert.IsTrue(_store.Read().Sessions["s1"].NotifiedAt > earlier);
     }
 
     [TestMethod]
