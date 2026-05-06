@@ -29,7 +29,8 @@ public sealed class HookDispatcher
                         Cwd = payload.Cwd ?? "",
                         TranscriptPath = payload.TranscriptPath,
                         NotifiedAt = DateTimeOffset.UtcNow,
-                        Message = payload.Message
+                        Message = payload.Message,
+                        Reason = WaitingReason.Permission
                     });
                     break;
 

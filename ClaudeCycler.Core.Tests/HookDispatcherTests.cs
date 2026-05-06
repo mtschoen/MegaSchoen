@@ -39,6 +39,7 @@ public class HookDispatcherTests
         Assert.IsTrue(file.Sessions.ContainsKey("s1"));
         Assert.AreEqual("C:\\foo", file.Sessions["s1"].Cwd);
         Assert.AreEqual("Claude needs your permission", file.Sessions["s1"].Message);
+        Assert.AreEqual(WaitingReason.Permission, file.Sessions["s1"].Reason);
     }
 
     [TestMethod]
