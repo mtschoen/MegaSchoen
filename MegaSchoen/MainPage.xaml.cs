@@ -1,4 +1,5 @@
 #if WINDOWS
+using ClaudeCycler.Core.Models;
 using MegaSchoen.Platforms.Windows.Services;
 #endif
 
@@ -11,7 +12,13 @@ namespace MegaSchoen
             InitializeComponent();
         }
 
-        void OnCycleClaudeNowClicked(object? sender, EventArgs eventArguments)
+        void OnCyclePermsClicked(object? sender, EventArgs eventArguments)
+            => CycleClaude(filter: WaitingReason.Permission);
+
+        void OnCycleAnyWaitingClicked(object? sender, EventArgs eventArguments)
+            => CycleClaude(filter: null);
+
+        void CycleClaude(WaitingReason? filter)
         {
 #if WINDOWS
             try
@@ -30,13 +37,14 @@ namespace MegaSchoen
                     CycleClaudeStatusLabel.Text = "ClaudeWindowService not resolved";
                     return;
                 }
-                cycler.CycleToNext();
-                CycleClaudeStatusLabel.Text = $"CycleToNext returned at {DateTimeOffset.UtcNow:O}";
+                cycler.CycleToNext(filter);
+                var label = filter is null ? "any-waiting" : filter.ToString();
+                CycleClaudeStatusLabel.Text = $"CycleToNext({label}) returned at {DateTimeOffset.UtcNow:O}";
             }
             catch (Exception exception)
             {
                 CycleClaudeStatusLabel.Text = $"Threw: {exception.GetType().Name}: {exception.Message}";
-                ClaudeCycler.Core.Logger.Log($"OnCycleClaudeNowClicked threw: {exception}");
+                ClaudeCycler.Core.Logger.Log($"CycleClaude({filter}) threw: {exception}");
             }
 #else
             CycleClaudeStatusLabel.Text = "Windows only";
