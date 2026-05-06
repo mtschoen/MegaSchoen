@@ -139,12 +139,22 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
-    public void PostToolUse_DeletesSession()
+    public void PostToolUse_LeavesEntryIntact()
     {
-        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        var existing = new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.Permission
+        };
+        _store.Upsert("s1", existing);
+
         _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        var file = _store.Read();
+        Assert.IsTrue(file.Sessions.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.Permission, file.Sessions["s1"].Reason);
+        Assert.AreEqual(existing.NotifiedAt, file.Sessions["s1"].NotifiedAt);
     }
 
     [TestMethod]
