@@ -1,3 +1,4 @@
+using ClaudeCycler.Core.Models;
 using DisplayManager.Core.Services;
 using MegaSchoen.Platforms.Windows.Services;
 using Microsoft.UI.Xaml;
@@ -101,15 +102,28 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        tray.CycleClaudeRequested += (s, e) =>
+        tray.CyclePermissionsRequested += (s, e) =>
         {
             try
             {
-                claudeWindowService.CycleToNext();
+                claudeWindowService.CycleToNext(WaitingReason.Permission);
             }
             catch (Exception exception)
             {
-                ClaudeCycler.Core.Logger.Log($"CycleClaudeRequested threw: {exception}");
+                ClaudeCycler.Core.Logger.Log($"CyclePermissionsRequested threw: {exception}");
+                tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
+            }
+        };
+
+        tray.CycleAnyWaitingRequested += (s, e) =>
+        {
+            try
+            {
+                claudeWindowService.CycleToNext(filter: null);
+            }
+            catch (Exception exception)
+            {
+                ClaudeCycler.Core.Logger.Log($"CycleAnyWaitingRequested threw: {exception}");
                 tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };
@@ -147,20 +161,31 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        hotkeys.RegisterNamedHotkey("claude-cycle", "9", new[] { "Control", "Alt" });
+        hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", new[] { "Control", "Alt" });
+        hotkeys.RegisterNamedHotkey("claude-cycle-any",   "0", new[] { "Control", "Alt" });
+
         hotkeys.NamedHotkeyTriggered += (s, name) =>
         {
-            if (name == "claude-cycle")
+            WaitingReason? filter = name switch
             {
-                try
-                {
-                    claudeWindowService.CycleToNext();
-                }
-                catch (Exception exception)
-                {
-                    ClaudeCycler.Core.Logger.Log($"CycleToNext threw: {exception}");
-                    tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
-                }
+                "claude-cycle-perms" => WaitingReason.Permission,
+                "claude-cycle-any"   => null,
+                _                    => null
+            };
+
+            if (name is not ("claude-cycle-perms" or "claude-cycle-any"))
+            {
+                return;
+            }
+
+            try
+            {
+                claudeWindowService.CycleToNext(filter);
+            }
+            catch (Exception exception)
+            {
+                ClaudeCycler.Core.Logger.Log($"CycleToNext threw: {exception}");
+                tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };
 
