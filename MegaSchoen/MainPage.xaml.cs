@@ -13,14 +13,26 @@ namespace MegaSchoen
         }
 
         void OnCyclePermsClicked(object? sender, EventArgs eventArguments)
-            => CycleClaude(filter: WaitingReason.Permission);
-
-        void OnCycleAnyWaitingClicked(object? sender, EventArgs eventArguments)
-            => CycleClaude(filter: null);
-
-        void CycleClaude(WaitingReason? filter)
         {
 #if WINDOWS
+            CycleClaude(filter: WaitingReason.Permission);
+#else
+            CycleClaudeStatusLabel.Text = "Windows only";
+#endif
+        }
+
+        void OnCycleAnyWaitingClicked(object? sender, EventArgs eventArguments)
+        {
+#if WINDOWS
+            CycleClaude(filter: null);
+#else
+            CycleClaudeStatusLabel.Text = "Windows only";
+#endif
+        }
+
+#if WINDOWS
+        void CycleClaude(WaitingReason? filter)
+        {
             try
             {
                 var services = Microsoft.UI.Xaml.Application.Current is MegaSchoen.WinUI.App
@@ -46,9 +58,7 @@ namespace MegaSchoen
                 CycleClaudeStatusLabel.Text = $"Threw: {exception.GetType().Name}: {exception.Message}";
                 ClaudeCycler.Core.Logger.Log($"CycleClaude({filter}) threw: {exception}");
             }
-#else
-            CycleClaudeStatusLabel.Text = "Windows only";
-#endif
         }
+#endif
     }
 }
