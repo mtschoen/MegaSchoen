@@ -118,7 +118,7 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 - `DisplayManager.Core/DisplayInfo.cs` - Display data model
 - `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile save/load/apply
 - `DisplayManagerCLI/Program.cs` - CLI commands
-- `MegaSchoen/ViewModels/MainPageViewModel.cs` - MAUI UI logic
+- `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs` - MAUI UI logic
 
 ### Native API Functions
 

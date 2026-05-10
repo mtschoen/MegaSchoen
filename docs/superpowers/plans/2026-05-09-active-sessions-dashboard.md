@@ -2279,7 +2279,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Move: `MegaSchoen/MainPage.xaml.cs` → `MegaSchoen/DisplayManagerPage.xaml.cs`
 - Move: `MegaSchoen/ViewModels/MainPageViewModel.cs` → `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs`
 
-- [ ] **Step 1: Move with git mv**
+- [x] **Step 1: Move with git mv**
 
 ```bash
 git mv MegaSchoen/MainPage.xaml MegaSchoen/DisplayManagerPage.xaml
@@ -2287,7 +2287,7 @@ git mv MegaSchoen/MainPage.xaml.cs MegaSchoen/DisplayManagerPage.xaml.cs
 git mv MegaSchoen/ViewModels/MainPageViewModel.cs MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs
 ```
 
-- [ ] **Step 2: Rename class names inside the moved files**
+- [x] **Step 2: Rename class names inside the moved files**
 
 In `DisplayManagerPage.xaml`:
 - Replace `x:Class="MegaSchoen.MainPage"` → `x:Class="MegaSchoen.DisplayManagerPage"`
@@ -2299,7 +2299,7 @@ In `DisplayManagerPage.xaml.cs`:
 In `DisplayManagerPageViewModel.cs`:
 - Replace `class MainPageViewModel` → `class DisplayManagerPageViewModel`
 
-- [ ] **Step 3: Update references in AppShell.xaml**
+- [x] **Step 3: Update references in AppShell.xaml**
 
 Open `MegaSchoen/AppShell.xaml` and change:
 ```xml
@@ -2316,7 +2316,7 @@ to (placeholder until Task 7.3):
     Route="DisplayManagerPage" />
 ```
 
-- [ ] **Step 4: Build**
+- [x] **Step 4: Build**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
@@ -2324,7 +2324,7 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 
 Expected: success. If errors mention `MainPage` somewhere we missed, fix and rebuild.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2342,7 +2342,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `MegaSchoen/SessionsPage.xaml` (placeholder, full content in Phase 8)
 - Create: `MegaSchoen/SessionsPage.xaml.cs`
 
-- [ ] **Step 1: Create a placeholder SessionsPage**
+- [x] **Step 1: Create a placeholder SessionsPage**
 
 `MegaSchoen/SessionsPage.xaml`:
 ```xml
@@ -2372,7 +2372,7 @@ public partial class SessionsPage : ContentPage
 }
 ```
 
-- [ ] **Step 2: Restructure AppShell.xaml to a flyout with two entries**
+- [x] **Step 2: Restructure AppShell.xaml to a flyout with two entries**
 
 Replace `MegaSchoen/AppShell.xaml` body:
 ```xml
@@ -2394,7 +2394,7 @@ Replace `MegaSchoen/AppShell.xaml` body:
 </Shell>
 ```
 
-- [ ] **Step 3: Build, run, and visually confirm both flyout entries appear**
+- [x] **Step 3: Build, run, and visually confirm both flyout entries appear**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
@@ -2402,7 +2402,7 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 
 Then run `MegaSchoen.exe` and confirm: hamburger menu shows "Display Manager" and "Claude Sessions"; clicking each switches pages.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
