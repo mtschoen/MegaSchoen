@@ -1,4 +1,4 @@
-using ClaudeCycler.Core.Models;
+using Claude.Core.Models;
 using DisplayManager.Core.Services;
 using MegaSchoen.Platforms.Windows.Services;
 using Microsoft.UI.Xaml;
@@ -92,7 +92,7 @@ public partial class App : MauiWinUIApplication
             try
             {
                 var bridgePath = Path.Combine(AppContext.BaseDirectory, "ClaudeHookBridge.exe");
-                var installer = new ClaudeCycler.Core.SettingsJsonInstaller();
+                var installer = new Claude.Core.SettingsJsonInstaller();
                 installer.Install(bridgePath);
                 tray.ShowNotification("MegaSchoen", "Claude hooks installed");
             }
@@ -110,7 +110,7 @@ public partial class App : MauiWinUIApplication
             }
             catch (Exception exception)
             {
-                ClaudeCycler.Core.Logger.Log($"CyclePermissionsRequested threw: {exception}");
+                Claude.Core.Logger.Log($"CyclePermissionsRequested threw: {exception}");
                 tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };
@@ -123,7 +123,7 @@ public partial class App : MauiWinUIApplication
             }
             catch (Exception exception)
             {
-                ClaudeCycler.Core.Logger.Log($"CycleAnyWaitingRequested threw: {exception}");
+                Claude.Core.Logger.Log($"CycleAnyWaitingRequested threw: {exception}");
                 tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };
@@ -132,13 +132,13 @@ public partial class App : MauiWinUIApplication
         {
             try
             {
-                var store = new ClaudeCycler.Core.StateStore();
-                store.Write(new ClaudeCycler.Core.Models.NeedySessionsFile());
+                var store = new Claude.Core.StateStore();
+                store.Write(new Claude.Core.Models.NeedySessionsFile());
                 tray.ShowNotification("MegaSchoen", "Needy sessions cleared");
             }
             catch (Exception exception)
             {
-                ClaudeCycler.Core.Logger.Log($"ClearNeedyClaude threw: {exception}");
+                Claude.Core.Logger.Log($"ClearNeedyClaude threw: {exception}");
                 tray.ShowNotification("MegaSchoen", $"Clear failed: {exception.Message}", NotificationIcon.Error);
             }
         };
@@ -163,11 +163,11 @@ public partial class App : MauiWinUIApplication
 
         if (!hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", new[] { "Control", "Alt" }))
         {
-            ClaudeCycler.Core.Logger.Log("Failed to register Ctrl+Alt+9 (claude-cycle-perms) — likely already bound system-wide");
+            Claude.Core.Logger.Log("Failed to register Ctrl+Alt+9 (claude-cycle-perms) — likely already bound system-wide");
         }
         if (!hotkeys.RegisterNamedHotkey("claude-cycle-any", "0", new[] { "Control", "Alt" }))
         {
-            ClaudeCycler.Core.Logger.Log("Failed to register Ctrl+Alt+0 (claude-cycle-any) — likely already bound system-wide");
+            Claude.Core.Logger.Log("Failed to register Ctrl+Alt+0 (claude-cycle-any) — likely already bound system-wide");
         }
 
         hotkeys.NamedHotkeyTriggered += (s, name) =>
@@ -190,7 +190,7 @@ public partial class App : MauiWinUIApplication
             }
             catch (Exception exception)
             {
-                ClaudeCycler.Core.Logger.Log($"CycleToNext threw: {exception}");
+                Claude.Core.Logger.Log($"CycleToNext threw: {exception}");
                 tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };

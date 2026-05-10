@@ -1,6 +1,6 @@
-using ClaudeCycler.Core.Models;
+using Claude.Core.Models;
 
-namespace ClaudeCycler.Core;
+namespace Claude.Core;
 
 public sealed class HookDispatcher
 {

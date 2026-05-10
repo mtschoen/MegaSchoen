@@ -1,6 +1,6 @@
-using ClaudeCycler.Core.Models;
+using Claude.Core.Models;
 
-namespace ClaudeCycler.Core.Tests;
+namespace Claude.Core.Tests;
 
 [TestClass]
 public class StateStoreTests

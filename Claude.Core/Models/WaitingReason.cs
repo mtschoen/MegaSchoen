@@ -1,4 +1,4 @@
-namespace ClaudeCycler.Core.Models;
+namespace Claude.Core.Models;
 
 public enum WaitingReason
 {

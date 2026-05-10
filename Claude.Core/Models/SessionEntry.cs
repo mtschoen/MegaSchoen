@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace ClaudeCycler.Core.Models;
+namespace Claude.Core.Models;
 
 public sealed class SessionEntry
 {

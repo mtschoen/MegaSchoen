@@ -1,8 +1,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using ClaudeCycler.Core.Interop;
+using Claude.Core.Interop;
 
-namespace ClaudeCycler.Core;
+namespace Claude.Core;
 
 public readonly record struct CmdWindow(uint ProcessId, IntPtr WindowHandle, string WindowTitle, string? WorkingDirectory);
 
@@ -82,8 +82,8 @@ public static class ProcessResolver
             if (status != 0 || pbi.PebBaseAddress == IntPtr.Zero) return null;
 
             // Offsets for 64-bit PEB:
-            //   PEB + 0x20  → ProcessParameters (PTR)
-            //   ProcessParameters + 0x38 → CurrentDirectory.DosPath (UNICODE_STRING)
+            //   PEB + 0x20  â†’ ProcessParameters (PTR)
+            //   ProcessParameters + 0x38 â†’ CurrentDirectory.DosPath (UNICODE_STRING)
             //   UNICODE_STRING: USHORT Length; USHORT MaximumLength; PWSTR Buffer;
             //     Length at +0x00, Buffer at +0x08 (64-bit).
 

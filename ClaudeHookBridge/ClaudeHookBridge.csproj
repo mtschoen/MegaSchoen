@@ -9,6 +9,6 @@
     <AssemblyName>ClaudeHookBridge</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />
+    <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />
   </ItemGroup>
 </Project>

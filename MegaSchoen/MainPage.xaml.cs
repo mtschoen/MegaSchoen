@@ -1,5 +1,5 @@
 #if WINDOWS
-using ClaudeCycler.Core.Models;
+using Claude.Core.Models;
 using MegaSchoen.Platforms.Windows.Services;
 #endif
 
@@ -56,7 +56,7 @@ namespace MegaSchoen
             catch (Exception exception)
             {
                 CycleClaudeStatusLabel.Text = $"Threw: {exception.GetType().Name}: {exception.Message}";
-                ClaudeCycler.Core.Logger.Log($"CycleClaude({filter}) threw: {exception}");
+                Claude.Core.Logger.Log($"CycleClaude({filter}) threw: {exception}");
             }
         }
 #endif

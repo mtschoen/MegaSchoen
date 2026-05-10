@@ -10,7 +10,7 @@
     <PackageReference Include="MSTest" Version="4.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />
+    <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />

@@ -1,6 +1,6 @@
 using System.Text.Json;
-using ClaudeCycler.Core;
-using ClaudeCycler.Core.Models;
+using Claude.Core;
+using Claude.Core.Models;
 
 namespace ClaudeHookBridge;
 

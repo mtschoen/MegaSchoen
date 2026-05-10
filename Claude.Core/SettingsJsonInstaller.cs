@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace ClaudeCycler.Core;
+namespace Claude.Core;
 
 public enum InstallState
 {

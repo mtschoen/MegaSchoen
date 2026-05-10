@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace ClaudeCycler.Core.Tests;
+namespace Claude.Core.Tests;
 
 [TestClass]
 public class HookModeIntegrationTests

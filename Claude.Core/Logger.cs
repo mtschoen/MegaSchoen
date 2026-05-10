@@ -1,4 +1,4 @@
-namespace ClaudeCycler.Core;
+namespace Claude.Core;
 
 public static class Logger
 {

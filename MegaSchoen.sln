@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35521.163
@@ -13,9 +13,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DisplayManagerNative", "Dis
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MegaSchoen.UITests", "MegaSchoen.UITests\MegaSchoen.UITests.csproj", "{539ED7B7-4412-4208-833F-710F0B4B13A4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCycler.Core", "ClaudeCycler.Core\ClaudeCycler.Core.csproj", "{90BB3B8F-B229-436D-ABF4-92562A343292}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Claude.Core", "Claude.Core\Claude.Core.csproj", "{90BB3B8F-B229-436D-ABF4-92562A343292}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeCycler.Core.Tests", "ClaudeCycler.Core.Tests\ClaudeCycler.Core.Tests.csproj", "{702D4E9E-5C9A-4858-8C97-C9DB24796B88}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Claude.Core.Tests", "Claude.Core.Tests\Claude.Core.Tests.csproj", "{702D4E9E-5C9A-4858-8C97-C9DB24796B88}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeHookBridge", "ClaudeHookBridge\ClaudeHookBridge.csproj", "{8F5B748C-467A-4FE6-AA93-73292AC233B8}"
 EndProject

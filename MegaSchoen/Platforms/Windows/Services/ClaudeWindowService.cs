@@ -1,5 +1,5 @@
-using ClaudeCycler.Core;
-using ClaudeCycler.Core.Models;
+using Claude.Core;
+using Claude.Core.Models;
 
 namespace MegaSchoen.Platforms.Windows.Services;
 

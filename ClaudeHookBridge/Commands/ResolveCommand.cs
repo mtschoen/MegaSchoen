@@ -1,4 +1,4 @@
-using ClaudeCycler.Core;
+using Claude.Core;
 
 namespace ClaudeHookBridge.Commands;
 

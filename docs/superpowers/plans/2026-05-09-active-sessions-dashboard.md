@@ -22,14 +22,14 @@ Foundation for the rest of the work. After this phase, the build is green with t
 - Rename: `Claude.Core/ClaudeCycler.Core.csproj` → `Claude.Core/Claude.Core.csproj`
 - Rename: `Claude.Core.Tests/ClaudeCycler.Core.Tests.csproj` → `Claude.Core.Tests/Claude.Core.Tests.csproj`
 
-- [ ] **Step 1: Stop any running MegaSchoen.exe and clean obj/bin**
+- [x] **Step 1: Stop any running MegaSchoen.exe and clean obj/bin**
 
 ```powershell
 Get-Process MegaSchoen -ErrorAction SilentlyContinue | Stop-Process -Force
 Get-ChildItem -Path . -Recurse -Directory -Include obj,bin | Remove-Item -Recurse -Force
 ```
 
-- [ ] **Step 2: Move the directories with `git mv` so history follows**
+- [x] **Step 2: Move the directories with `git mv` so history follows**
 
 ```bash
 git mv ClaudeCycler.Core Claude.Core
@@ -38,11 +38,11 @@ git mv Claude.Core/ClaudeCycler.Core.csproj Claude.Core/Claude.Core.csproj
 git mv Claude.Core.Tests/ClaudeCycler.Core.Tests.csproj Claude.Core.Tests/Claude.Core.Tests.csproj
 ```
 
-- [ ] **Step 3: Update the test csproj's project reference to the renamed library**
+- [x] **Step 3: Update the test csproj's project reference to the renamed library**
 
 Open `Claude.Core.Tests/Claude.Core.Tests.csproj` and change any `<ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />` to `<ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />`.
 
-- [ ] **Step 4: Verify the renames**
+- [x] **Step 4: Verify the renames**
 
 ```bash
 git status
@@ -58,7 +58,7 @@ Expected: shows the renames as moves, both directories present with their `.cspr
 - Modify: every `*.cs` under `Claude.Core/` and `Claude.Core.Tests/`
 - Modify: every consumer file that has `using ClaudeCycler.Core` or `using ClaudeCycler.Core.Models`
 
-- [ ] **Step 1: Replace `namespace ClaudeCycler.Core` with `namespace Claude.Core` recursively**
+- [x] **Step 1: Replace `namespace ClaudeCycler.Core` with `namespace Claude.Core` recursively**
 
 ```powershell
 Get-ChildItem -Recurse -Include *.cs -Path Claude.Core,Claude.Core.Tests | ForEach-Object {
@@ -68,7 +68,7 @@ Get-ChildItem -Recurse -Include *.cs -Path Claude.Core,Claude.Core.Tests | ForEa
 }
 ```
 
-- [ ] **Step 2: Replace `using ClaudeCycler.Core` with `using Claude.Core` across the whole repo**
+- [x] **Step 2: Replace `using ClaudeCycler.Core` with `using Claude.Core` across the whole repo**
 
 ```powershell
 Get-ChildItem -Recurse -Include *.cs -Path Claude.Core,Claude.Core.Tests,MegaSchoen,ClaudeHookBridge | ForEach-Object {
@@ -78,7 +78,7 @@ Get-ChildItem -Recurse -Include *.cs -Path Claude.Core,Claude.Core.Tests,MegaSch
 }
 ```
 
-- [ ] **Step 3: Verify no `ClaudeCycler.Core` references remain in source**
+- [x] **Step 3: Verify no `ClaudeCycler.Core` references remain in source**
 
 Use Grep:
 - pattern: `ClaudeCycler\.Core`
@@ -93,7 +93,7 @@ Expected: no matches.
 - Modify: `ClaudeHookBridge/ClaudeHookBridge.csproj` (ProjectReference path)
 - Modify: `MegaSchoen.sln` (project entries on lines 16-19)
 
-- [ ] **Step 1: Update `MegaSchoen/MegaSchoen.csproj`**
+- [x] **Step 1: Update `MegaSchoen/MegaSchoen.csproj`**
 
 Open `MegaSchoen/MegaSchoen.csproj` and replace:
 
@@ -107,11 +107,11 @@ with:
 <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" Condition="$(TargetFramework.Contains('windows'))" />
 ```
 
-- [ ] **Step 2: Update `ClaudeHookBridge/ClaudeHookBridge.csproj`**
+- [x] **Step 2: Update `ClaudeHookBridge/ClaudeHookBridge.csproj`**
 
 Find the `<ProjectReference Include="..\ClaudeCycler.Core\ClaudeCycler.Core.csproj" />` line and change the path to `..\Claude.Core\Claude.Core.csproj`.
 
-- [ ] **Step 3: Update `MegaSchoen.sln`**
+- [x] **Step 3: Update `MegaSchoen.sln`**
 
 Edit `MegaSchoen.sln`:
 
@@ -137,7 +137,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Claude.Core.Tests", "Claude
 
 ### Task 1.4: Build verification + commit
 
-- [ ] **Step 1: Restore + build the solution**
+- [x] **Step 1: Restore + build the solution**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false -restore
@@ -145,7 +145,7 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false -restore
 
 Expected: build succeeds with no errors. Warnings about LF/CRLF are fine.
 
-- [ ] **Step 2: Run the existing test suite to confirm renames didn't break behavior**
+- [x] **Step 2: Run the existing test suite to confirm renames didn't break behavior**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --no-build
@@ -153,7 +153,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --no-build
 
 Expected: all existing tests pass.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A

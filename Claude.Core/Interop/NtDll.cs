@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace ClaudeCycler.Core.Interop;
+namespace Claude.Core.Interop;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct ProcessBasicInformation
