@@ -19,4 +19,20 @@ public class ActiveSessionEnumeratorTests
         var result = enumerator.Enumerate();
         Assert.AreEqual(0, result.Count);
     }
+
+    [TestMethod]
+    public void Enumerate_WindowCwdHasNoProjectsDir_ProducesNoSessions()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(
+            ProcessId: 100,
+            Window: WindowToken.FromHandle(new IntPtr(1)),
+            Title: "cmd",
+            WorkingDirectory: @"C:\nowhere\that\matches"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+
+        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
+        Assert.AreEqual(0, enumerator.Enumerate().Count);
+    }
 }
