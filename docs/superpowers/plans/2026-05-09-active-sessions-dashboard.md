@@ -302,7 +302,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `Claude.Core/Models/SessionSnapshot.cs`
 - Create: `Claude.Core.Tests/SessionSnapshotRollupTests.cs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Claude.Core.Tests/SessionSnapshotRollupTests.cs`:
 ```csharp
@@ -356,7 +356,7 @@ public class SessionSnapshotRollupTests
 }
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail (SessionSnapshot doesn't exist yet)**
+- [x] **Step 2: Run tests to confirm they fail (SessionSnapshot doesn't exist yet)**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SessionSnapshotRollupTests" --no-restore
@@ -364,7 +364,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: build error on `SessionSnapshot`.
 
-- [ ] **Step 3: Write SessionSnapshot**
+- [x] **Step 3: Write SessionSnapshot**
 
 `Claude.Core/Models/SessionSnapshot.cs`:
 ```csharp
@@ -393,7 +393,7 @@ public sealed record SessionSnapshot(
 }
 ```
 
-- [ ] **Step 4: Run tests to confirm they pass**
+- [x] **Step 4: Run tests to confirm they pass**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SessionSnapshotRollupTests"
@@ -401,7 +401,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Claude.Core/Models/SessionSnapshot.cs Claude.Core.Tests/SessionSnapshotRollupTests.cs
