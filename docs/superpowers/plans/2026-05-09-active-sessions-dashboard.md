@@ -2423,7 +2423,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `MegaSchoen/ViewModels/SessionCardViewModel.cs`
 
-- [ ] **Step 1: Write the card view model**
+- [x] **Step 1: Write the card view model**
 
 `MegaSchoen/ViewModels/SessionCardViewModel.cs`:
 ```csharp
@@ -2522,13 +2522,13 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
 #endif
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add MegaSchoen/ViewModels/SessionCardViewModel.cs
@@ -2543,7 +2543,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `MegaSchoen/ViewModels/SessionsPageViewModel.cs`
 - Modify: `MegaSchoen/MauiProgram.cs`
 
-- [ ] **Step 1: Write the view model skeleton (watcher logic comes in 8.3)**
+- [x] **Step 1: Write the view model skeleton (watcher logic comes in 8.3)**
 
 `MegaSchoen/ViewModels/SessionsPageViewModel.cs`:
 ```csharp
@@ -2628,7 +2628,7 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
 #endif
 ```
 
-- [ ] **Step 2: Register the view model + ActiveSessionEnumerator in MauiProgram.cs**
+- [x] **Step 2: Register the view model + ActiveSessionEnumerator in MauiProgram.cs**
 
 Open `MegaSchoen/MauiProgram.cs` and inside the `#if WINDOWS` block, add:
 ```csharp
@@ -2644,13 +2644,13 @@ builder.Services.AddTransient<DisplayManagerPage>();
 
 Add `using Claude.Core;` and `using Claude.Core.Models;` to the top.
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -2666,7 +2666,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `MegaSchoen/ViewModels/SessionsPageViewModel.cs`
 
-- [ ] **Step 1: Add the watcher infrastructure**
+- [x] **Step 1: Add the watcher infrastructure**
 
 In `SessionsPageViewModel.cs`, add fields and modify the constructor:
 ```csharp
@@ -2754,7 +2754,7 @@ Update `Dispose`:
 
 Add `using Claude.Core;` so `Logger` and `Paths` resolve.
 
-- [ ] **Step 2: Wire Start/Dispose into the page lifecycle**
+- [x] **Step 2: Wire Start/Dispose into the page lifecycle**
 
 `MegaSchoen/SessionsPage.xaml.cs`:
 ```csharp
@@ -2792,20 +2792,20 @@ public partial class SessionsPage : ContentPage
 }
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 4: Run + manual smoke test**
+- [x] **Step 4: Run + manual smoke test**
 
 Run MegaSchoen.exe, switch to the Claude Sessions flyout entry. With a Claude Code session running in another terminal:
 - The card should appear within ~250ms.
 - When you submit a prompt, the badge should flip Working → Idle within ~1s of the Stop hook firing.
 - Cards remove themselves when the cmd.exe window closes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2822,7 +2822,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `MegaSchoen/SessionsPage.xaml`
 
-- [ ] **Step 1: Replace the placeholder XAML with the card layout**
+- [x] **Step 1: Replace the placeholder XAML with the card layout**
 
 `MegaSchoen/SessionsPage.xaml`:
 ```xml
@@ -2893,7 +2893,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 </ContentPage>
 ```
 
-- [ ] **Step 2: Add the `IsNonEmptyStringConverter` if it doesn't exist**
+- [x] **Step 2: Add the `IsNonEmptyStringConverter` if it doesn't exist**
 
 Look in `MegaSchoen/Converters/` for an existing string-emptiness converter. If absent, create `MegaSchoen/Converters/IsNonEmptyStringConverter.cs`:
 ```csharp
@@ -2918,7 +2918,7 @@ Register it in `MegaSchoen/App.xaml`:
 
 (Inside the existing `<Application.Resources>` `<ResourceDictionary>` block. Match the pattern of `IsZeroConverter`.)
 
-- [ ] **Step 3: Build, run, and visually verify**
+- [x] **Step 3: Build, run, and visually verify**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
@@ -2926,7 +2926,7 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 
 Run MegaSchoen.exe → Claude Sessions tab. Cards should render with state badge, cwd, last-activity, Focus button. With no sessions: "No active Claude sessions" centered.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -2943,15 +2943,15 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Modify: `MegaSchoen/SessionsPage.xaml` (add cycler section at bottom)
 - Modify: `MegaSchoen/SessionsPage.xaml.cs` (add cycler handlers)
 
-- [ ] **Step 1: Cut the cycler `Frame` block out of DisplayManagerPage.xaml**
+- [x] **Step 1: Cut the cycler `Frame` block out of DisplayManagerPage.xaml**
 
 In `MegaSchoen/DisplayManagerPage.xaml`, remove the entire `Frame` element titled "🤖 Claude Cycler (debug)" (currently at lines 217-238).
 
-- [ ] **Step 2: Cut the cycler handlers out of DisplayManagerPage.xaml.cs**
+- [x] **Step 2: Cut the cycler handlers out of DisplayManagerPage.xaml.cs**
 
 Remove the entire `OnCyclePermsClicked`, `OnCycleAnyWaitingClicked`, and `CycleClaude` methods (and any `#if WINDOWS` / `#endif` wrappers around them) from `MegaSchoen/DisplayManagerPage.xaml.cs`.
 
-- [ ] **Step 3: Append the cycler `Frame` block to SessionsPage.xaml**
+- [x] **Step 3: Append the cycler `Frame` block to SessionsPage.xaml**
 
 In `MegaSchoen/SessionsPage.xaml`, before the closing `</VerticalStackLayout>`, paste the same cycler block:
 
@@ -2979,7 +2979,7 @@ In `MegaSchoen/SessionsPage.xaml`, before the closing `</VerticalStackLayout>`, 
 </Frame>
 ```
 
-- [ ] **Step 4: Add the cycler handlers to SessionsPage.xaml.cs**
+- [x] **Step 4: Add the cycler handlers to SessionsPage.xaml.cs**
 
 Append to `MegaSchoen/SessionsPage.xaml.cs` (inside the class):
 ```csharp
@@ -3028,7 +3028,7 @@ Append to `MegaSchoen/SessionsPage.xaml.cs` (inside the class):
 #endif
 ```
 
-- [ ] **Step 5: Build, run, and confirm the buttons still work**
+- [x] **Step 5: Build, run, and confirm the buttons still work**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
@@ -3036,7 +3036,7 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
 
 Run MegaSchoen.exe → Claude Sessions tab. Confirm: the "Cycle Pending Permissions" / "Cycle Any Waiting" buttons appear at the bottom and behave the same as before.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add -A
@@ -3052,11 +3052,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `MegaSchoen.UITests/ScreenshotTests.cs`
 
-- [ ] **Step 1: Read the existing screenshot test to learn the harness**
+- [x] **Step 1: Read the existing screenshot test to learn the harness**
 
 Use Read on `MegaSchoen.UITests/ScreenshotTests.cs` to understand how the existing test launches and captures.
 
-- [ ] **Step 2: Add a SessionsPage screenshot test**
+- [x] **Step 2: Add a SessionsPage screenshot test**
 
 Append a new `[Fact]` to `ScreenshotTests.cs` that navigates to the Claude Sessions flyout entry and captures a screenshot. Match the existing test pattern; if the existing test does e.g.
 
@@ -3075,7 +3075,7 @@ public void SessionsPage_RendersWithoutErrors()
 }
 ```
 
-- [ ] **Step 3: Run the UI test**
+- [x] **Step 3: Run the UI test**
 
 ```bash
 dotnet test MegaSchoen.UITests/MegaSchoen.UITests.csproj
@@ -3083,7 +3083,7 @@ dotnet test MegaSchoen.UITests/MegaSchoen.UITests.csproj
 
 Expected: PASS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add MegaSchoen.UITests/ScreenshotTests.cs
