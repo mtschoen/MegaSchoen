@@ -1646,7 +1646,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `ClaudeSessionsCLI/Program.cs`
 - Modify: `MegaSchoen.sln` (add the new project entry + config mappings)
 
-- [ ] **Step 1: Create the csproj**
+- [x] **Step 1: Create the csproj**
 
 `ClaudeSessionsCLI/ClaudeSessionsCLI.csproj`:
 ```xml
@@ -1671,7 +1671,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 (If `0.49.1` is not the latest at implementation time, take the latest stable.)
 
-- [ ] **Step 2: Create the dispatcher Program.cs**
+- [x] **Step 2: Create the dispatcher Program.cs**
 
 `ClaudeSessionsCLI/Program.cs`:
 ```csharp
@@ -1715,7 +1715,7 @@ partial class Program
 
 Note: top-level statements provide `args`; the snippet uses `arguments` for readability. Adjust to match `args` if the compiler complains, OR rewrite as `static int Main(string[] arguments) { ... }`.
 
-- [ ] **Step 3: Add ClaudeSessionsCLI to MegaSchoen.sln**
+- [x] **Step 3: Add ClaudeSessionsCLI to MegaSchoen.sln**
 
 Open `MegaSchoen.sln` and add a new Project line at the bottom of the existing `Project(...) ... EndProject` block (line ~21 area):
 
@@ -1741,7 +1741,7 @@ In the `GlobalSection(ProjectConfigurationPlatforms)` block, add config mappings
 {C5D8E001-0001-0001-0001-000000000001}.Release|x86.Build.0 = Release|Any CPU
 ```
 
-- [ ] **Step 4: Add stub Commands files so the project compiles**
+- [x] **Step 4: Add stub Commands files so the project compiles**
 
 `ClaudeSessionsCLI/Commands/ListCommand.cs`:
 ```csharp
@@ -1763,7 +1763,7 @@ static class FocusCommand
 }
 ```
 
-- [ ] **Step 5: Build, restore, and commit**
+- [x] **Step 5: Build, restore, and commit**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false -restore
@@ -1781,7 +1781,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Modify: `ClaudeSessionsCLI/Commands/ListCommand.cs`
 - Create: `ClaudeSessionsCLI/CliOptions.cs`
 
-- [ ] **Step 1: Write CliOptions parser**
+- [x] **Step 1: Write CliOptions parser**
 
 `ClaudeSessionsCLI/CliOptions.cs`:
 ```csharp
@@ -1817,7 +1817,7 @@ sealed class CliOptions
 }
 ```
 
-- [ ] **Step 2: Implement ListCommand JSON one-shot path**
+- [x] **Step 2: Implement ListCommand JSON one-shot path**
 
 Replace `ClaudeSessionsCLI/Commands/ListCommand.cs`:
 ```csharp
@@ -1899,7 +1899,7 @@ sealed record SubagentDto(string AgentId, DateTimeOffset LastActivityUtc, string
 
 (`SnapshotDto` is the wire format — strings instead of enums for friendlier JSON.)
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 ```bash
 MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -nodeReuse:false
@@ -1907,7 +1907,7 @@ MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -n
 
 Expected: success.
 
-- [ ] **Step 4: Smoke test (manual)**
+- [x] **Step 4: Smoke test (manual)**
 
 ```bash
 ".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json
@@ -1915,7 +1915,7 @@ Expected: success.
 
 Expected: JSON array (possibly empty `[]`) printed; exit 0. If you have an active Claude session in another window, it should appear.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1926,7 +1926,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 6.3: ListCommand --json-stream
 
-- [ ] **Step 1: Implement EmitJsonStream**
+- [x] **Step 1: Implement EmitJsonStream**
 
 Replace the placeholder `EmitJsonStream` in `ListCommand.cs`:
 ```csharp
@@ -1960,13 +1960,13 @@ static async Task<int> EmitJsonStream(ActiveSessionEnumerator enumerator, CliOpt
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 ```bash
 MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 3: Smoke test (manual)**
+- [x] **Step 3: Smoke test (manual)**
 
 ```bash
 ".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json-stream --interval 1
@@ -1974,7 +1974,7 @@ MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -n
 
 Expected: NDJSON line every ~1 second. Ctrl-C exits cleanly.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -1985,7 +1985,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 6.4: ListCommand human mode with Spectre.Console.Live
 
-- [ ] **Step 1: Implement RunHumanMode**
+- [x] **Step 1: Implement RunHumanMode**
 
 Replace the placeholder `RunHumanMode` in `ListCommand.cs`:
 ```csharp
@@ -2078,13 +2078,13 @@ static string TruncateMiddle(string s, int max)
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 ```bash
 MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 3: Smoke test (manual)**
+- [x] **Step 3: Smoke test (manual)**
 
 In a real terminal (not piped):
 ```bash
@@ -2093,7 +2093,7 @@ In a real terminal (not piped):
 
 Expected: a Spectre.Console table that refreshes every 1.5s. Ctrl-C exits cleanly with "Stopped." printed.
 
-- [ ] **Step 4: Smoke test pipe-detection**
+- [x] **Step 4: Smoke test pipe-detection**
 
 ```bash
 ".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list | clip
@@ -2101,7 +2101,7 @@ Expected: a Spectre.Console table that refreshes every 1.5s. Ctrl-C exits cleanl
 
 Expected: clipboard receives a JSON document; the CLI exits immediately (no infinite loop).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -2114,7 +2114,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 6.5: FocusCommand
 
-- [ ] **Step 1: Implement FocusCommand**
+- [x] **Step 1: Implement FocusCommand**
 
 Replace `ClaudeSessionsCLI/Commands/FocusCommand.cs`:
 ```csharp
@@ -2159,13 +2159,13 @@ static class FocusCommand
 }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 ```bash
 MSBuild.exe ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -p:Configuration=Debug -nodeReuse:false
 ```
 
-- [ ] **Step 3: Smoke test (manual)**
+- [x] **Step 3: Smoke test (manual)**
 
 Open a Claude Code session in another terminal. Then:
 ```bash
@@ -2179,7 +2179,7 @@ Copy the first 8 chars of a `SessionId` from the output. Then:
 
 Expected: the matching window comes to the foreground; CLI exits 0.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -2193,7 +2193,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `Claude.Core.Tests/CliSmokeTests.cs`
 
-- [ ] **Step 1: Write a smoke test that spawns the built CLI**
+- [x] **Step 1: Write a smoke test that spawns the built CLI**
 
 `Claude.Core.Tests/CliSmokeTests.cs`:
 ```csharp
@@ -2251,7 +2251,7 @@ public class CliSmokeTests
 }
 ```
 
-- [ ] **Step 2: Run**
+- [x] **Step 2: Run**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~CliSmokeTests"
@@ -2259,7 +2259,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: 2 passed.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Claude.Core.Tests/CliSmokeTests.cs
