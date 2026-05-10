@@ -214,29 +214,6 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- Claude Cycler Debug Section -->
-            <Frame BorderColor="{StaticResource Primary}"
-                   BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
-                   Padding="15">
-                <VerticalStackLayout Spacing="10">
-                    <Label Text="🤖 Claude Cycler (debug)"
-                           FontSize="20"
-                           FontAttributes="Bold"/>
-                    <Button x:Name="CyclePermsButton"
-                            Text="Cycle Pending Permissions"
-                            Clicked="OnCyclePermsClicked"
-                            BackgroundColor="{StaticResource Primary}"/>
-                    <Button x:Name="CycleAnyWaitingButton"
-                            Text="Cycle Any Waiting"
-                            Clicked="OnCycleAnyWaitingClicked"
-                            BackgroundColor="{StaticResource Primary}"/>
-                    <Label x:Name="CycleClaudeStatusLabel"
-                           Text=""
-                           FontSize="12"
-                           TextColor="{StaticResource Gray600}"/>
-                </VerticalStackLayout>
-            </Frame>
-
             <!-- Settings Section -->
             <Frame BorderColor="{StaticResource Primary}"
                    BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource Gray900}}"
