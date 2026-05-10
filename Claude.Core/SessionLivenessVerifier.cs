@@ -3,6 +3,12 @@ using Claude.Core.Models;
 
 namespace Claude.Core;
 
+public enum LastEntryClass
+{
+    SessionPending,
+    Resolved
+}
+
 public sealed class SessionLivenessVerifier
 {
     static readonly TimeSpan DefaultGrace = TimeSpan.FromSeconds(5);
@@ -34,13 +40,7 @@ public sealed class SessionLivenessVerifier
         return ClassifyLastEntry(entry.TranscriptPath) == LastEntryClass.SessionPending;
     }
 
-    enum LastEntryClass
-    {
-        SessionPending,
-        Resolved
-    }
-
-    static LastEntryClass ClassifyLastEntry(string transcriptPath)
+    public static LastEntryClass ClassifyLastEntry(string transcriptPath)
     {
         string? lastLine;
         try

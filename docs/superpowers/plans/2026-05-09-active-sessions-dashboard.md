@@ -852,7 +852,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Modify: `Claude.Core/SessionLivenessVerifier.cs` — promote `ClassifyLastEntry` and `LastEntryClass` from `private` to `internal`, OR add a new public method `GetLastEntryClass(string transcriptPath)` and a public `LastEntryClass` enum
 
-- [ ] **Step 1: Promote `LastEntryClass` enum and `ClassifyLastEntry` static method to public**
+- [x] **Step 1: Promote `LastEntryClass` enum and `ClassifyLastEntry` static method to public**
 
 Edit `Claude.Core/SessionLivenessVerifier.cs`. Move `LastEntryClass` out as a public enum at namespace level:
 
@@ -866,7 +866,7 @@ public enum LastEntryClass
 
 Change `static LastEntryClass ClassifyLastEntry(string transcriptPath)` to `public static LastEntryClass ClassifyLastEntry(string transcriptPath)`.
 
-- [ ] **Step 2: Build (existing tests should still pass)**
+- [x] **Step 2: Build (existing tests should still pass)**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
@@ -875,7 +875,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --no-build
 
 Expected: all green.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Claude.Core/SessionLivenessVerifier.cs
