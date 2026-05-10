@@ -893,7 +893,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `Claude.Core/SessionStateClassifier.cs`
 - Create: `Claude.Core.Tests/SessionStateClassifierTests.cs`
 
-- [ ] **Step 1: Write failing tests with a temp-file fixture**
+- [x] **Step 1: Write failing tests with a temp-file fixture**
 
 `Claude.Core.Tests/SessionStateClassifierTests.cs`:
 ```csharp
@@ -951,7 +951,7 @@ public class SessionStateClassifierTests : IDisposable
 }
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail (SessionStateClassifier doesn't exist)**
+- [x] **Step 2: Run tests to confirm they fail (SessionStateClassifier doesn't exist)**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SessionStateClassifierTests"
@@ -959,7 +959,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: build error on `SessionStateClassifier`.
 
-- [ ] **Step 3: Implement SessionStateClassifier**
+- [x] **Step 3: Implement SessionStateClassifier**
 
 `Claude.Core/SessionStateClassifier.cs`:
 ```csharp
@@ -1004,7 +1004,7 @@ public static class SessionStateClassifier
 }
 ```
 
-- [ ] **Step 4: Run tests to confirm they pass**
+- [x] **Step 4: Run tests to confirm they pass**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SessionStateClassifierTests"
@@ -1012,7 +1012,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: 5 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Claude.Core/SessionStateClassifier.cs Claude.Core.Tests/SessionStateClassifierTests.cs
