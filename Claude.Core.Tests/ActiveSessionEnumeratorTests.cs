@@ -87,4 +87,25 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual("new-id", result[0].SessionId);
     }
+
+    [TestMethod]
+    public void Enumerate_FirstLineCwdMismatch_SkipsTranscript()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var actualCwd = @"C:\foo\bar";
+        var slug = SlugEncoder.Encode(actualCwd);
+
+        // The window says C:\foo\bar, but the transcript was written with cwd=C:\foo-bar
+        // (the colliding partner). The classifier should detect mismatch and skip.
+        fixture.AddSession(slug, "wrong-cwd-id",
+            """{"type":"assistant","message":{},"cwd":"C:\\foo-bar"}""",
+            DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", actualCwd));
+        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
+
+        Assert.AreEqual(0, enumerator.Enumerate().Count);
+    }
 }
