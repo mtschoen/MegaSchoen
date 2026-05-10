@@ -1036,7 +1036,7 @@ Joins window-list ⨝ slug-derived JSONL globs ⨝ StateStore. Integration-teste
 - Create: `Claude.Core.Tests/Fakes/FakeProcessLocator.cs`
 - Create: `Claude.Core.Tests/Fakes/ClaudeProjectsFixture.cs`
 
-- [ ] **Step 1: Write FakeProcessLocator**
+- [x] **Step 1: Write FakeProcessLocator**
 
 `Claude.Core.Tests/Fakes/FakeProcessLocator.cs`:
 ```csharp
@@ -1052,7 +1052,7 @@ internal sealed class FakeProcessLocator : IClaudeProcessLocator
 }
 ```
 
-- [ ] **Step 2: Write the projects-tree fixture**
+- [x] **Step 2: Write the projects-tree fixture**
 
 `Claude.Core.Tests/Fakes/ClaudeProjectsFixture.cs`:
 ```csharp
@@ -1097,7 +1097,7 @@ internal sealed class ClaudeProjectsFixture : IDisposable
 }
 ```
 
-- [ ] **Step 3: Build, then commit**
+- [x] **Step 3: Build, then commit**
 
 ```bash
 MSBuild.exe Claude.Core.Tests/Claude.Core.Tests.csproj -p:Configuration=Debug -nodeReuse:false
@@ -1117,7 +1117,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 The enumerator needs to know where `~/.claude/projects/` is. We add a constructor parameter for the projects root so tests can point it at the fixture; production code will resolve `Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)` + `.claude/projects`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `Claude.Core.Tests/ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1145,7 +1145,7 @@ public class ActiveSessionEnumeratorTests
 }
 ```
 
-- [ ] **Step 2: Run test to confirm it fails (ActiveSessionEnumerator doesn't exist)**
+- [x] **Step 2: Run test to confirm it fails (ActiveSessionEnumerator doesn't exist)**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_NoWindows_ReturnsEmpty"
@@ -1153,7 +1153,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_NoWin
 
 Expected: build error on `ActiveSessionEnumerator`.
 
-- [ ] **Step 3: Write the skeleton**
+- [x] **Step 3: Write the skeleton**
 
 `Claude.Core/ActiveSessionEnumerator.cs`:
 ```csharp
@@ -1193,7 +1193,7 @@ public sealed class ActiveSessionEnumerator
 }
 ```
 
-- [ ] **Step 4: Run test to confirm it passes**
+- [x] **Step 4: Run test to confirm it passes**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_NoWindows_ReturnsEmpty"
@@ -1201,7 +1201,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_NoWin
 
 Expected: 1 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Claude.Core/ActiveSessionEnumerator.cs Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1215,7 +1215,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.3: Window with no slug-dir → skipped
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1236,7 +1236,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run to confirm it passes already (no slug-dir means nothing to glob)**
+- [x] **Step 2: Run to confirm it passes already (no slug-dir means nothing to glob)**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_WindowCwdHasNoProjectsDir"
@@ -1244,7 +1244,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_Windo
 
 Expected: PASS (the loop doesn't yet do anything for a window). Even after we add slug-glob in the next task, this should still pass since the dir won't exist.
 
-- [ ] **Step 3: Commit (regression coverage of an early-exit path)**
+- [x] **Step 3: Commit (regression coverage of an early-exit path)**
 
 ```bash
 git add Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1255,7 +1255,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.4: Most-recent JSONL match (Working state)
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1288,7 +1288,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run to confirm it fails (no glob logic yet)**
+- [x] **Step 2: Run to confirm it fails (no glob logic yet)**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_OneWindowOneTranscriptAssistantLast"
@@ -1296,7 +1296,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_OneWi
 
 Expected: assertion failure (result is empty).
 
-- [ ] **Step 3: Implement the join**
+- [x] **Step 3: Implement the join**
 
 Replace the `Enumerate()` body in `Claude.Core/ActiveSessionEnumerator.cs` with:
 
@@ -1404,7 +1404,7 @@ static IReadOnlyList<SubagentSnapshot> EnumerateSubagents(string slugDir, string
 }
 ```
 
-- [ ] **Step 4: Run all enumerator tests**
+- [x] **Step 4: Run all enumerator tests**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~ActiveSessionEnumeratorTests"
@@ -1412,7 +1412,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: 3 passed (no-windows, no-slug-dir, one-window-working).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Claude.Core/ActiveSessionEnumerator.cs Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1426,7 +1426,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.5: Multiple JSONLs in same slug → freshest wins
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1455,7 +1455,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run; this should pass already because of the OrderByDescending in Step 3 of Task 5.4**
+- [x] **Step 2: Run; this should pass already because of the OrderByDescending in Step 3 of Task 5.4**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_MultipleTranscriptsSameSlug_PicksFreshest"
@@ -1463,7 +1463,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_Multi
 
 Expected: PASS.
 
-- [ ] **Step 3: Commit (regression coverage)**
+- [x] **Step 3: Commit (regression coverage)**
 
 ```bash
 git add Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1474,7 +1474,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.6: cwd-mismatch sanity check skips collisions
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1501,7 +1501,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run; this should pass already because of VerifyCwdMatch**
+- [x] **Step 2: Run; this should pass already because of VerifyCwdMatch**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_FirstLineCwdMismatch_SkipsTranscript"
@@ -1509,7 +1509,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_First
 
 Expected: PASS. If FAIL, debug — possible escaping issue in the JSON test string.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1520,7 +1520,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.7: Subagent rollup
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1553,7 +1553,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run to confirm pass**
+- [x] **Step 2: Run to confirm pass**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_SessionWithSubagents"
@@ -1561,7 +1561,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_Sessi
 
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
@@ -1572,7 +1572,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.8: StateStore join + sort order
 
-- [ ] **Step 1: Add the failing test**
+- [x] **Step 1: Add the failing test**
 
 Append to `ActiveSessionEnumeratorTests.cs`:
 ```csharp
@@ -1618,7 +1618,7 @@ Append to `ActiveSessionEnumeratorTests.cs`:
     }
 ```
 
-- [ ] **Step 2: Run to confirm pass**
+- [x] **Step 2: Run to confirm pass**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_StateStoreUpgradesIdleToAwaitingInput"
@@ -1626,7 +1626,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "Enumerate_State
 
 Expected: PASS.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add Claude.Core.Tests/ActiveSessionEnumeratorTests.cs
