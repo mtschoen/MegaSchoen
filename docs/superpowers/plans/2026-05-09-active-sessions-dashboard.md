@@ -179,7 +179,7 @@ New value types that the enumerator, classifier, CLI, and ViewModel all consume.
 **Files:**
 - Create: `Claude.Core/Models/SessionState.cs`
 
-- [ ] **Step 1: Write the enum**
+- [x] **Step 1: Write the enum**
 
 `Claude.Core/Models/SessionState.cs`:
 ```csharp
@@ -196,7 +196,7 @@ public enum SessionState
 }
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
