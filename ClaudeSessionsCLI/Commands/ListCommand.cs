@@ -41,8 +41,34 @@ static class ListCommand
         return 0;
     }
 
-    static Task<int> EmitJsonStream(ActiveSessionEnumerator enumerator, CliOptions options) =>
-        Task.FromResult(0); // implemented in Task 6.3
+    static async Task<int> EmitJsonStream(ActiveSessionEnumerator enumerator, CliOptions options)
+    {
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+
+        var json = new JsonSerializerOptions { WriteIndented = false };
+        var ct = cts.Token;
+
+        while (!ct.IsCancellationRequested)
+        {
+            var snapshots = enumerator.Enumerate();
+            var serialized = JsonSerializer.Serialize(
+                snapshots.Select(SnapshotDto.From).ToArray(),
+                json);
+            await Console.Out.WriteLineAsync(serialized.AsMemory(), ct).ConfigureAwait(false);
+            await Console.Out.FlushAsync(ct).ConfigureAwait(false);
+
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+        }
+        return 0;
+    }
 
     static Task<int> RunHumanMode(ActiveSessionEnumerator enumerator, CliOptions options) =>
         Task.FromResult(0); // implemented in Task 6.4
