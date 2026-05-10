@@ -6,7 +6,7 @@
 
 **Architecture:** Rename `ClaudeCycler.Core` → `Claude.Core` and grow it to own session enumeration + state classification. Pull `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces with Windows-only impls so non-Windows ports drop in cleanly later. Active sessions = running cmd.exe windows joined to the most-recently-modified `~/.claude/projects/<slug>/*.jsonl` per cwd. State badges driven by StateStore presence (no time gates) — `Stop` hook upserts `AwaitingInput`, transcript tail-read distinguishes Working from Idle. MAUI restructures AppShell to a flyout with two siblings (Display Manager, Claude Sessions); SessionsPageViewModel uses two `FileSystemWatcher`s (one for `needy-sessions.json`, one recursive on `~/.claude/projects/`) funneling into a bounded channel with 250ms debounce — no polling. CLI uses Spectre.Console `AnsiConsole.Live()` for human mode and NDJSON for `--json-stream`, matching the conventions in `~/.claude/notes/idioms_cli_dashboard.md`.
 
-**Tech Stack:** .NET 10, C# 13, MAUI Shell, Spectre.Console (NuGet), `System.Threading.Channels`, `FileSystemWatcher`, MSBuild (not `dotnet build` — native C++ dep). xUnit for tests. Build with `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug`.
+**Tech Stack:** .NET 10, C# 13, MAUI Shell, Spectre.Console (NuGet), `System.Threading.Channels`, `FileSystemWatcher`, MSBuild (not `dotnet build` — native C++ dep). **MSTest 4.0.2** for tests — the existing `Claude.Core.Tests` project uses MSTest with `Microsoft.VisualStudio.TestTools.UnitTesting` as a global using. Plan task code below sometimes shows xUnit syntax; convert to MSTest when implementing: `[Fact]` → `[TestMethod]`, add `[TestClass]` on the class, `Assert.Equal(expected, actual)` → `Assert.AreEqual(expected, actual)`, `Assert.True/False` → `Assert.IsTrue/IsFalse`, `Assert.Single(x)` → `Assert.AreEqual(1, x.Count)`, `Assert.Empty(x)` → `Assert.AreEqual(0, x.Count)`, `Assert.NotEqual(a, b)` → `Assert.AreNotEqual(a, b)`, `IDisposable`/`Dispose` cleanup → `[TestCleanup]` method. Drop the `using Xunit;` line. Build with `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug`.
 
 ---
 
@@ -424,7 +424,7 @@ Pull the seams the spec mandates. Move `Win32ForegroundHelper` from MegaSchoen i
 **Files:**
 - Create: `Claude.Core/IClaudeProcessLocator.cs`
 
-- [ ] **Step 1: Write the interface**
+- [x] **Step 1: Write the interface**
 
 `Claude.Core/IClaudeProcessLocator.cs`:
 ```csharp
@@ -438,7 +438,7 @@ public interface IClaudeProcessLocator
 }
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
