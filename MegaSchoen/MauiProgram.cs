@@ -2,6 +2,7 @@ using DisplayManager.Core.Services;
 using Microsoft.Extensions.Logging;
 #if WINDOWS
 using Claude.Core;
+using Claude.Core.Models;
 using Claude.Core.Windows;
 using MegaSchoen.Platforms.Windows.Services;
 #endif
@@ -33,6 +34,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<StartupService>();
         builder.Services.AddSingleton<IClaudeWindowFocuser, WindowsClaudeWindowFocuser>();
         builder.Services.AddSingleton<ClaudeWindowService>();
+        builder.Services.AddSingleton<IClaudeProcessLocator, Claude.Core.Windows.WindowsClaudeProcessLocator>();
+        builder.Services.AddSingleton<StateStore>();
+        builder.Services.AddSingleton<ActiveSessionEnumerator>();
+        builder.Services.AddTransient<MegaSchoen.ViewModels.SessionsPageViewModel>();
+        builder.Services.AddTransient<SessionsPage>();
+        builder.Services.AddTransient<DisplayManagerPage>();
 #endif
 
 #if DEBUG
