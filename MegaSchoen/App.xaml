@@ -17,6 +17,7 @@
             <converters:UtcToLocalConverter x:Key="UtcToLocalConverter" />
             <converters:HotkeyDisplayConverter x:Key="HotkeyDisplayConverter" />
             <converters:HotkeyButtonTextConverter x:Key="HotkeyButtonTextConverter" />
+            <converters:IsNonEmptyStringConverter x:Key="IsNonEmptyStringConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

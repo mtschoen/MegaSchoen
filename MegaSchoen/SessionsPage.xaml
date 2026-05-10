@@ -1,11 +1,65 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:MegaSchoen.ViewModels"
              x:Class="MegaSchoen.SessionsPage"
              Title="Claude Sessions">
 
-    <VerticalStackLayout Padding="20" Spacing="20">
-        <Label Text="Sessions page coming soon" FontSize="20" FontAttributes="Bold"/>
-    </VerticalStackLayout>
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="12">
+
+            <Label Text="Active Claude sessions"
+                   FontSize="22"
+                   FontAttributes="Bold"/>
+
+            <Label Text="No active Claude sessions"
+                   IsVisible="{Binding Sessions.Count, Converter={StaticResource IsZeroConverter}}"
+                   TextColor="{StaticResource Gray500}"
+                   HorizontalOptions="Center"
+                   Margin="20"/>
+
+            <CollectionView ItemsSource="{Binding Sessions}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SessionCardViewModel">
+                        <Frame Margin="0,4" Padding="12" BorderColor="{StaticResource Gray300}">
+                            <VerticalStackLayout Spacing="6">
+                                <Grid ColumnDefinitions="80,*,Auto,Auto" ColumnSpacing="10">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding StateText}"
+                                           TextColor="{Binding StateColor}"
+                                           FontAttributes="Bold"
+                                           VerticalOptions="Center"/>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding CwdShort}"
+                                           VerticalOptions="Center"
+                                           FontSize="13"/>
+                                    <Label Grid.Column="2"
+                                           Text="{Binding LastActivityRelative}"
+                                           TextColor="{StaticResource Gray500}"
+                                           FontSize="11"
+                                           VerticalOptions="Center"/>
+                                    <Button Grid.Column="3"
+                                            Text="Focus"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=FocusCommand}"
+                                            CommandParameter="{Binding .}"
+                                            HeightRequest="36"
+                                            WidthRequest="80"
+                                            VerticalOptions="Center"/>
+                                </Grid>
+                                <Label Text="{Binding SessionIdStem}"
+                                       FontSize="11"
+                                       TextColor="{StaticResource Gray500}"/>
+                                <Label Text="{Binding SubagentSummary}"
+                                       IsVisible="{Binding SubagentSummary, Converter={StaticResource IsNonEmptyStringConverter}}"
+                                       FontSize="11"
+                                       TextColor="{StaticResource Gray500}"/>
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>
