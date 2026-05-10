@@ -483,11 +483,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Move: `MegaSchoen/Platforms/Windows/Services/Win32ForegroundHelper.cs` → `Claude.Core/Interop/Win32ForegroundHelper.cs`
 - Modify: `Claude.Core/Interop/User32.cs` — add the missing P/Invokes that Win32ForegroundHelper needs
 
-- [ ] **Step 1: Identify what User32/Kernel32 P/Invokes Win32ForegroundHelper needs**
+- [x] **Step 1: Identify what User32/Kernel32 P/Invokes Win32ForegroundHelper needs**
 
 Read `MegaSchoen/Platforms/Windows/Services/Win32Interop.cs` to find: `IsIconic`, `ShowWindow`, `SW_RESTORE`, `GetCurrentThreadId`, `GetForegroundWindow`, `AttachThreadInput`, `BringWindowToTop`, `SetForegroundWindow`, `SetFocus`, plus the existing `GetWindowThreadProcessId`.
 
-- [ ] **Step 2: Add the missing P/Invokes to `Claude.Core/Interop/User32.cs`**
+- [x] **Step 2: Add the missing P/Invokes to `Claude.Core/Interop/User32.cs`**
 
 Open `Claude.Core/Interop/User32.cs` and add (preserving any existing imports):
 
@@ -531,7 +531,7 @@ static class Kernel32Threading
 
 (If `User32.cs` is not declared `partial`, declare both blocks in the same file directly — adjust to fit the existing declaration.)
 
-- [ ] **Step 3: Move and rewrite Win32ForegroundHelper**
+- [x] **Step 3: Move and rewrite Win32ForegroundHelper**
 
 Create `Claude.Core/Interop/Win32ForegroundHelper.cs`:
 
@@ -588,7 +588,7 @@ static class Win32ForegroundHelper
 }
 ```
 
-- [ ] **Step 4: Delete the old file from MegaSchoen and update its consumer (`ClaudeWindowService`)**
+- [x] **Step 4: Delete the old file from MegaSchoen and update its consumer (`ClaudeWindowService`)**
 
 ```bash
 git rm MegaSchoen/Platforms/Windows/Services/Win32ForegroundHelper.cs
@@ -608,7 +608,7 @@ Claude.Core.Interop.Win32ForegroundHelper.BringToFront(WindowToken.FromHandle(ne
 
 and add `using Claude.Core.Models;` to the `using` block. Also: change `Win32ForegroundHelper`'s accessibility from internal to public for now (we'll narrow it again in Task 3.5 when the focuser wraps it). Edit `Claude.Core/Interop/Win32ForegroundHelper.cs` and change `static class Win32ForegroundHelper` to `public static class Win32ForegroundHelper`.
 
-- [ ] **Step 5: Build the whole solution and commit**
+- [x] **Step 5: Build the whole solution and commit**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false
@@ -675,7 +675,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs`
 - Modify: `MegaSchoen/Platforms/Windows/Services/ClaudeWindowService.cs` (use the new interface; remove the temporary Win32ForegroundHelper direct-call)
 
-- [ ] **Step 1: Implement the focuser**
+- [x] **Step 1: Implement the focuser**
 
 `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs`:
 ```csharp
@@ -690,7 +690,7 @@ public sealed class WindowsClaudeWindowFocuser : IClaudeWindowFocuser
 }
 ```
 
-- [ ] **Step 2: Make ClaudeWindowService take an `IClaudeWindowFocuser` via constructor**
+- [x] **Step 2: Make ClaudeWindowService take an `IClaudeWindowFocuser` via constructor**
 
 Modify `MegaSchoen/Platforms/Windows/Services/ClaudeWindowService.cs`:
 
@@ -718,18 +718,18 @@ _focuser.BringToFront(WindowToken.FromHandle(next.Window.WindowHandle));
 
 Add `using Claude.Core;` and `using Claude.Core.Models;` if not already present.
 
-- [ ] **Step 3: Register WindowsClaudeWindowFocuser in MauiProgram.cs**
+- [x] **Step 3: Register WindowsClaudeWindowFocuser in MauiProgram.cs**
 
 Open `MegaSchoen/MauiProgram.cs` and inside the `#if WINDOWS` block, add:
 ```csharp
 builder.Services.AddSingleton<IClaudeWindowFocuser, Claude.Core.Windows.WindowsClaudeWindowFocuser>();
 ```
 
-- [ ] **Step 4: Narrow Win32ForegroundHelper back to internal**
+- [x] **Step 4: Narrow Win32ForegroundHelper back to internal**
 
 Edit `Claude.Core/Interop/Win32ForegroundHelper.cs` and change `public static class Win32ForegroundHelper` back to `static class Win32ForegroundHelper`. Now only `WindowsClaudeWindowFocuser` (in the same assembly) calls into it.
 
-- [ ] **Step 5: Build the whole solution and commit**
+- [x] **Step 5: Build the whole solution and commit**
 
 ```bash
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -nodeReuse:false

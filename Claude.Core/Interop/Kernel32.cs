@@ -17,4 +17,7 @@ public static partial class Kernel32
     [LibraryImport("kernel32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static unsafe partial bool ReadProcessMemory(IntPtr hProcess, IntPtr baseAddress, void* buffer, nuint size, out nuint bytesRead);
+
+    [LibraryImport("kernel32.dll")]
+    public static partial uint GetCurrentThreadId();
 }

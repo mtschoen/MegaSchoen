@@ -1,6 +1,8 @@
 using DisplayManager.Core.Services;
 using Microsoft.Extensions.Logging;
 #if WINDOWS
+using Claude.Core;
+using Claude.Core.Windows;
 using MegaSchoen.Platforms.Windows.Services;
 #endif
 
@@ -29,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<GlobalHotkeyService>();
         builder.Services.AddSingleton<KeyCaptureService>();
         builder.Services.AddSingleton<StartupService>();
+        builder.Services.AddSingleton<IClaudeWindowFocuser, WindowsClaudeWindowFocuser>();
         builder.Services.AddSingleton<ClaudeWindowService>();
 #endif
 

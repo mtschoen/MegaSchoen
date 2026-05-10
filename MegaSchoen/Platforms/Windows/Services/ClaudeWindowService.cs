@@ -6,13 +6,15 @@ namespace MegaSchoen.Platforms.Windows.Services;
 sealed class ClaudeWindowService
 {
     readonly TrayIconService _tray;
+    readonly IClaudeWindowFocuser _focuser;
     readonly StateStore _store = new();
     readonly SessionLivenessVerifier _verifier = new();
     IntPtr _lastFocused = IntPtr.Zero;
 
-    public ClaudeWindowService(TrayIconService tray)
+    public ClaudeWindowService(TrayIconService tray, IClaudeWindowFocuser focuser)
     {
         _tray = tray;
+        _focuser = focuser;
     }
 
     public void CycleToNext(WaitingReason? filter = null)
@@ -70,7 +72,7 @@ sealed class ClaudeWindowService
         var nextIndex = (lastIndex + 1) % candidates.Count;
         var next = candidates[nextIndex];
 
-        Win32ForegroundHelper.BringToFront(next.Window.WindowHandle);
+        _focuser.BringToFront(WindowToken.FromHandle(next.Window.WindowHandle));
         _lastFocused = next.Window.WindowHandle;
     }
 

@@ -28,4 +28,32 @@ public static partial class User32
 
     public const uint GA_ROOT = 2;
     public const uint GA_ROOTOWNER = 3;
+
+    public const int SW_RESTORE = 9;
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool IsIconic(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool AttachThreadInput(uint idAttach, uint idAttachTo, [MarshalAs(UnmanagedType.Bool)] bool fAttach);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool BringWindowToTop(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetForegroundWindow(IntPtr hWnd);
+
+    [LibraryImport("user32.dll")]
+    public static partial IntPtr SetFocus(IntPtr hWnd);
 }

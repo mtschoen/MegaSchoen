@@ -1,11 +1,13 @@
-using static MegaSchoen.Platforms.Windows.Services.Win32Interop;
+using Claude.Core.Models;
+using static Claude.Core.Interop.User32;
 
-namespace MegaSchoen.Platforms.Windows.Services;
+namespace Claude.Core.Interop;
 
 static class Win32ForegroundHelper
 {
-    public static bool BringToFront(IntPtr targetHwnd)
+    public static bool BringToFront(WindowToken token)
     {
+        var targetHwnd = token.Handle;
         if (targetHwnd == IntPtr.Zero) return false;
 
         if (IsIconic(targetHwnd))
@@ -13,11 +15,10 @@ static class Win32ForegroundHelper
             ShowWindow(targetHwnd, SW_RESTORE);
         }
 
-        // Three-way AttachThreadInput: let our thread, the target's thread, and
-        // the current foreground thread share an input queue, so SetForegroundWindow
-        // is allowed to hand focus to the target. Standard workaround for the
+        // Three-way AttachThreadInput so SetForegroundWindow is allowed to
+        // hand focus to the target. Standard workaround for the
         // foreground-lock restriction on modern Windows.
-        var currentThread = GetCurrentThreadId();
+        var currentThread = Kernel32.GetCurrentThreadId();
         var foregroundHwnd = GetForegroundWindow();
         var foregroundThread = GetWindowThreadProcessId(foregroundHwnd, out _);
         var targetThread = GetWindowThreadProcessId(targetHwnd, out _);
