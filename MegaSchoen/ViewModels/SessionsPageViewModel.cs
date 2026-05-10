@@ -46,6 +46,8 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
 
     public void Start()
     {
+        if (_consumerTask is not null) return;
+
         var stateFile = Paths.NeedySessionsFile;
         var stateDir = Path.GetDirectoryName(stateFile);
         if (!string.IsNullOrEmpty(stateDir))
