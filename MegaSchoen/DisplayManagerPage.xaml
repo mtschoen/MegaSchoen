@@ -4,11 +4,11 @@
              xmlns:viewmodels="clr-namespace:MegaSchoen.ViewModels"
              xmlns:models="clr-namespace:DisplayManager.Core.Models;assembly=DisplayManager.Core"
              xmlns:core="clr-namespace:DisplayManager.Core;assembly=DisplayManager.Core"
-             x:Class="MegaSchoen.MainPage"
+             x:Class="MegaSchoen.DisplayManagerPage"
              Title="Display Manager">
 
     <ContentPage.BindingContext>
-        <viewmodels:MainPageViewModel />
+        <viewmodels:DisplayManagerPageViewModel />
     </ContentPage.BindingContext>
 
     <ScrollView>
@@ -148,7 +148,7 @@
                                         </VerticalStackLayout>
 
                                         <Button Grid.Column="1"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=SetHotkeyCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}, Path=SetHotkeyCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="110"
                                                 HeightRequest="50"
@@ -158,14 +158,14 @@
                                                 <MultiBinding Converter="{StaticResource HotkeyButtonTextConverter}">
                                                     <Binding Path="Hotkey" />
                                                     <Binding Path="Id" />
-                                                    <Binding Path="CapturingProfileId" Source="{RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}" />
+                                                    <Binding Path="CapturingProfileId" Source="{RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}" />
                                                 </MultiBinding>
                                             </Button.Text>
                                         </Button>
 
                                         <Button Text="✓ Apply"
                                                 Grid.Column="2"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=ApplyProfileCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}, Path=ApplyProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="80"
                                                 HeightRequest="50"
@@ -174,7 +174,7 @@
 
                                         <Button Text="↻"
                                                 Grid.Column="3"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=OverwriteProfileCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}, Path=OverwriteProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="50"
                                                 HeightRequest="50"
@@ -184,7 +184,7 @@
 
                                         <Button Text="✕"
                                                 Grid.Column="4"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=ClearHotkeyCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}, Path=ClearHotkeyCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="40"
                                                 HeightRequest="50"
@@ -194,7 +194,7 @@
 
                                         <Button Text="🗑️"
                                                 Grid.Column="5"
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainPageViewModel}}, Path=DeleteProfileCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DisplayManagerPageViewModel}}, Path=DeleteProfileCommand}"
                                                 CommandParameter="{Binding .}"
                                                 WidthRequest="50"
                                                 HeightRequest="50"

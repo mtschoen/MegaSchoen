@@ -5,9 +5,9 @@ using MegaSchoen.Platforms.Windows.Services;
 
 namespace MegaSchoen
 {
-    public partial class MainPage : ContentPage
+    public partial class DisplayManagerPage : ContentPage
     {
-        public MainPage()
+        public DisplayManagerPage()
         {
             InitializeComponent();
         }

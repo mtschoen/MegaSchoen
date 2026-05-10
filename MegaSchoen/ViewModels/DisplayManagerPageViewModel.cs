@@ -10,7 +10,7 @@ using MegaSchoen.Platforms.Windows.Services;
 
 namespace MegaSchoen.ViewModels;
 
-public class MainPageViewModel : INotifyPropertyChanged
+public class DisplayManagerPageViewModel : INotifyPropertyChanged
 {
     readonly DisplayProfileService _profileService;
     bool _isLoading;
@@ -102,7 +102,7 @@ public class MainPageViewModel : INotifyPropertyChanged
     public ICommand SetHotkeyCommand { get; }
     public ICommand ClearHotkeyCommand { get; }
 
-    public MainPageViewModel()
+    public DisplayManagerPageViewModel()
     {
         _profileService = new DisplayProfileService();
 

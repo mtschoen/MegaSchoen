@@ -7,8 +7,8 @@
     Title="MegaSchoen">
 
     <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+        Title="Display Manager"
+        ContentTemplate="{DataTemplate local:DisplayManagerPage}"
+        Route="DisplayManagerPage" />
 
 </Shell>
