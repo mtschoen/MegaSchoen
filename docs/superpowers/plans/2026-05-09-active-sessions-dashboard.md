@@ -629,7 +629,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 The Win32 API call itself isn't unit-testable; we cover it indirectly via the enumerator integration tests in Phase 5 (with a fake). Step here is just the wrap.
 
-- [ ] **Step 1: Implement the locator**
+- [x] **Step 1: Implement the locator**
 
 `Claude.Core/Windows/WindowsClaudeProcessLocator.cs`:
 ```csharp
@@ -656,7 +656,7 @@ public sealed class WindowsClaudeProcessLocator : IClaudeProcessLocator
 }
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
