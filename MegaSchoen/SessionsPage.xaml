@@ -8,9 +8,19 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="12">
 
-            <Label Text="Active Claude sessions"
-                   FontSize="22"
-                   FontAttributes="Bold"/>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Label Grid.Column="0"
+                       Text="Active Claude sessions"
+                       FontSize="22"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center"/>
+                <Button Grid.Column="1"
+                        Text="Refresh"
+                        Command="{Binding RefreshCommand}"
+                        HeightRequest="36"
+                        WidthRequest="100"
+                        VerticalOptions="Center"/>
+            </Grid>
 
             <Label Text="No active Claude sessions"
                    IsVisible="{Binding Sessions.Count, Converter={StaticResource IsZeroConverter}}"

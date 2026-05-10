@@ -28,6 +28,7 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
     public ObservableCollection<SessionCardViewModel> Sessions { get; } = new();
     public ICommand FocusCommand { get; }
     public ICommand ToggleExpandCommand { get; }
+    public ICommand RefreshCommand { get; }
 
     public SessionsPageViewModel(
         ActiveSessionEnumerator enumerator,
@@ -42,6 +43,7 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
             _focuser.BringToFront(card.Snapshot.Window));
         ToggleExpandCommand = new Command<SessionCardViewModel>(card =>
             card.IsExpanded = !card.IsExpanded);
+        RefreshCommand = new Command(RefreshNow);
     }
 
     public void Start()
