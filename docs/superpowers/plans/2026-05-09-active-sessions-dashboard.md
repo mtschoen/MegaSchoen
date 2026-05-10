@@ -245,7 +245,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `Claude.Core/Models/ClaudeWindow.cs`
 
-- [ ] **Step 1: Write the record**
+- [x] **Step 1: Write the record**
 
 `Claude.Core/Models/ClaudeWindow.cs`:
 ```csharp
@@ -258,7 +258,7 @@ public readonly record struct ClaudeWindow(
     string? WorkingDirectory);
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
