@@ -2,6 +2,7 @@ using System.Text.Json;
 using Claude.Core;
 using Claude.Core.Models;
 using Claude.Core.Windows;
+using Spectre.Console;
 
 namespace ClaudeSessionsCLI.Commands;
 
@@ -70,8 +71,90 @@ static class ListCommand
         return 0;
     }
 
-    static Task<int> RunHumanMode(ActiveSessionEnumerator enumerator, CliOptions options) =>
-        Task.FromResult(0); // implemented in Task 6.4
+    static async Task<int> RunHumanMode(ActiveSessionEnumerator enumerator, CliOptions options)
+    {
+        // Pipe-aware: if stdout is redirected, render once and exit (NOT ANSI live).
+        if (Console.IsOutputRedirected)
+        {
+            var snapshots = enumerator.Enumerate();
+            var json = JsonSerializer.Serialize(
+                snapshots.Select(SnapshotDto.From).ToArray(),
+                new JsonSerializerOptions { WriteIndented = true });
+            Console.Out.Write(json);
+            Console.Out.Write('\n');
+            return 0;
+        }
+
+        using var cts = new CancellationTokenSource();
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+        var ct = cts.Token;
+
+        var table = BuildTable(Array.Empty<SessionSnapshot>());
+
+        await Spectre.Console.AnsiConsole.Live(table)
+            .StartAsync(async live =>
+            {
+                while (!ct.IsCancellationRequested)
+                {
+                    var snapshots = enumerator.Enumerate();
+                    Repopulate(table, snapshots);
+                    live.Refresh();
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }).ConfigureAwait(false);
+
+        Spectre.Console.AnsiConsole.WriteLine("Stopped.");
+        return 0;
+    }
+
+    static Spectre.Console.Table BuildTable(IReadOnlyList<SessionSnapshot> snapshots)
+    {
+        var table = new Spectre.Console.Table();
+        table.AddColumns("State", "Cwd", "Session", "Last activity");
+        Repopulate(table, snapshots);
+        return table;
+    }
+
+    static void Repopulate(Spectre.Console.Table table, IReadOnlyList<SessionSnapshot> snapshots)
+    {
+        table.Rows.Clear();
+        if (snapshots.Count == 0)
+        {
+            table.AddRow("[grey](no active sessions)[/]", "", "", "");
+            return;
+        }
+        foreach (var s in snapshots)
+        {
+            table.AddRow(
+                FormatState(s.RollupState),
+                Spectre.Console.Markup.Escape(TruncateMiddle(s.Cwd, 50)),
+                s.SessionId.Length >= 8 ? s.SessionId[..8] : s.SessionId,
+                $"{s.LastActivityUtc.ToLocalTime():HH:mm:ss}");
+        }
+    }
+
+    static string FormatState(SessionState state) => state switch
+    {
+        SessionState.PendingPermission => "[red]PERM[/]",
+        SessionState.AwaitingInput => "[yellow]INPUT[/]",
+        SessionState.Working => "[green]WORK[/]",
+        SessionState.Idle => "[grey]idle[/]",
+        _ => "[red]?[/]"
+    };
+
+    static string TruncateMiddle(string s, int maximum)
+    {
+        if (s.Length <= maximum) return s;
+        var keep = (maximum - 3) / 2;
+        return s[..keep] + "..." + s[^keep..];
+    }
 }
 
 sealed record SnapshotDto(
