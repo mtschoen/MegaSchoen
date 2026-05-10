@@ -57,13 +57,14 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
 Output locations after a successful build:
 
 - `MegaSchoen\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\MegaSchoen.exe` — **the MAUI app (authoritative path)**
-- `DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe` — CLI (AnyCPU)
+- `DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe` — display-management CLI (AnyCPU)
+- `ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe` — active-Claude-sessions CLI (AnyCPU, Windows TFM)
 - `ClaudeHookBridge\bin\Debug\net10.0-windows10.0.26100.0\ClaudeHookBridge.exe` — hook bridge (AnyCPU)
 - Library DLLs at `<project>\bin\Debug\...` (AnyCPU)
 
 If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution mappings (e.g., a direct `dotnet build MegaSchoen.csproj`). It should not be produced by any normal workflow.
 
-### Running the CLI
+### Running the Display Manager CLI
 ```bash
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" list              # List all displays
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" save "My Profile" # Save current config
@@ -72,7 +73,30 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw               # Show raw JSON
 ```
 
-## Current Status (Last updated: 2026-03-24)
+### Running the Claude Sessions CLI
+```bash
+".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list                    # Spectre.Console live table (refreshes on FileSystemWatcher events)
+".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json             # One-shot JSON snapshot, exit
+".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json-stream      # NDJSON, one snapshot per --interval (default 1.5s)
+".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" focus <session-prefix>  # Bring matching window to foreground
+```
+Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it emits one-shot JSON instead of an ANSI live table.
+
+## Current Status (Last updated: 2026-05-10)
+
+### ✅ Active Claude Sessions Dashboard Working
+
+**What's Working:**
+- New `ClaudeSessionsCLI` binary with `list` (one-shot JSON / NDJSON stream / Spectre.Console live table) and `focus <prefix>` verbs
+- New MAUI Sessions tab (sibling to Display Manager via AppShell flyout) showing per-session cards: state badge, cwd, last-activity, Focus button, plus optional Refresh button
+- Session enumeration: cmd.exe windows joined to most-recently-modified `~/.claude/projects/<slug>/*.jsonl` per cwd, with subagent rollup
+- State classification: StateStore presence is the discriminator (no time gates) — `PendingPermission`/`AwaitingInput` from `needy-sessions.json`, `Working`/`Idle` from transcript tail-read
+- Refresh is event-driven: two `FileSystemWatcher`s (`needy-sessions.json` + recursive on `~/.claude/projects/`) funnel into a `Channel<byte>` with 250ms debounce; no polling
+
+**Key Implementation Details:**
+- `ClaudeCycler.Core` was renamed to `Claude.Core` in this same work (it now owns more than the cycler)
+- Cycler debug section moved from DisplayManagerPage to SessionsPage — conceptually belongs with sessions
+- Win32 platform code wrapped behind `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces; non-Windows impls are TODO
 
 ### ✅ Display Toggle Working
 
@@ -93,11 +117,14 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 
 ### 🎯 Next Steps
 
-**Priority 1: Test GPU Swap Survival**
+**Priority 1: Test GPU Swap Survival** (Display Manager)
 - Verify EDID matching and topology database survive adapter LUID changes after GPU swap
 
-**Priority 2: Identical Model Disambiguation**
+**Priority 2: Identical Model Disambiguation** (Display Manager)
 - Handle case where user has multiple monitors of the same model (deferred)
+
+**Priority 3: Cross-platform Sessions Dashboard**
+- macOS / Linux impls of `IClaudeProcessLocator` / `IClaudeWindowFocuser` (interfaces in place; impls deferred)
 
 ## Architecture Overview
 
@@ -107,9 +134,15 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 
 - **DisplayManager.Core** (.NET 10 Library) - Managed wrapper around the native DLL via P/Invoke. Contains DisplayManager static class, DisplayInfo model, and profile services.
 
-- **DisplayManagerCLI** (.NET 10 Console App) - Command-line interface. Commands: list, apply, save, load, profiles, delete, config, raw.
+- **DisplayManagerCLI** (.NET 10 Console App) - Display CLI. Commands: list, apply, save, load, profiles, delete, config, raw.
 
-- **MegaSchoen** (MAUI App) - Cross-platform GUI application. Currently Windows-only for display management features.
+- **Claude.Core** (.NET 10 Library) - Cycler + active-sessions primitives. Owns `StateStore` (`needy-sessions.json`), `SessionLivenessVerifier`, `SlugEncoder`, `SessionStateClassifier`, `ActiveSessionEnumerator`, the `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces, and Windows impls (`WindowsClaudeProcessLocator`, `WindowsClaudeWindowFocuser`). Win32 interop in `Claude.Core/Interop/`. Was originally `ClaudeCycler.Core`; renamed when scope grew beyond cycling.
+
+- **ClaudeSessionsCLI** (.NET 10 Console App, Windows TFM) - Active-Claude-sessions CLI. `list` (default human / `--json` / `--json-stream`) + `focus <prefix>`. Uses `Spectre.Console` for live table.
+
+- **ClaudeHookBridge** (.NET 10 Console App) - Claude Code hook receiver. Spawned by hooks; writes `needy-sessions.json` via `Claude.Core.StateStore`.
+
+- **MegaSchoen** (MAUI App) - Cross-platform GUI. AppShell flyout with two pages: **Display Manager** (display profiles, save/apply/hotkeys) and **Claude Sessions** (live cards driven by `FileSystemWatcher` + bounded-channel debounce). Currently Windows-only for the active features.
 
 ### Key Files
 
@@ -117,8 +150,18 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 - `DisplayManager.Core/DisplayManager.cs` - P/Invoke wrappers
 - `DisplayManager.Core/DisplayInfo.cs` - Display data model
 - `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile save/load/apply
-- `DisplayManagerCLI/Program.cs` - CLI commands
-- `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs` - MAUI UI logic
+- `DisplayManagerCLI/Program.cs` - Display CLI commands
+- `Claude.Core/ActiveSessionEnumerator.cs` - The window ⨝ slug-JSONL ⨝ StateStore join
+- `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping (StateStore presence is the discriminator; no time gates)
+- `Claude.Core/SlugEncoder.cs` - cwd → `~/.claude/projects/<slug>` directory naming
+- `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - cmd.exe window enumeration (wraps `ProcessResolver`)
+- `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs` - `BringToFront` via `Win32ForegroundHelper` (three-way `AttachThreadInput`)
+- `ClaudeSessionsCLI/Commands/ListCommand.cs` - Three-mode list (human/JSON/NDJSON)
+- `ClaudeSessionsCLI/Commands/FocusCommand.cs` - Unique-prefix focus
+- `MegaSchoen/AppShell.xaml` - Two-entry flyout (Display Manager + Claude Sessions)
+- `MegaSchoen/SessionsPage.xaml(.cs)` - Sessions UI; `OnAppearing` calls `_viewModel.Start()`, `OnDisappearing` calls `Dispose`
+- `MegaSchoen/ViewModels/SessionsPageViewModel.cs` - FileSystemWatcher → bounded `Channel<byte>` → 250ms debounce → re-enumerate; idempotent `Start()`
+- `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs` - Display Manager UI logic
 
 ### Native API Functions
 
