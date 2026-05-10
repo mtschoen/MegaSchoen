@@ -63,4 +63,28 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual(SessionState.Working, result[0].State);
         Assert.AreEqual(0, result[0].Subagents.Count);
     }
+
+    [TestMethod]
+    public void Enumerate_MultipleTranscriptsSameSlug_PicksFreshest()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\proj";
+        var slug = SlugEncoder.Encode(cwd);
+
+        var older = DateTime.UtcNow.AddMinutes(-30);
+        var newer = DateTime.UtcNow;
+        fixture.AddSession(slug, "old-id",
+            """{"type":"user","message":{}}""", older);
+        fixture.AddSession(slug, "new-id",
+            """{"type":"assistant","message":{}}""", newer);
+
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
+        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
+
+        var result = enumerator.Enumerate();
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual("new-id", result[0].SessionId);
+    }
 }
