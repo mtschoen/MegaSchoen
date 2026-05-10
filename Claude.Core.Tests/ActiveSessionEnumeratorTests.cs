@@ -136,4 +136,42 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual(2, result[0].Subagents.Count);
         Assert.AreEqual(SessionState.Working, result[0].RollupState);
     }
+
+    [TestMethod]
+    public void Enumerate_StateStoreUpgradesIdleToAwaitingInput_AndSortsToTop()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+
+        var cwdA = @"C:\repo\a";
+        var cwdB = @"C:\repo\b";
+        var slugA = SlugEncoder.Encode(cwdA);
+        var slugB = SlugEncoder.Encode(cwdB);
+
+        fixture.AddSession(slugA, "session-a",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        fixture.AddSession(slugB, "session-b",
+            """{"type":"user","message":{}}""", DateTime.UtcNow);
+
+        var statePath = Path.Combine(fixture.Root, "state.json");
+        var store = new StateStore(statePath);
+        store.Upsert("session-b", new SessionEntry
+        {
+            Cwd = cwdB,
+            TranscriptPath = Path.Combine(fixture.Root, slugB, "session-b.jsonl"),
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
+
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd-a", cwdA));
+        locator.Windows.Add(new ClaudeWindow(101, WindowToken.FromHandle(new IntPtr(2)), "cmd-b", cwdB));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(2, result.Count);
+        Assert.AreEqual("session-b", result[0].SessionId);
+        Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
+        Assert.AreEqual("session-a", result[1].SessionId);
+        Assert.AreEqual(SessionState.Working, result[1].State);
+    }
 }
