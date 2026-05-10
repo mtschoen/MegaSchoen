@@ -108,4 +108,32 @@ public class ActiveSessionEnumeratorTests
 
         Assert.AreEqual(0, enumerator.Enumerate().Count);
     }
+
+    [TestMethod]
+    public void Enumerate_SessionWithSubagents_RollsUpAndExposesIndividualStates()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\proj";
+        var slug = SlugEncoder.Encode(cwd);
+
+        // Parent: Idle (last user line).
+        fixture.AddSession(slug, "parent-1",
+            """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-10));
+        // Two subagents: one Working, one Idle.
+        fixture.AddSubagent(slug, "parent-1", "abc",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        fixture.AddSubagent(slug, "parent-1", "def",
+            """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-5));
+
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
+        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual(SessionState.Idle, result[0].State);
+        Assert.AreEqual(2, result[0].Subagents.Count);
+        Assert.AreEqual(SessionState.Working, result[0].RollupState);
+    }
 }
