@@ -6,9 +6,11 @@
     xmlns:local="clr-namespace:MegaSchoen"
     Title="MegaSchoen">
 
-    <ShellContent
-        Title="Display Manager"
-        ContentTemplate="{DataTemplate local:DisplayManagerPage}"
-        Route="DisplayManagerPage" />
+    <FlyoutItem Title="Display Manager">
+        <ShellContent ContentTemplate="{DataTemplate local:DisplayManagerPage}" Route="displays" />
+    </FlyoutItem>
+    <FlyoutItem Title="Claude Sessions">
+        <ShellContent ContentTemplate="{DataTemplate local:SessionsPage}" Route="sessions" />
+    </FlyoutItem>
 
 </Shell>
