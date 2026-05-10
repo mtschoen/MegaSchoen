@@ -453,7 +453,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `Claude.Core/IClaudeWindowFocuser.cs`
 
-- [ ] **Step 1: Write the interface**
+- [x] **Step 1: Write the interface**
 
 `Claude.Core/IClaudeWindowFocuser.cs`:
 ```csharp
@@ -467,7 +467,7 @@ public interface IClaudeWindowFocuser
 }
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
