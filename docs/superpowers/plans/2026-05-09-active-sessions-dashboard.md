@@ -754,7 +754,7 @@ Pure logic; full TDD coverage.
 - Create: `Claude.Core/SlugEncoder.cs`
 - Create: `Claude.Core.Tests/SlugEncoderTests.cs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 `Claude.Core.Tests/SlugEncoderTests.cs`:
 ```csharp
@@ -796,7 +796,7 @@ public class SlugEncoderTests
 }
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SlugEncoderTests"
@@ -804,7 +804,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: build error on `SlugEncoder`.
 
-- [ ] **Step 3: Implement SlugEncoder**
+- [x] **Step 3: Implement SlugEncoder**
 
 `Claude.Core/SlugEncoder.cs`:
 ```csharp
@@ -830,7 +830,7 @@ public static class SlugEncoder
 }
 ```
 
-- [ ] **Step 4: Run tests to confirm they pass**
+- [x] **Step 4: Run tests to confirm they pass**
 
 ```bash
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedName~SlugEncoderTests"
@@ -838,7 +838,7 @@ dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj --filter "FullyQualifiedN
 
 Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add Claude.Core/SlugEncoder.cs Claude.Core.Tests/SlugEncoderTests.cs
