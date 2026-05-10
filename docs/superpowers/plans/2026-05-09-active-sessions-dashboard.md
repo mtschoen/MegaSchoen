@@ -273,7 +273,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 **Files:**
 - Create: `Claude.Core/Models/SubagentSnapshot.cs`
 
-- [ ] **Step 1: Write the record**
+- [x] **Step 1: Write the record**
 
 `Claude.Core/Models/SubagentSnapshot.cs`:
 ```csharp
@@ -286,7 +286,7 @@ public sealed record SubagentSnapshot(
     SessionState State);
 ```
 
-- [ ] **Step 2: Build and commit**
+- [x] **Step 2: Build and commit**
 
 ```bash
 MSBuild.exe Claude.Core/Claude.Core.csproj -p:Configuration=Debug -nodeReuse:false
