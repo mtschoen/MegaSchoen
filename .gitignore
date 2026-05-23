@@ -9,4 +9,5 @@
 *.user
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/settings.json
