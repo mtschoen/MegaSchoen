@@ -21,6 +21,7 @@ public static class Program
                 "logs" => Commands.LogsCommand.Run(),
                 "check" => Commands.CheckCommand.Run(),
                 "resolve" => Commands.ResolveCommand.Run(),
+                "install" => Commands.InstallCommand.Run(),
                 _ => PrintUnknownCommand(arguments[0])
             };
         }
@@ -34,7 +35,7 @@ public static class Program
     static int PrintUnknownCommand(string name)
     {
         Console.Error.WriteLine($"Unknown subcommand: {name}");
-        Console.Error.WriteLine("Available: status, logs, check, resolve");
+        Console.Error.WriteLine("Available: status, logs, check, resolve, install");
         return 1;
     }
 

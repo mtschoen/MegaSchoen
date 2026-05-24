@@ -22,6 +22,18 @@
                         VerticalOptions="Center"/>
             </Grid>
 
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding HostStatuses}" Spacing="2">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:HostStatusViewModel">
+                        <HorizontalStackLayout Spacing="6">
+                            <Label Text="●" TextColor="{Binding StatusColor}" FontSize="12" VerticalOptions="Center"/>
+                            <Label Text="{Binding Host}" FontSize="12" FontAttributes="Bold" VerticalOptions="Center"/>
+                            <Label Text="{Binding StatusText}" FontSize="12" TextColor="{StaticResource Gray500}" VerticalOptions="Center"/>
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
             <Label Text="No active Claude sessions"
                    IsVisible="{Binding Sessions.Count, Converter={StaticResource IsZeroConverter}}"
                    TextColor="{StaticResource Gray500}"
@@ -50,15 +62,22 @@
                                            VerticalOptions="Center"/>
                                     <Button Grid.Column="3"
                                             Text="Focus"
+                                            IsVisible="{Binding CanFocus}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=FocusCommand}"
                                             CommandParameter="{Binding .}"
                                             HeightRequest="36"
                                             WidthRequest="80"
                                             VerticalOptions="Center"/>
                                 </Grid>
-                                <Label Text="{Binding SessionIdStem}"
-                                       FontSize="11"
-                                       TextColor="{StaticResource Gray500}"/>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Label Text="{Binding SessionIdStem}"
+                                           FontSize="11"
+                                           TextColor="{StaticResource Gray500}"/>
+                                    <Label Text="{Binding HostLabel}"
+                                           IsVisible="{Binding HostLabel, Converter={StaticResource IsNonEmptyStringConverter}}"
+                                           FontSize="11"
+                                           TextColor="{StaticResource Gray500}"/>
+                                </HorizontalStackLayout>
                                 <Label Text="{Binding SubagentSummary}"
                                        IsVisible="{Binding SubagentSummary, Converter={StaticResource IsNonEmptyStringConverter}}"
                                        FontSize="11"

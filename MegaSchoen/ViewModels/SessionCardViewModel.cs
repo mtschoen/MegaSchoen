@@ -28,6 +28,9 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(SessionIdStem));
             OnPropertyChanged(nameof(LastActivityRelative));
             OnPropertyChanged(nameof(SubagentSummary));
+            OnPropertyChanged(nameof(IsRemote));
+            OnPropertyChanged(nameof(CanFocus));
+            OnPropertyChanged(nameof(HostLabel));
         }
     }
 
@@ -84,6 +87,10 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
         : $"{_snapshot.Subagents.Count} subagent{(_snapshot.Subagents.Count == 1 ? "" : "s")}";
 
     public IReadOnlyList<SubagentSnapshot> Subagents => _snapshot.Subagents;
+
+    public bool IsRemote => _snapshot.Host is not null;
+    public bool CanFocus => !IsRemote;
+    public string HostLabel => _snapshot.Host ?? "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

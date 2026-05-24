@@ -12,7 +12,7 @@ public class ActiveSessionEnumeratorTests
     {
         using var fixture = new ClaudeProjectsFixture();
         var locator = new FakeProcessLocator();
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
 
@@ -30,7 +30,7 @@ public class ActiveSessionEnumeratorTests
             Window: WindowToken.FromHandle(new IntPtr(1)),
             Title: "cmd",
             WorkingDirectory: @"C:\nowhere\that\matches"));
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
         Assert.AreEqual(0, enumerator.Enumerate().Count);
@@ -52,7 +52,7 @@ public class ActiveSessionEnumeratorTests
             Window: WindowToken.FromHandle(new IntPtr(1)),
             Title: "cmd",
             WorkingDirectory: cwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
         var result = enumerator.Enumerate();
@@ -80,7 +80,7 @@ public class ActiveSessionEnumeratorTests
 
         var locator = new FakeProcessLocator();
         locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
 
         var result = enumerator.Enumerate();
@@ -103,7 +103,7 @@ public class ActiveSessionEnumeratorTests
 
         var locator = new FakeProcessLocator();
         locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", actualCwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
 
         Assert.AreEqual(0, enumerator.Enumerate().Count);
@@ -127,7 +127,7 @@ public class ActiveSessionEnumeratorTests
 
         var locator = new FakeProcessLocator();
         locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
@@ -135,6 +135,57 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual(SessionState.Idle, result[0].State);
         Assert.AreEqual(2, result[0].Subagents.Count);
         Assert.AreEqual(SessionState.Working, result[0].RollupState);
+    }
+
+    [TestMethod]
+    public void Enumerate_TwoWindowsSameCwd_DistinctJsonls_AttributedByStartTime()
+    {
+        // Regression: when multiple Claude CLI processes share a cwd, the old
+        // freshest-pick logic collapsed them onto one SessionId, producing
+        // duplicate snapshots and a downstream UpdateUi crash on the UI side.
+        // With per-window start-time matching each window should be attributed
+        // to its own JSONL.
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\proj";
+        var slug = SlugEncoder.Encode(cwd);
+
+        var sessionAStart = DateTime.UtcNow.AddMinutes(-10);
+        var sessionBStart = DateTime.UtcNow.AddMinutes(-2);
+        fixture.AddSession(slug, "session-a",
+            """{"type":"assistant","message":{}}""",
+            mtimeUtc: sessionAStart.AddSeconds(30),
+            creationTimeUtc: sessionAStart);
+        fixture.AddSession(slug, "session-b",
+            """{"type":"assistant","message":{}}""",
+            mtimeUtc: sessionBStart.AddSeconds(30),
+            creationTimeUtc: sessionBStart);
+
+        var locator = new FakeProcessLocator();
+        locator.Windows.Add(new ClaudeWindow(
+            ProcessId: 100,
+            Window: WindowToken.FromHandle(new IntPtr(1)),
+            Title: "cmd-a",
+            WorkingDirectory: cwd,
+            StartTimeUtc: new DateTimeOffset(sessionAStart, TimeSpan.Zero)));
+        locator.Windows.Add(new ClaudeWindow(
+            ProcessId: 101,
+            Window: WindowToken.FromHandle(new IntPtr(2)),
+            Title: "cmd-b",
+            WorkingDirectory: cwd,
+            StartTimeUtc: new DateTimeOffset(sessionBStart, TimeSpan.Zero)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
+
+        var result = enumerator.Enumerate();
+
+        Assert.AreEqual(2, result.Count, "expected one snapshot per window, not collapsed-to-freshest");
+        var sessionIds = result.Select(s => s.SessionId).ToHashSet();
+        CollectionAssert.AreEquivalent(new[] { "session-a", "session-b" }, sessionIds.ToList());
+
+        var aSnapshot = result.Single(s => s.SessionId == "session-a");
+        var bSnapshot = result.Single(s => s.SessionId == "session-b");
+        Assert.AreEqual("cmd-a", aSnapshot.WindowTitle, "session-a should be attributed to the older claude process's window");
+        Assert.AreEqual("cmd-b", bSnapshot.WindowTitle, "session-b should be attributed to the newer claude process's window");
     }
 
     [TestMethod]
@@ -152,8 +203,8 @@ public class ActiveSessionEnumeratorTests
         fixture.AddSession(slugB, "session-b",
             """{"type":"user","message":{}}""", DateTime.UtcNow);
 
-        var statePath = Path.Combine(fixture.Root, "state.json");
-        var store = new StateStore(statePath);
+        var stateDir = Path.Combine(fixture.Root, "state");
+        var store = new StateStore(stateDir);
         store.Upsert("session-b", new SessionEntry
         {
             Cwd = cwdB,

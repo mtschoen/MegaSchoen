@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Claude.Core;
 using Claude.Core.Models;
+#if WINDOWS
 using Claude.Core.Windows;
+#endif
 using Spectre.Console;
 
 namespace ClaudeSessionsCLI.Commands;
@@ -26,7 +28,11 @@ static class ListCommand
 
     static ActiveSessionEnumerator BuildEnumerator()
     {
-        var locator = new WindowsClaudeProcessLocator();
+#if WINDOWS
+        IClaudeProcessLocator locator = new WindowsClaudeProcessLocator();
+#else
+        IClaudeProcessLocator locator = new Claude.Core.Linux.LinuxClaudeProcessLocator();
+#endif
         var store = new StateStore();
         return new ActiveSessionEnumerator(locator, store);
     }

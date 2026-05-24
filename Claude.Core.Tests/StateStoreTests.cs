@@ -5,115 +5,162 @@ namespace Claude.Core.Tests;
 [TestClass]
 public class StateStoreTests
 {
-    string _tempFile = "";
+    string _tempDir = "";
 
     [TestInitialize]
     public void Setup()
     {
-        _tempFile = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}.json");
+        _tempDir = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}");
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        if (File.Exists(_tempFile))
+        if (Directory.Exists(_tempDir))
         {
-            File.Delete(_tempFile);
+            Directory.Delete(_tempDir, recursive: true);
         }
     }
 
     [TestMethod]
-    public void Read_MissingFile_ReturnsEmpty()
+    public void Read_MissingDirectory_ReturnsEmpty()
     {
-        var store = new StateStore(_tempFile);
-        var file = store.Read();
-        Assert.IsEmpty(file.Sessions);
-        Assert.AreEqual(1, file.Version);
+        var store = new StateStore(_tempDir);
+        var entries = store.Read();
+        Assert.IsEmpty(entries);
     }
 
     [TestMethod]
-    public void Read_CorruptJson_ReturnsEmpty()
+    public void Read_CorruptSessionFile_SkipsItButReturnsOthers()
     {
-        File.WriteAllText(_tempFile, "{ not valid json");
-        var store = new StateStore(_tempFile);
-        var file = store.Read();
-        Assert.IsEmpty(file.Sessions);
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(Path.Combine(_tempDir, "bad.json"), "{ not valid json");
+        var store = new StateStore(_tempDir);
+        store.Upsert("good", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+
+        var entries = store.Read();
+        Assert.HasCount(1, entries);
+        Assert.IsTrue(entries.ContainsKey("good"));
     }
 
     [TestMethod]
-    public void Read_ValidFile_Parses()
+    public void Read_OneSession_Parses()
     {
-        File.WriteAllText(_tempFile, """
-        {
-          "version": 1,
-          "sessions": {
-            "abc": { "cwd": "C:\\foo", "notifiedAt": "2026-04-18T12:00:00Z", "message": "hi" }
-          }
-        }
-        """);
-        var store = new StateStore(_tempFile);
-        var file = store.Read();
-        Assert.HasCount(1, file.Sessions);
-        Assert.AreEqual("C:\\foo", file.Sessions["abc"].Cwd);
-        Assert.AreEqual("hi", file.Sessions["abc"].Message);
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(
+            Path.Combine(_tempDir, "abc.json"),
+            """{"cwd":"C:\\foo","notifiedAt":"2026-04-18T12:00:00Z","message":"hi"}""");
+
+        var entries = new StateStore(_tempDir).Read();
+        Assert.HasCount(1, entries);
+        Assert.AreEqual("C:\\foo", entries["abc"].Cwd);
+        Assert.AreEqual("hi", entries["abc"].Message);
     }
 
     [TestMethod]
     public void Upsert_NewSession_PersistsEntry()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow, Message = "hi" });
 
-        var file = store.Read();
-        Assert.HasCount(1, file.Sessions);
-        Assert.AreEqual("C:\\foo", file.Sessions["sess1"].Cwd);
+        var entries = store.Read();
+        Assert.HasCount(1, entries);
+        Assert.AreEqual("C:\\foo", entries["sess1"].Cwd);
+        Assert.IsTrue(File.Exists(Path.Combine(_tempDir, "sess1.json")));
     }
 
     [TestMethod]
     public void Upsert_ExistingSession_Overwrites()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\bar", NotifiedAt = DateTimeOffset.UtcNow });
 
-        var file = store.Read();
-        Assert.AreEqual("C:\\bar", file.Sessions["sess1"].Cwd);
+        Assert.AreEqual("C:\\bar", store.Read()["sess1"].Cwd);
     }
 
     [TestMethod]
-    public void Delete_ExistingSession_RemovesEntry()
+    public void Upsert_ConcurrentSessionsDoNotCorruptEachOther()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
+        store.Upsert("alpha", new SessionEntry { Cwd = "C:\\a", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("beta", new SessionEntry { Cwd = "C:\\b", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("gamma", new SessionEntry { Cwd = "C:\\c", NotifiedAt = DateTimeOffset.UtcNow });
+
+        var entries = store.Read();
+        Assert.HasCount(3, entries);
+        Assert.AreEqual("C:\\a", entries["alpha"].Cwd);
+        Assert.AreEqual("C:\\b", entries["beta"].Cwd);
+        Assert.AreEqual("C:\\c", entries["gamma"].Cwd);
+    }
+
+    [TestMethod]
+    public void Delete_ExistingSession_RemovesFile()
+    {
+        var store = new StateStore(_tempDir);
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         store.Delete("sess1");
 
-        var file = store.Read();
-        Assert.IsEmpty(file.Sessions);
+        Assert.IsEmpty(store.Read());
+        Assert.IsFalse(File.Exists(Path.Combine(_tempDir, "sess1.json")));
+    }
+
+    [TestMethod]
+    public void Delete_DoesNotAffectOtherSessions()
+    {
+        var store = new StateStore(_tempDir);
+        store.Upsert("keep", new SessionEntry { Cwd = "C:\\keep", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("drop", new SessionEntry { Cwd = "C:\\drop", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Delete("drop");
+
+        var entries = store.Read();
+        Assert.HasCount(1, entries);
+        Assert.IsTrue(entries.ContainsKey("keep"));
     }
 
     [TestMethod]
     public void Delete_MissingSession_IsNoop()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
         store.Delete("nope"); // should not throw
-        var file = store.Read();
-        Assert.IsEmpty(file.Sessions);
+        Assert.IsEmpty(store.Read());
     }
 
     [TestMethod]
-    public void Write_UsesTempFileThenRename()
+    public void DeleteAll_RemovesEverySessionFile()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
+        store.Upsert("a", new SessionEntry { Cwd = "C:\\a", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("b", new SessionEntry { Cwd = "C:\\b", NotifiedAt = DateTimeOffset.UtcNow });
+        store.DeleteAll();
+
+        Assert.IsEmpty(store.Read());
+    }
+
+    [TestMethod]
+    public void EnumerateSessionIds_ReturnsIdsWithoutDeserializing()
+    {
+        var store = new StateStore(_tempDir);
+        store.Upsert("a", new SessionEntry { Cwd = "C:\\a", NotifiedAt = DateTimeOffset.UtcNow });
+        store.Upsert("b", new SessionEntry { Cwd = "C:\\b", NotifiedAt = DateTimeOffset.UtcNow });
+
+        CollectionAssert.AreEquivalent(new[] { "a", "b" }, store.EnumerateSessionIds().ToList());
+    }
+
+    [TestMethod]
+    public void Upsert_LeavesNoTempFileBehind()
+    {
+        var store = new StateStore(_tempDir);
         store.Upsert("sess1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
 
-        Assert.IsTrue(File.Exists(_tempFile));
-        Assert.IsFalse(File.Exists(_tempFile + ".tmp"), "tmp file should have been renamed away");
+        Assert.IsTrue(File.Exists(Path.Combine(_tempDir, "sess1.json")));
+        Assert.IsFalse(File.Exists(Path.Combine(_tempDir, "sess1.json.tmp")));
     }
 
     [TestMethod]
     public void Reason_RoundtripsThroughStore()
     {
-        var store = new StateStore(_tempFile);
+        var store = new StateStore(_tempDir);
         store.Upsert("s1", new SessionEntry
         {
             Cwd = "C:\\foo",
@@ -121,29 +168,24 @@ public class StateStoreTests
             Reason = WaitingReason.AwaitingInput
         });
 
-        var roundtripped = new StateStore(_tempFile).Read();
-        Assert.AreEqual(WaitingReason.AwaitingInput, roundtripped.Sessions["s1"].Reason);
+        Assert.AreEqual(WaitingReason.AwaitingInput, new StateStore(_tempDir).Read()["s1"].Reason);
     }
 
     [TestMethod]
     public void Reason_LegacyEntryWithoutField_DefaultsToPermission()
     {
-        File.WriteAllText(_tempFile, """
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(
+            Path.Combine(_tempDir, "s1.json"),
+            """
             {
-              "version": 1,
-              "sessions": {
-                "s1": {
-                  "cwd": "C:\\foo",
-                  "transcriptPath": null,
-                  "notifiedAt": "2026-04-01T00:00:00+00:00",
-                  "message": "old"
-                }
-              }
+              "cwd": "C:\\foo",
+              "transcriptPath": null,
+              "notifiedAt": "2026-04-01T00:00:00+00:00",
+              "message": "old"
             }
             """);
 
-        var loaded = new StateStore(_tempFile).Read();
-        Assert.AreEqual(WaitingReason.Permission, loaded.Sessions["s1"].Reason);
+        Assert.AreEqual(WaitingReason.Permission, new StateStore(_tempDir).Read()["s1"].Reason);
     }
-
 }

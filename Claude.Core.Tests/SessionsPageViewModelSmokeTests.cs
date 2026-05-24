@@ -17,7 +17,7 @@ public class SessionsPageViewModelSmokeTests
     {
         using var fixture = new ClaudeProjectsFixture();
         var locator = new FakeProcessLocator();
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
 
         var snapshots = enumerator.Enumerate();
@@ -109,7 +109,7 @@ public class SessionsPageViewModelSmokeTests
             Title: "cmd",
             WorkingDirectory: cwd));
 
-        var store = new StateStore(Path.Combine(fixture.Root, "state.json"));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
         var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
 
         var snapshots = enumerator.Enumerate();

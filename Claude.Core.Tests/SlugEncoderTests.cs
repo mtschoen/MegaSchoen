@@ -8,8 +8,8 @@ public class SlugEncoderTests
     [TestMethod]
     public void Encode_WindowsPathWithDriveLetter_ProducesDoubleHyphen()
     {
-        Assert.AreEqual("C--Users-mtsch-source-repos-MegaSchoen",
-            SlugEncoder.Encode(@"C:\Users\mtsch\source\repos\MegaSchoen"));
+        Assert.AreEqual("C--Users-mtsch-MegaSchoen",
+            SlugEncoder.Encode(@"C:\Users\mtsch\MegaSchoen"));
     }
 
     [TestMethod]

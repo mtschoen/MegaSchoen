@@ -19,8 +19,8 @@ sealed class ClaudeWindowService
 
     public void CycleToNext(WaitingReason? filter = null)
     {
-        var file = _store.Read();
-        if (file.Sessions.Count == 0)
+        var entries = _store.Read();
+        if (entries.Count == 0)
         {
             _tray.ShowNotification("MegaSchoen", "No Claude windows waiting", NotificationIcon.Info);
             return;
@@ -29,7 +29,7 @@ sealed class ClaudeWindowService
         var windows = ProcessResolver.EnumerateCmdExeWindows();
         var candidates = new List<(string SessionId, CmdWindow Window, DateTimeOffset NotifiedAt)>();
         var matchedSessionIds = new HashSet<string>();
-        foreach (var (id, entry) in file.Sessions)
+        foreach (var (id, entry) in entries)
         {
             if (!_verifier.IsStillWaiting(entry))
             {
@@ -52,7 +52,7 @@ sealed class ClaudeWindowService
             }
         }
 
-        foreach (var id in file.Sessions.Keys)
+        foreach (var id in entries.Keys)
         {
             if (!matchedSessionIds.Contains(id))
             {

@@ -8,7 +8,12 @@ public static class Paths
                 ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MegaSchoen");
 
-    public static string NeedySessionsFile { get; } =
+    public static string NeedySessionsDirectory { get; } =
+        Path.Combine(AppDataDirectory, "needy-sessions");
+
+    // Pre-2026-05-23 single-file state store. Retained only so startup migration
+    // can delete the leftover blob; nothing should read from this path anymore.
+    public static string LegacyNeedySessionsFile { get; } =
         Path.Combine(AppDataDirectory, "needy-sessions.json");
 
     public static string HookBridgeLog { get; } =
@@ -19,4 +24,10 @@ public static class Paths
 
     public static void EnsureAppDataDirectoryExists() =>
         Directory.CreateDirectory(AppDataDirectory);
+
+    public static void EnsureNeedySessionsDirectoryExists() =>
+        Directory.CreateDirectory(NeedySessionsDirectory);
+
+    public static string GetSessionFilePath(string sessionId, string? directoryOverride = null) =>
+        Path.Combine(directoryOverride ?? NeedySessionsDirectory, $"{sessionId}.json");
 }

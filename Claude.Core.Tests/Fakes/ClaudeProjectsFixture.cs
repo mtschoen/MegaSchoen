@@ -9,12 +9,16 @@ internal sealed class ClaudeProjectsFixture : IDisposable
         Directory.CreateDirectory(Root);
     }
 
-    public string AddSession(string slug, string sessionId, string lastLineJson, DateTime mtimeUtc)
+    public string AddSession(string slug, string sessionId, string lastLineJson, DateTime mtimeUtc, DateTime? creationTimeUtc = null)
     {
         var dir = Path.Combine(Root, slug);
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{sessionId}.jsonl");
         File.WriteAllText(path, lastLineJson + "\n");
+        if (creationTimeUtc is { } createdAt)
+        {
+            File.SetCreationTimeUtc(path, createdAt);
+        }
         File.SetLastWriteTimeUtc(path, mtimeUtc);
         return path;
     }

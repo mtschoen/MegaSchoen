@@ -43,6 +43,8 @@ public partial class App : MauiWinUIApplication
     {
         var services = MauiWinUIApplication.Current.Services;
 
+        MigrateAndSweepSessionState(services);
+
         var messageWindow = services.GetRequiredService<MessageWindow>();
         var tray = services.GetRequiredService<TrayIconService>();
         var hotkeys = services.GetRequiredService<GlobalHotkeyService>();
@@ -133,7 +135,7 @@ public partial class App : MauiWinUIApplication
             try
             {
                 var store = new Claude.Core.StateStore();
-                store.Write(new Claude.Core.Models.NeedySessionsFile());
+                store.DeleteAll();
                 tray.ShowNotification("MegaSchoen", "Needy sessions cleared");
             }
             catch (Exception exception)
@@ -238,6 +240,49 @@ public partial class App : MauiWinUIApplication
                 }
             });
         });
+    }
+
+    static void MigrateAndSweepSessionState(IServiceProvider services)
+    {
+        try
+        {
+            if (File.Exists(Claude.Core.Paths.LegacyNeedySessionsFile))
+            {
+                File.Delete(Claude.Core.Paths.LegacyNeedySessionsFile);
+                Claude.Core.Logger.Log("Deleted legacy needy-sessions.json (one-time migration)");
+            }
+        }
+        catch (Exception exception)
+        {
+            Claude.Core.Logger.Log($"Legacy state-file migration failed: {exception.Message}");
+        }
+
+        try
+        {
+            Claude.Core.Paths.EnsureNeedySessionsDirectoryExists();
+            var enumerator = services.GetRequiredService<Claude.Core.ActiveSessionEnumerator>();
+            var store = services.GetRequiredService<Claude.Core.StateStore>();
+            var liveIds = new HashSet<string>(
+                enumerator.Enumerate().Select(s => s.SessionId),
+                StringComparer.OrdinalIgnoreCase);
+            var swept = 0;
+            foreach (var existingId in store.EnumerateSessionIds())
+            {
+                if (!liveIds.Contains(existingId))
+                {
+                    store.Delete(existingId);
+                    swept++;
+                }
+            }
+            if (swept > 0)
+            {
+                Claude.Core.Logger.Log($"Startup zombie sweep removed {swept} stale session entries");
+            }
+        }
+        catch (Exception exception)
+        {
+            Claude.Core.Logger.Log($"Startup zombie sweep failed: {exception.Message}");
+        }
     }
 
     void ShowMainWindow()

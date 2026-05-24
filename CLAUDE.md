@@ -82,16 +82,17 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 ```
 Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it emits one-shot JSON instead of an ANSI live table.
 
-## Current Status (Last updated: 2026-05-10)
+## Current Status (Last updated: 2026-05-23)
 
 ### ✅ Active Claude Sessions Dashboard Working
 
 **What's Working:**
 - New `ClaudeSessionsCLI` binary with `list` (one-shot JSON / NDJSON stream / Spectre.Console live table) and `focus <prefix>` verbs
 - New MAUI Sessions tab (sibling to Display Manager via AppShell flyout) showing per-session cards: state badge, cwd, last-activity, Focus button, plus optional Refresh button
-- Session enumeration: cmd.exe windows joined to most-recently-modified `~/.claude/projects/<slug>/*.jsonl` per cwd, with subagent rollup
-- State classification: StateStore presence is the discriminator (no time gates) — `PendingPermission`/`AwaitingInput` from `needy-sessions.json`, `Working`/`Idle` from transcript tail-read
-- Refresh is event-driven: two `FileSystemWatcher`s (`needy-sessions.json` + recursive on `~/.claude/projects/`) funnel into a `Channel<byte>` with 250ms debounce; no polling
+- Session enumeration: `claude.exe` processes (filtered to those with a shell parent: `cmd.exe` / `powershell.exe` / `pwsh.exe`) each attributed to a specific `~/.claude/projects/<slug>/*.jsonl` by matching the process's `StartTimeUtc` to the JSONL's `CreationTimeUtc` within 30s (freshest-unassigned fallback for `claude --resume`), with subagent rollup
+- State classification: StateStore presence is the discriminator (no time gates) — `PendingPermission`/`AwaitingInput` from per-session files under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json`, `Working`/`Idle` from transcript tail-read
+- Refresh is event-driven: two `FileSystemWatcher`s (`needy-sessions/*.json` directory + recursive on `~/.claude/projects/`) funnel into a `Channel<byte>` with 250ms debounce; no polling
+- State store is sharded one-file-per-session (changed 2026-05-23 from a single shared `needy-sessions.json`) so concurrent `ClaudeHookBridge.exe` invocations don't contend or drop events. A per-session named `Mutex` (`Local\\MegaSchoen.Session.<sessionId>`) serializes within-session writes. MAUI app does a one-time legacy-file delete + zombie sweep at startup (deletes per-session files whose session ID has no corresponding live transcript).
 
 **Key Implementation Details:**
 - `ClaudeCycler.Core` was renamed to `Claude.Core` in this same work (it now owns more than the cycler)
@@ -140,7 +141,7 @@ Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it 
 
 - **ClaudeSessionsCLI** (.NET 10 Console App, Windows TFM) - Active-Claude-sessions CLI. `list` (default human / `--json` / `--json-stream`) + `focus <prefix>`. Uses `Spectre.Console` for live table.
 
-- **ClaudeHookBridge** (.NET 10 Console App) - Claude Code hook receiver. Spawned by hooks; writes `needy-sessions.json` via `Claude.Core.StateStore`.
+- **ClaudeHookBridge** (.NET 10 Console App) - Claude Code hook receiver. Spawned by hooks; writes one file per session under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json` via `Claude.Core.StateStore`.
 
 - **MegaSchoen** (MAUI App) - Cross-platform GUI. AppShell flyout with two pages: **Display Manager** (display profiles, save/apply/hotkeys) and **Claude Sessions** (live cards driven by `FileSystemWatcher` + bounded-channel debounce). Currently Windows-only for the active features.
 
@@ -154,7 +155,7 @@ Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it 
 - `Claude.Core/ActiveSessionEnumerator.cs` - The window ⨝ slug-JSONL ⨝ StateStore join
 - `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping (StateStore presence is the discriminator; no time gates)
 - `Claude.Core/SlugEncoder.cs` - cwd → `~/.claude/projects/<slug>` directory naming
-- `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - cmd.exe window enumeration (wraps `ProcessResolver`)
+- `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - claude.exe process enumeration (parent-shell filter via `ProcessResolver`); each claude.exe's parent cmd.exe is then mapped to its visible terminal window for focus
 - `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs` - `BringToFront` via `Win32ForegroundHelper` (three-way `AttachThreadInput`)
 - `ClaudeSessionsCLI/Commands/ListCommand.cs` - Three-mode list (human/JSON/NDJSON)
 - `ClaudeSessionsCLI/Commands/FocusCommand.cs` - Unique-prefix focus

@@ -7,15 +7,14 @@ public static class StatusCommand
     public static int Run()
     {
         var store = new StateStore();
-        var file = store.Read();
+        var entries = store.Read();
         var now = DateTimeOffset.UtcNow;
 
-        Console.WriteLine($"State file: {Paths.NeedySessionsFile}");
-        Console.WriteLine($"Version: {file.Version}");
-        Console.WriteLine($"Sessions: {file.Sessions.Count}");
+        Console.WriteLine($"State directory: {Paths.NeedySessionsDirectory}");
+        Console.WriteLine($"Sessions: {entries.Count}");
         Console.WriteLine();
 
-        foreach (var (id, entry) in file.Sessions)
+        foreach (var (id, entry) in entries)
         {
             var age = now - entry.NotifiedAt;
             Console.WriteLine($"  {id}");

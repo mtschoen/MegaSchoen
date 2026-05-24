@@ -97,7 +97,7 @@ MegaSchoen.sln                         (modified — add new projects)
 
 - [x] **Step 2: Add project to solution**
 
-Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeCycler.Core\ClaudeCycler.Core.csproj"`
+Run: `dotnet sln "C:\Users\mtsch\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\MegaSchoen\ClaudeCycler.Core\ClaudeCycler.Core.csproj"`
 
 - [x] **Step 3: Build and verify**
 
@@ -146,7 +146,7 @@ git commit -m "Add ClaudeCycler.Core project"
 
 - [x] **Step 2: Add to solution**
 
-Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeCycler.Core.Tests\ClaudeCycler.Core.Tests.csproj"`
+Run: `dotnet sln "C:\Users\mtsch\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\MegaSchoen\ClaudeCycler.Core.Tests\ClaudeCycler.Core.Tests.csproj"`
 
 - [x] **Step 3: Build**
 
@@ -921,7 +921,7 @@ public static class Program
 
 - [x] **Step 3: Add to solution and build**
 
-Run: `dotnet sln "C:\Users\mtsch\source\repos\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\source\repos\MegaSchoen\ClaudeHookBridge\ClaudeHookBridge.csproj"`
+Run: `dotnet sln "C:\Users\mtsch\MegaSchoen\MegaSchoen.sln" add "C:\Users\mtsch\MegaSchoen\ClaudeHookBridge\ClaudeHookBridge.csproj"`
 Run: `MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64`
 Expected: both new projects build.
 

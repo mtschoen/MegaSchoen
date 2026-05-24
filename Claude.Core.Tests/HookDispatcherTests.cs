@@ -5,22 +5,22 @@ namespace Claude.Core.Tests;
 [TestClass]
 public class HookDispatcherTests
 {
-    string _tempFile = "";
+    string _tempDir = "";
     StateStore _store = null!;
     HookDispatcher _dispatcher = null!;
 
     [TestInitialize]
     public void Setup()
     {
-        _tempFile = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}.json");
-        _store = new StateStore(_tempFile);
+        _tempDir = Path.Combine(Path.GetTempPath(), $"needy-{Guid.NewGuid():N}");
+        _store = new StateStore(_tempDir);
         _dispatcher = new HookDispatcher(_store);
     }
 
     [TestCleanup]
     public void Cleanup()
     {
-        if (File.Exists(_tempFile)) File.Delete(_tempFile);
+        if (Directory.Exists(_tempDir)) Directory.Delete(_tempDir, recursive: true);
     }
 
     [TestMethod]
@@ -35,11 +35,11 @@ public class HookDispatcherTests
             Message = "Claude needs your permission"
         });
 
-        var file = _store.Read();
-        Assert.IsTrue(file.Sessions.ContainsKey("s1"));
-        Assert.AreEqual("C:\\foo", file.Sessions["s1"].Cwd);
-        Assert.AreEqual("Claude needs your permission", file.Sessions["s1"].Message);
-        Assert.AreEqual(WaitingReason.Permission, file.Sessions["s1"].Reason);
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual("C:\\foo", entries["s1"].Cwd);
+        Assert.AreEqual("Claude needs your permission", entries["s1"].Message);
+        Assert.AreEqual(WaitingReason.Permission, entries["s1"].Reason);
     }
 
     [TestMethod]
@@ -53,7 +53,7 @@ public class HookDispatcherTests
             Cwd = "C:\\foo"
         });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -62,7 +62,7 @@ public class HookDispatcherTests
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public class HookDispatcherTests
         });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -90,7 +90,7 @@ public class HookDispatcherTests
         });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -106,10 +106,10 @@ public class HookDispatcherTests
             Message = "Claude needs your permission"
         });
 
-        var file = _store.Read();
+        var entries = _store.Read();
         Assert.AreEqual(
             "C:\\Users\\me\\.claude\\projects\\C--foo\\s1.jsonl",
-            file.Sessions["s1"].TranscriptPath);
+            entries["s1"].TranscriptPath);
     }
 
     [TestMethod]
@@ -123,11 +123,11 @@ public class HookDispatcherTests
             TranscriptPath = "C:\\foo\\transcript.jsonl"
         });
 
-        var file = _store.Read();
-        Assert.IsTrue(file.Sessions.ContainsKey("s1"));
-        Assert.AreEqual(WaitingReason.AwaitingInput, file.Sessions["s1"].Reason);
-        Assert.AreEqual("C:\\foo", file.Sessions["s1"].Cwd);
-        Assert.AreEqual("C:\\foo\\transcript.jsonl", file.Sessions["s1"].TranscriptPath);
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.AwaitingInput, entries["s1"].Reason);
+        Assert.AreEqual("C:\\foo", entries["s1"].Cwd);
+        Assert.AreEqual("C:\\foo\\transcript.jsonl", entries["s1"].TranscriptPath);
     }
 
     [TestMethod]
@@ -147,7 +147,7 @@ public class HookDispatcherTests
             Cwd = "C:\\foo"
         });
 
-        Assert.AreEqual(WaitingReason.AwaitingInput, _store.Read().Sessions["s1"].Reason);
+        Assert.AreEqual(WaitingReason.AwaitingInput, _store.Read()["s1"].Reason);
     }
 
     [TestMethod]
@@ -163,7 +163,7 @@ public class HookDispatcherTests
             Cwd = "C:\\foo"
         });
 
-        Assert.IsTrue(_store.Read().Sessions["s1"].NotifiedAt > earlier);
+        Assert.IsTrue(_store.Read()["s1"].NotifiedAt > earlier);
     }
 
     [TestMethod]
@@ -179,17 +179,17 @@ public class HookDispatcherTests
 
         _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1" });
 
-        var file = _store.Read();
-        Assert.IsTrue(file.Sessions.ContainsKey("s1"));
-        Assert.AreEqual(WaitingReason.Permission, file.Sessions["s1"].Reason);
-        Assert.AreEqual(existing.NotifiedAt, file.Sessions["s1"].NotifiedAt);
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.Permission, entries["s1"].Reason);
+        Assert.AreEqual(existing.NotifiedAt, entries["s1"].NotifiedAt);
     }
 
     [TestMethod]
     public void PostToolUse_NoMatchingEntry_IsNoop()
     {
         _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "unrelated" });
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -198,14 +198,14 @@ public class HookDispatcherTests
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
     public void UnknownEvent_IsNoop()
     {
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SomeOtherEvent", SessionId = "s1" });
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 
     [TestMethod]
@@ -217,6 +217,6 @@ public class HookDispatcherTests
             NotificationType = "permission_prompt"
             // SessionId deliberately null
         });
-        Assert.IsEmpty(_store.Read().Sessions);
+        Assert.IsEmpty(_store.Read());
     }
 }

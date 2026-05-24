@@ -6,15 +6,20 @@ public sealed class WindowsClaudeProcessLocator : IClaudeProcessLocator
 {
     public IReadOnlyList<ClaudeWindow> EnumerateWindows()
     {
-        var raw = ProcessResolver.EnumerateCmdExeWindows();
-        var result = new List<ClaudeWindow>(raw.Count);
-        foreach (var window in raw)
+        var processes = ProcessResolver.EnumerateClaudeCliProcesses();
+        if (processes.Count == 0) return Array.Empty<ClaudeWindow>();
+
+        var terminalsByCmdPid = ProcessResolver.GetTerminalWindowsByCmdPid();
+        var result = new List<ClaudeWindow>(processes.Count);
+        foreach (var process in processes)
         {
+            if (!terminalsByCmdPid.TryGetValue(process.ParentPid, out var terminal)) continue;
             result.Add(new ClaudeWindow(
-                ProcessId: window.ProcessId,
-                Window: WindowToken.FromHandle(window.WindowHandle),
-                Title: window.WindowTitle,
-                WorkingDirectory: window.WorkingDirectory));
+                ProcessId: process.Pid,
+                Window: WindowToken.FromHandle(terminal.WindowHandle),
+                Title: terminal.WindowTitle,
+                WorkingDirectory: process.WorkingDirectory,
+                StartTimeUtc: process.StartTimeUtc));
         }
         return result;
     }

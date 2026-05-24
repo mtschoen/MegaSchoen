@@ -9,7 +9,8 @@ public sealed record SessionSnapshot(
     string? PendingMessage,
     WindowToken Window,
     string? WindowTitle,
-    IReadOnlyList<SubagentSnapshot> Subagents)
+    IReadOnlyList<SubagentSnapshot> Subagents,
+    string? Host = null)
 {
     public SessionState RollupState
     {
