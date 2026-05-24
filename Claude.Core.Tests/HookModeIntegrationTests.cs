@@ -5,12 +5,7 @@ namespace Claude.Core.Tests;
 [TestClass]
 public class HookModeIntegrationTests
 {
-    static string BridgeExePath =>
-        Path.Combine(
-            AppContext.BaseDirectory,
-            "..", "..", "..", "..",
-            "ClaudeHookBridge", "bin", "Debug", "net10.0-windows10.0.26100.0",
-            "ClaudeHookBridge.exe");
+    static string BridgeExePath => TestBinaries.LocateExecutable("ClaudeHookBridge", "ClaudeHookBridge.exe");
 
     [TestMethod]
     public void StdinPermissionPrompt_UpsertsStateFile()

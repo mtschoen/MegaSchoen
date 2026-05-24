@@ -11,6 +11,7 @@
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <Compile Remove="CliSmokeTests.cs" />
     <Compile Remove="HookModeIntegrationTests.cs" />
+    <Compile Remove="TestBinaries.cs" />
   </ItemGroup>
 
   <!-- Linux-only tests: excluded from the Windows target.
@@ -24,6 +25,13 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />
+  </ItemGroup>
+  <!-- Build-only references (Windows target only): CliSmokeTests / HookModeIntegrationTests launch
+       these executables at runtime. ReferenceOutputAssembly=false builds them (so they exist on
+       disk for the tests to find) without linking their output into the test assembly. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.26100.0'">
+    <ProjectReference Include="..\ClaudeSessionsCLI\ClaudeSessionsCLI.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\ClaudeHookBridge\ClaudeHookBridge.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />

@@ -6,17 +6,7 @@ namespace Claude.Core.Tests;
 [TestClass]
 public class CliSmokeTests
 {
-    static string CliPath()
-    {
-        var current = AppContext.BaseDirectory;
-        for (var i = 0; i < 8 && current is not null; i++)
-        {
-            var probe = Path.Combine(current, "ClaudeSessionsCLI", "bin", "Debug", "net10.0-windows10.0.26100.0", "ClaudeSessionsCLI.exe");
-            if (File.Exists(probe)) return probe;
-            current = Directory.GetParent(current)?.FullName;
-        }
-        throw new FileNotFoundException("ClaudeSessionsCLI.exe not found — build the solution first.");
-    }
+    static string CliPath() => TestBinaries.LocateExecutable("ClaudeSessionsCLI", "ClaudeSessionsCLI.exe");
 
     [TestMethod]
     public void ListJson_ProducesParseableJsonAndExitsZero()
