@@ -103,7 +103,7 @@ public class SessionsPageViewModelSmokeTests
             DateTime.UtcNow);
 
         var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(
+        locator.Sessions.Add(new ClaudeWindow(
             ProcessId: 42,
             Window: WindowToken.FromHandle(new IntPtr(2)),
             Title: "cmd",

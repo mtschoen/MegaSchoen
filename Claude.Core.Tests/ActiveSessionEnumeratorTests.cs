@@ -7,126 +7,213 @@ namespace Claude.Core.Tests;
 [TestClass]
 public class ActiveSessionEnumeratorTests
 {
-    [TestMethod]
-    public void Enumerate_NoWindows_ReturnsEmpty()
-    {
-        using var fixture = new ClaudeProjectsFixture();
-        var locator = new FakeProcessLocator();
-        var store = new StateStore(Path.Combine(fixture.Root, "state"));
-
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
-
-        var result = enumerator.Enumerate();
-        Assert.AreEqual(0, result.Count);
-    }
+    static ClaudeWindow LiveProc(uint pid, string cwd, IntPtr window, string title = "term", DateTime? startUtc = null) =>
+        new(pid, window == IntPtr.Zero ? WindowToken.Null : WindowToken.FromHandle(window),
+            window == IntPtr.Zero ? "" : title, cwd,
+            new DateTimeOffset(startUtc ?? DateTime.UtcNow, TimeSpan.Zero));
 
     [TestMethod]
-    public void Enumerate_WindowCwdHasNoProjectsDir_ProducesNoSessions()
-    {
-        using var fixture = new ClaudeProjectsFixture();
-        var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(
-            ProcessId: 100,
-            Window: WindowToken.FromHandle(new IntPtr(1)),
-            Title: "cmd",
-            WorkingDirectory: @"C:\nowhere\that\matches"));
-        var store = new StateStore(Path.Combine(fixture.Root, "state"));
-
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
-        Assert.AreEqual(0, enumerator.Enumerate().Count);
-    }
-
-    [TestMethod]
-    public void Enumerate_OneWindowOneTranscriptAssistantLast_ReturnsWorking()
+    public void Enumerate_NoLiveProcesses_ReturnsEmpty()
     {
         using var fixture = new ClaudeProjectsFixture();
         var cwd = @"C:\repo\proj";
-        var slug = SlugEncoder.Encode(cwd);
-        fixture.AddSession(slug, "abc-123",
-            """{"type":"assistant","message":{}}""",
-            DateTime.UtcNow);
-
-        var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(
-            ProcessId: 100,
-            Window: WindowToken.FromHandle(new IntPtr(1)),
-            Title: "cmd",
-            WorkingDirectory: cwd));
+        fixture.AddSession(SlugEncoder.Encode(cwd), "abc-123",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        var locator = new FakeProcessLocator(); // no live procs
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
-        var result = enumerator.Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        Assert.AreEqual(0, result.Count, "no live process in any cwd => nothing surfaced (zombie pruned)");
+    }
+
+    [TestMethod]
+    public void Enumerate_LiveProcWithTranscript_SurfacesTrueId()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\proj";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "abc-123",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
         Assert.AreEqual(1, result.Count);
         Assert.AreEqual("abc-123", result[0].SessionId);
         Assert.AreEqual(cwd, result[0].Cwd);
         Assert.AreEqual(SessionState.Working, result[0].State);
-        Assert.AreEqual(0, result[0].Subagents.Count);
+        Assert.IsFalse(result[0].Window.IsZero, "a confident start-time match should attach the window");
     }
 
     [TestMethod]
-    public void Enumerate_MultipleTranscriptsSameSlug_PicksFreshest()
+    public void Enumerate_StoreEntryNoLiveProc_IsPruned()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
+        var cwd = @"C:\repo\dead";
         var slug = SlugEncoder.Encode(cwd);
+        fixture.AddSession(slug, "dead-1", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        store.Upsert("dead-1", new SessionEntry
+        {
+            Cwd = cwd,
+            TranscriptPath = Path.Combine(fixture.Root, slug, "dead-1.jsonl"),
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.Working
+        });
 
-        var older = DateTime.UtcNow.AddMinutes(-30);
-        var newer = DateTime.UtcNow;
-        fixture.AddSession(slug, "old-id",
-            """{"type":"user","message":{}}""", older);
-        fixture.AddSession(slug, "new-id",
-            """{"type":"assistant","message":{}}""", newer);
+        var locator = new FakeProcessLocator(); // terminal killed => no live proc
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(0, result.Count, "Working session whose process is gone is a zombie => pruned");
+    }
+
+    [TestMethod]
+    public void Enumerate_WaitingState_StaleTranscript_StillSurfaced_NoTimeCutoff()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\waiting";
+        var slug = SlugEncoder.Encode(cwd);
+        // Transcript last touched 3 hours ago; the user walked away from a prompt.
+        var stale = DateTime.UtcNow.AddHours(-3);
+        fixture.AddSession(slug, "wait-1", """{"type":"assistant","message":{}}""", stale, creationTimeUtc: stale);
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        store.Upsert("wait-1", new SessionEntry
+        {
+            Cwd = cwd,
+            TranscriptPath = Path.Combine(fixture.Root, slug, "wait-1.jsonl"),
+            NotifiedAt = new DateTimeOffset(stale, TimeSpan.Zero),
+            Reason = WaitingReason.AwaitingInput
+        });
 
         var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state"));
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1), startUtc: stale)); // process still alive (blocked)
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        var result = enumerator.Enumerate();
-        Assert.AreEqual(1, result.Count);
-        Assert.AreEqual("new-id", result[0].SessionId);
+        Assert.AreEqual(1, result.Count, "waiting sessions never time-expire while their process lives");
+        Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
     }
 
     [TestMethod]
-    public void Enumerate_FirstLineCwdMismatch_SkipsTranscript()
+    public void Enumerate_TranscriptOnly_NoStoreEntry_UsesTailReadFallback()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var actualCwd = @"C:\foo\bar";
-        var slug = SlugEncoder.Encode(actualCwd);
-
-        // The window says C:\foo\bar, but the transcript was written with cwd=C:\foo-bar
-        // (the colliding partner). The classifier should detect mismatch and skip.
-        fixture.AddSession(slug, "wrong-cwd-id",
-            """{"type":"assistant","message":{},"cwd":"C:\\foo-bar"}""",
-            DateTime.UtcNow);
-
-        var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", actualCwd));
-        var store = new StateStore(Path.Combine(fixture.Root, "state"));
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
-
-        Assert.AreEqual(0, enumerator.Enumerate().Count);
-    }
-
-    [TestMethod]
-    public void Enumerate_SessionWithSubagents_RollsUpAndExposesIndividualStates()
-    {
-        using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
-        var slug = SlugEncoder.Encode(cwd);
-
-        // Parent: Idle (last user line).
-        fixture.AddSession(slug, "parent-1",
-            """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-10));
-        // Two subagents: one Working, one Idle.
-        fixture.AddSubagent(slug, "parent-1", "abc",
+        var cwd = @"C:\repo\fresh";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "fresh-1",
             """{"type":"assistant","message":{}}""", DateTime.UtcNow);
-        fixture.AddSubagent(slug, "parent-1", "def",
-            """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-5));
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state")); // empty store
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual("fresh-1", result[0].SessionId);
+        Assert.AreEqual(SessionState.Working, result[0].State, "assistant-last => Working via tail read");
+    }
+
+    [TestMethod]
+    public void Enumerate_SharedCwd_TwoProcsThreeTranscripts_KeepsTwoFreshest()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\shared";
+        var slug = SlugEncoder.Encode(cwd);
+        fixture.AddSession(slug, "old", """{"type":"user","message":{}}""", DateTime.UtcNow.AddMinutes(-30));
+        fixture.AddSession(slug, "mid", """{"type":"assistant","message":{}}""", DateTime.UtcNow.AddMinutes(-10));
+        fixture.AddSession(slug, "new", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
 
         var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd", cwd));
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+        locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(2)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        var ids = result.Select(s => s.SessionId).ToHashSet();
+        Assert.AreEqual(2, result.Count, "cap to live-process count (2)");
+        Assert.IsTrue(ids.Contains("new") && ids.Contains("mid"), "freshest two kept");
+        Assert.IsFalse(ids.Contains("old"), "oldest dropped");
+    }
+
+    [TestMethod]
+    public void Enumerate_ResumeStartTimeFarFromCreation_StillCorrectId_WindowMayBeNull()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\resumed";
+        var slug = SlugEncoder.Encode(cwd);
+        var created = DateTime.UtcNow.AddDays(-2); // old transcript (resumed)
+        fixture.AddSession(slug, "resumed-1", """{"type":"assistant","message":{}}""",
+            mtimeUtc: DateTime.UtcNow, creationTimeUtc: created);
+
+        var locator = new FakeProcessLocator();
+        // process started just now, far from the 2-day-old transcript creation
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1), startUtc: DateTime.UtcNow));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual("resumed-1", result[0].SessionId, "identity is the filename, not a start-time guess");
+        Assert.IsTrue(result[0].Window.IsZero, "no confident window match => Focus disabled, but session still shown");
+    }
+
+    [TestMethod]
+    public void Enumerate_WindowlessLiveProc_SurfacesWithNullWindow()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\headless";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "headless-1",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, IntPtr.Zero)); // windowless headless -p
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(1, result.Count);
+        Assert.AreEqual("headless-1", result[0].SessionId);
+        Assert.IsTrue(result[0].Window.IsZero);
+    }
+
+    [TestMethod]
+    public void Enumerate_SlugCollision_DifferentRealCwds_NotCrossAttributed()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwdA = @"C:\foo\bar";   // encodes to C--foo-bar
+        var cwdB = @"C:\foo-bar";   // ALSO encodes to C--foo-bar
+        var slug = SlugEncoder.Encode(cwdA);
+        Assert.AreEqual(slug, SlugEncoder.Encode(cwdB), "precondition: real collision");
+
+        // Two transcripts in the shared slug dir, each recording its own cwd.
+        fixture.AddSession(slug, "in-bar",
+            """{"type":"assistant","message":{},"cwd":"C:\\foo\\bar"}""", DateTime.UtcNow);
+        fixture.AddSession(slug, "in-foobar",
+            """{"type":"assistant","message":{},"cwd":"C:\\foo-bar"}""", DateTime.UtcNow);
+
+        // Only cwdA has a live process.
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwdA, new IntPtr(1)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.AreEqual(1, result.Count, "only the transcript recorded with the live cwd surfaces");
+        Assert.AreEqual("in-bar", result[0].SessionId);
+    }
+
+    [TestMethod]
+    public void Enumerate_SessionWithSubagents_RollsUp()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        var cwd = @"C:\repo\proj";
+        var slug = SlugEncoder.Encode(cwd);
+        fixture.AddSession(slug, "parent-1", """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-10));
+        fixture.AddSubagent(slug, "parent-1", "abc", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        fixture.AddSubagent(slug, "parent-1", "def", """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-5));
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
@@ -138,73 +225,17 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
-    public void Enumerate_TwoWindowsSameCwd_DistinctJsonls_AttributedByStartTime()
-    {
-        // Regression: when multiple Claude CLI processes share a cwd, the old
-        // freshest-pick logic collapsed them onto one SessionId, producing
-        // duplicate snapshots and a downstream UpdateUi crash on the UI side.
-        // With per-window start-time matching each window should be attributed
-        // to its own JSONL.
-        using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
-        var slug = SlugEncoder.Encode(cwd);
-
-        var sessionAStart = DateTime.UtcNow.AddMinutes(-10);
-        var sessionBStart = DateTime.UtcNow.AddMinutes(-2);
-        fixture.AddSession(slug, "session-a",
-            """{"type":"assistant","message":{}}""",
-            mtimeUtc: sessionAStart.AddSeconds(30),
-            creationTimeUtc: sessionAStart);
-        fixture.AddSession(slug, "session-b",
-            """{"type":"assistant","message":{}}""",
-            mtimeUtc: sessionBStart.AddSeconds(30),
-            creationTimeUtc: sessionBStart);
-
-        var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(
-            ProcessId: 100,
-            Window: WindowToken.FromHandle(new IntPtr(1)),
-            Title: "cmd-a",
-            WorkingDirectory: cwd,
-            StartTimeUtc: new DateTimeOffset(sessionAStart, TimeSpan.Zero)));
-        locator.Windows.Add(new ClaudeWindow(
-            ProcessId: 101,
-            Window: WindowToken.FromHandle(new IntPtr(2)),
-            Title: "cmd-b",
-            WorkingDirectory: cwd,
-            StartTimeUtc: new DateTimeOffset(sessionBStart, TimeSpan.Zero)));
-        var store = new StateStore(Path.Combine(fixture.Root, "state"));
-        var enumerator = new ActiveSessionEnumerator(locator, store, fixture.Root);
-
-        var result = enumerator.Enumerate();
-
-        Assert.AreEqual(2, result.Count, "expected one snapshot per window, not collapsed-to-freshest");
-        var sessionIds = result.Select(s => s.SessionId).ToHashSet();
-        CollectionAssert.AreEquivalent(new[] { "session-a", "session-b" }, sessionIds.ToList());
-
-        var aSnapshot = result.Single(s => s.SessionId == "session-a");
-        var bSnapshot = result.Single(s => s.SessionId == "session-b");
-        Assert.AreEqual("cmd-a", aSnapshot.WindowTitle, "session-a should be attributed to the older claude process's window");
-        Assert.AreEqual("cmd-b", bSnapshot.WindowTitle, "session-b should be attributed to the newer claude process's window");
-    }
-
-    [TestMethod]
-    public void Enumerate_StateStoreUpgradesIdleToAwaitingInput_AndSortsToTop()
+    public void Enumerate_WaitingSortsAboveWorking()
     {
         using var fixture = new ClaudeProjectsFixture();
-
         var cwdA = @"C:\repo\a";
         var cwdB = @"C:\repo\b";
         var slugA = SlugEncoder.Encode(cwdA);
         var slugB = SlugEncoder.Encode(cwdB);
+        fixture.AddSession(slugA, "session-a", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        fixture.AddSession(slugB, "session-b", """{"type":"user","message":{}}""", DateTime.UtcNow);
 
-        fixture.AddSession(slugA, "session-a",
-            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
-        fixture.AddSession(slugB, "session-b",
-            """{"type":"user","message":{}}""", DateTime.UtcNow);
-
-        var stateDir = Path.Combine(fixture.Root, "state");
-        var store = new StateStore(stateDir);
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
         store.Upsert("session-b", new SessionEntry
         {
             Cwd = cwdB,
@@ -214,8 +245,8 @@ public class ActiveSessionEnumeratorTests
         });
 
         var locator = new FakeProcessLocator();
-        locator.Windows.Add(new ClaudeWindow(100, WindowToken.FromHandle(new IntPtr(1)), "cmd-a", cwdA));
-        locator.Windows.Add(new ClaudeWindow(101, WindowToken.FromHandle(new IntPtr(2)), "cmd-b", cwdB));
+        locator.Sessions.Add(LiveProc(100, cwdA, new IntPtr(1)));
+        locator.Sessions.Add(LiveProc(101, cwdB, new IntPtr(2)));
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
@@ -223,6 +254,5 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual("session-b", result[0].SessionId);
         Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
         Assert.AreEqual("session-a", result[1].SessionId);
-        Assert.AreEqual(SessionState.Working, result[1].State);
     }
 }

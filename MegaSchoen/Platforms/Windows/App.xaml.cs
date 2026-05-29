@@ -262,6 +262,9 @@ public partial class App : MauiWinUIApplication
             Claude.Core.Paths.EnsureNeedySessionsDirectoryExists();
             var enumerator = services.GetRequiredService<Claude.Core.ActiveSessionEnumerator>();
             var store = services.GetRequiredService<Claude.Core.StateStore>();
+            // Liveness is now centralized in ActiveSessionEnumerator (a session
+            // is live iff a claude process runs in its cwd). The sweep simply
+            // deletes StateStore entries the enumerator no longer considers live.
             var liveIds = new HashSet<string>(
                 enumerator.Enumerate().Select(s => s.SessionId),
                 StringComparer.OrdinalIgnoreCase);

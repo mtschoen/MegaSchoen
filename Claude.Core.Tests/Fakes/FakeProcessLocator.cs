@@ -5,6 +5,6 @@ namespace Claude.Core.Tests.Fakes;
 
 internal sealed class FakeProcessLocator : IClaudeProcessLocator
 {
-    public List<ClaudeWindow> Windows { get; } = new();
-    public IReadOnlyList<ClaudeWindow> EnumerateWindows() => Windows;
+    public List<ClaudeWindow> Sessions { get; } = new();
+    public IReadOnlyList<ClaudeWindow> EnumerateLiveSessions() => Sessions;
 }

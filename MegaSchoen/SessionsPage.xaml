@@ -62,7 +62,8 @@
                                            VerticalOptions="Center"/>
                                     <Button Grid.Column="3"
                                             Text="Focus"
-                                            IsVisible="{Binding CanFocus}"
+                                            IsVisible="{Binding FocusButtonVisible}"
+                                            IsEnabled="{Binding CanFocus}"
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=FocusCommand}"
                                             CommandParameter="{Binding .}"
                                             HeightRequest="36"

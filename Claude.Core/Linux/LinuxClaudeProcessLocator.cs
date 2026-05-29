@@ -9,7 +9,7 @@ public sealed class LinuxClaudeProcessLocator : IClaudeProcessLocator
     public LinuxClaudeProcessLocator() : this(new ProcFileSystem()) { }
     public LinuxClaudeProcessLocator(IProcFileSystem proc) => _proc = proc;
 
-    public IReadOnlyList<ClaudeWindow> EnumerateWindows()
+    public IReadOnlyList<ClaudeWindow> EnumerateLiveSessions()
     {
         var result = new List<ClaudeWindow>();
         foreach (var pid in _proc.EnumeratePids())

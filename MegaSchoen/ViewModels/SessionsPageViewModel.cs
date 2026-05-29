@@ -46,7 +46,10 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
         _dispatcher = dispatcher;
 
         FocusCommand = new Command<SessionCardViewModel>(card =>
-            _focuser.BringToFront(card.Snapshot.Window));
+        {
+            if (card.Snapshot.Window.IsZero) return;
+            _focuser.BringToFront(card.Snapshot.Window);
+        });
         ToggleExpandCommand = new Command<SessionCardViewModel>(card =>
             card.IsExpanded = !card.IsExpanded);
         RefreshCommand = new Command(RefreshNow);

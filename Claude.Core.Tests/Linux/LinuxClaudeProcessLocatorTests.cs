@@ -26,7 +26,7 @@ public class LinuxClaudeProcessLocatorTests
         fake.Procs[999]     = ("claude", null, 100);                             // no cwd — must be excluded
 
         var sut = new LinuxClaudeProcessLocator(fake);
-        var windows = sut.EnumerateWindows();
+        var windows = sut.EnumerateLiveSessions();
 
         Assert.AreEqual(1, windows.Count);
         var w = windows[0];

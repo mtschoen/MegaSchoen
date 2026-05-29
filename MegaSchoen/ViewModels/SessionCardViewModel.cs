@@ -29,6 +29,7 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(LastActivityRelative));
             OnPropertyChanged(nameof(SubagentSummary));
             OnPropertyChanged(nameof(IsRemote));
+            OnPropertyChanged(nameof(FocusButtonVisible));
             OnPropertyChanged(nameof(CanFocus));
             OnPropertyChanged(nameof(HostLabel));
         }
@@ -89,7 +90,11 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
     public IReadOnlyList<SubagentSnapshot> Subagents => _snapshot.Subagents;
 
     public bool IsRemote => _snapshot.Host is not null;
-    public bool CanFocus => !IsRemote;
+    // Visible for all local sessions; remote sessions can't be focused at all.
+    public bool FocusButtonVisible => !IsRemote;
+    // Enabled only when a terminal window was attached. Windowless local
+    // sessions (headless -p, unresolved --resume) show a greyed-out button.
+    public bool CanFocus => !IsRemote && !_snapshot.Window.IsZero;
     public string HostLabel => _snapshot.Host ?? "";
 
     public event PropertyChangedEventHandler? PropertyChanged;

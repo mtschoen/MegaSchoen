@@ -35,6 +35,12 @@ static class FocusCommand
             return Task.FromResult(1);
         }
 
+        if (matches[0].Window.IsZero)
+        {
+            Console.Error.WriteLine($"focus: no terminal window attached for session '{matches[0].SessionId}' (headless or unresolved)");
+            return Task.FromResult(2);
+        }
+
         var focuser = new WindowsClaudeWindowFocuser();
         var ok = focuser.BringToFront(matches[0].Window);
         return Task.FromResult(ok ? 0 : 2);
