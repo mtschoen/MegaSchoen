@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- Repo-wide analyzer enablement. Auto-imported by every project in the tree
+       (including the native .vcxproj, which ignores the .NET-only properties). -->
+  <PropertyGroup>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-Recommended</AnalysisLevel>
+    <!-- The autofix sweep + hand-fix pass clear all findings; the gate that keeps
+         them at zero is `dotnet build -warnaserror` / MSBuild -warnaserror in CI,
+         NOT a project-wide TreatWarningsAsErrors (that would also promote native
+         C++ compiler warnings and break normal dev builds). -->
+  </PropertyGroup>
+
+  <!-- Roslynator analyzers — C# (.csproj) projects only. The native DisplayManagerNative.vcxproj
+       imports this file too, so the PackageReference is scoped out of it. -->
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Include="Roslynator.Analyzers" Version="4.15.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

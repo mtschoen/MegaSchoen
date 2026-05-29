@@ -1,0 +1,5 @@
+# clang-format config for DisplayManagerNative (Win32/C++).
+# Microsoft base style suits Win32/CCD API code.
+# The vendor header DisplayManagerNative/json.hpp (nlohmann/json) is excluded
+# from formatting via .clang-format-ignore.
+BasedOnStyle: Microsoft

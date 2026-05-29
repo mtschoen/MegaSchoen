@@ -207,3 +207,20 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 dotnet_naming_style.pascal_case.capitalization = pascal_case
 
 dotnet_naming_style.camel_case.capitalization = camel_case
+
+#### Analyzer rule configuration (linter rollout 2026-05-29) ####
+
+# CA1822 (member can be marked static) is a performance rule. Whether a *public*
+# member is static is an API-design decision, not a perf bug — so scope CA1822 to
+# non-public members, where making a method static is a pure, behavior-preserving win.
+dotnet_code_quality.CA1822.api_surface = private, internal
+
+# Test method names follow the deliberate Method_Scenario_Result convention, which
+# uses underscores; CA1707 (no underscores in member names) does not apply to test code.
+[{Claude.Core.Tests,MegaSchoen.UITests}/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+
+# iOS/MacCatalyst platform glue uses framework-mandated type names (e.g. AppDelegate),
+# whose reserved "Delegate" suffix CA1711 cannot accept and which cannot be renamed.
+[**/Platforms/{iOS,MacCatalyst}/**.cs]
+dotnet_diagnostic.CA1711.severity = none
