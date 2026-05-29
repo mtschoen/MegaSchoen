@@ -54,7 +54,7 @@ public sealed class RemoteSessionStreamClient
         }
     }
 
-    IReadOnlyList<SessionSnapshot>? Parse(string ndjsonLine)
+    List<SessionSnapshot>? Parse(string ndjsonLine)
     {
         try
         {

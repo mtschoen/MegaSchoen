@@ -10,6 +10,9 @@ namespace ClaudeSessionsCLI.Commands;
 
 static class ListCommand
 {
+    static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+    static readonly JsonSerializerOptions CompactJson = new() { WriteIndented = false };
+
     public static async Task<int> Run(string[] arguments)
     {
         var options = CliOptions.Parse(arguments);
@@ -42,7 +45,7 @@ static class ListCommand
         var snapshots = enumerator.Enumerate();
         var json = JsonSerializer.Serialize(
             snapshots.Select(SnapshotDto.From).ToArray(),
-            new JsonSerializerOptions { WriteIndented = true });
+            IndentedJson);
         Console.Out.Write(json);
         Console.Out.Write('\n');
         return 0;
@@ -53,7 +56,7 @@ static class ListCommand
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        var json = new JsonSerializerOptions { WriteIndented = false };
+        var json = CompactJson;
         var ct = cts.Token;
 
         while (!ct.IsCancellationRequested)
@@ -85,7 +88,7 @@ static class ListCommand
             var snapshots = enumerator.Enumerate();
             var json = JsonSerializer.Serialize(
                 snapshots.Select(SnapshotDto.From).ToArray(),
-                new JsonSerializerOptions { WriteIndented = true });
+                IndentedJson);
             Console.Out.Write(json);
             Console.Out.Write('\n');
             return 0;

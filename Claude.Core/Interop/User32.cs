@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Claude.Core.Interop;
 
-public static partial class User32
+static partial class User32
 {
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 

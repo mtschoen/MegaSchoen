@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Claude.Core.Interop;
 
-public static partial class Kernel32
+static partial class Kernel32
 {
     public const int PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
     public const int PROCESS_VM_READ = 0x0010;

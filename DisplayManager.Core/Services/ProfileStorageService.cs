@@ -35,32 +35,32 @@ public class ProfileStorageService
     /// Loads the profile collection from disk.
     /// Returns a new empty collection if the file doesn't exist.
     /// </summary>
-    public async Task<ProfileCollection> LoadAsync()
+    public async Task<ProfileConfiguration> LoadAsync()
     {
         if (!File.Exists(_configFilePath))
         {
             // Return new empty collection if file doesn't exist
-            return new ProfileCollection();
+            return new ProfileConfiguration();
         }
 
         try
         {
             using var stream = File.OpenRead(_configFilePath);
-            var collection = await JsonSerializer.DeserializeAsync<ProfileCollection>(stream, _jsonOptions);
-            return collection ?? new ProfileCollection();
+            var collection = await JsonSerializer.DeserializeAsync<ProfileConfiguration>(stream, _jsonOptions);
+            return collection ?? new ProfileConfiguration();
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error loading profiles: {ex.Message}");
             // Return empty collection on error
-            return new ProfileCollection();
+            return new ProfileConfiguration();
         }
     }
 
     /// <summary>
     /// Saves the profile collection to disk with atomic write and backup.
     /// </summary>
-    public async Task SaveAsync(ProfileCollection collection)
+    public async Task SaveAsync(ProfileConfiguration collection)
     {
         try
         {

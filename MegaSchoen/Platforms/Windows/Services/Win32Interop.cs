@@ -306,7 +306,7 @@ static partial class Win32Interop
         }
 
         // Function keys
-        if (key.StartsWith("F") && int.TryParse(key.AsSpan(1), out var fNum) && fNum is >= 1 and <= 24)
+        if (key.StartsWith('F') && int.TryParse(key.AsSpan(1), out var fNum) && fNum is >= 1 and <= 24)
         {
             return (uint)(0x70 + fNum - 1); // VK_F1 = 0x70
         }

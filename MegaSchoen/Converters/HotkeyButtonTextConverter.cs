@@ -8,7 +8,7 @@ namespace MegaSchoen.Converters;
 /// Values: [0] = Hotkey (HotkeyDefinition?), [1] = Profile Id (Guid), [2] = CapturingProfileId (Guid?)
 /// Returns "Press keys..." if this profile is being captured, otherwise the hotkey display text.
 /// </summary>
-class HotkeyButtonTextConverter : IMultiValueConverter
+sealed class HotkeyButtonTextConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {

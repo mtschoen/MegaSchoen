@@ -8,7 +8,7 @@ public readonly record struct WindowToken
     internal IntPtr Handle { get; init; }
 
     public static WindowToken FromHandle(IntPtr handle) => new() { Handle = handle };
-    public static WindowToken Null { get; } = new();
+    public static WindowToken Null => default;
 
     public bool IsZero => Handle == IntPtr.Zero;
 }

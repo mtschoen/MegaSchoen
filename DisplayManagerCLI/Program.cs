@@ -17,7 +17,7 @@ if (args.Length == 0)
     return;
 }
 
-var command = args[0].ToLower();
+var command = args[0].ToLowerInvariant();
 
 switch (command)
 {

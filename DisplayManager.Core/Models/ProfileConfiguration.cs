@@ -4,7 +4,7 @@ namespace DisplayManager.Core.Models;
 /// Root configuration object that contains all profiles and settings.
 /// This is the object serialized to/from configs.json.
 /// </summary>
-public class ProfileCollection
+public class ProfileConfiguration
 {
     /// <summary>
     /// Schema version for migration support.

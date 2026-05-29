@@ -29,7 +29,7 @@ public sealed class ScreenshotTests
     const int PW_RENDERFULLCONTENT = 0x00000002;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int count);
+    static extern int GetWindowText(IntPtr hWnd, [System.Runtime.InteropServices.Out] char[] text, int count);
 
     [DllImport("user32.dll")]
     static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
@@ -50,16 +50,17 @@ public sealed class ScreenshotTests
         IntPtr result = IntPtr.Zero;
         EnumWindows((hWnd, lParam) =>
         {
-            GetWindowThreadProcessId(hWnd, out uint windowProcessId);
+            _ = GetWindowThreadProcessId(hWnd, out uint windowProcessId);
             if (windowProcessId == processId && IsWindowVisible(hWnd))
             {
-                var text = new System.Text.StringBuilder(256);
-                GetWindowText(hWnd, text, text.Capacity);
+                var buffer = new char[256];
+                var length = GetWindowText(hWnd, buffer, buffer.Length);
 
                 // Make sure it's a main window, not a child window
-                if (text.Length > 0)
+                if (length > 0)
                 {
-                    Console.WriteLine($"Found window: '{text}' (PID: {windowProcessId})");
+                    var title = new string(buffer, 0, length);
+                    Console.WriteLine($"Found window: '{title}' (PID: {windowProcessId})");
                     result = hWnd;
                     return false; // Stop enumeration
                 }

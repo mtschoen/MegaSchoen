@@ -144,7 +144,8 @@ public class StateStoreTests
         store.Upsert("a", new SessionEntry { Cwd = "C:\\a", NotifiedAt = DateTimeOffset.UtcNow });
         store.Upsert("b", new SessionEntry { Cwd = "C:\\b", NotifiedAt = DateTimeOffset.UtcNow });
 
-        CollectionAssert.AreEquivalent(new[] { "a", "b" }, store.EnumerateSessionIds().ToList());
+        var expected = new[] { "a", "b" };
+        CollectionAssert.AreEquivalent(expected, store.EnumerateSessionIds().ToList());
     }
 
     [TestMethod]
