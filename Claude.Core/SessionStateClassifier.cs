@@ -12,6 +12,7 @@ public static class SessionStateClassifier
             {
                 WaitingReason.Permission => SessionState.PendingPermission,
                 WaitingReason.AwaitingInput => SessionState.AwaitingInput,
+                WaitingReason.Working => SessionState.Working,
                 _ => SessionState.Unknown
             };
         }

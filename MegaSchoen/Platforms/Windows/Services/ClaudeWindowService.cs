@@ -37,7 +37,9 @@ sealed class ClaudeWindowService
                 continue;
             }
 
-            var includeInCycle = filter is null || entry.Reason == filter;
+            // filter null means "any session needing attention" — Working
+            // sessions live in the store now too, so they must be excluded.
+            var includeInCycle = filter is null ? entry.Reason.IsNeedy() : entry.Reason == filter;
 
             foreach (var window in windows)
             {

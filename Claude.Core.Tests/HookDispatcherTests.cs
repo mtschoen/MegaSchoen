@@ -43,7 +43,7 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
-    public void Notification_IdlePrompt_DoesNotUpsert()
+    public void Notification_IdlePrompt_UpsertsAwaitingInput()
     {
         _dispatcher.Dispatch(new HookPayload
         {
@@ -53,44 +53,74 @@ public class HookDispatcherTests
             Cwd = "C:\\foo"
         });
 
-        Assert.IsEmpty(_store.Read());
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.AwaitingInput, entries["s1"].Reason);
     }
 
     [TestMethod]
-    public void UserPromptSubmit_DeletesSession()
+    public void Notification_OtherType_LeavesEntryIntact()
     {
-        _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
+        var existing = new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.Working
+        };
+        _store.Upsert("s1", existing);
 
-        Assert.IsEmpty(_store.Read());
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Notification",
+            NotificationType = "auth_success",
+            SessionId = "s1"
+        });
+
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason);
+        Assert.AreEqual(existing.NotifiedAt, _store.Read()["s1"].NotifiedAt);
     }
 
     [TestMethod]
-    public void UserPromptSubmit_DeletesAwaitingInputSession()
+    public void UserPromptSubmit_UpsertsWorking()
+    {
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "UserPromptSubmit",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
+        });
+
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.Working, entries["s1"].Reason);
+    }
+
+    [TestMethod]
+    public void UserPromptSubmit_OverwritesAwaitingInputWithWorking()
     {
         _store.Upsert("s1", new SessionEntry
         {
             Cwd = "C:\\foo",
-            NotifiedAt = DateTimeOffset.UtcNow,
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
             Reason = WaitingReason.AwaitingInput
         });
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read());
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "UserPromptSubmit", SessionId = "s1", Cwd = "C:\\foo" });
+
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason);
     }
 
     [TestMethod]
-    public void SessionEnd_DeletesAwaitingInputSession()
+    public void PreToolUse_UpsertsWorking()
     {
-        _store.Upsert("s1", new SessionEntry
+        _dispatcher.Dispatch(new HookPayload
         {
-            Cwd = "C:\\foo",
-            NotifiedAt = DateTimeOffset.UtcNow,
-            Reason = WaitingReason.AwaitingInput
+            HookEventName = "PreToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
         });
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
 
-        Assert.IsEmpty(_store.Read());
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason);
     }
 
     [TestMethod]
@@ -167,35 +197,75 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
-    public void PostToolUse_LeavesEntryIntact()
+    public void PostToolUse_OverwritesPermissionWithWorking()
     {
-        var existing = new SessionEntry
+        // The core bug: approving a permission runs the tool (PostToolUse fires),
+        // which must clear the stale PendingPermission latch back to Working.
+        _store.Upsert("s1", new SessionEntry
         {
             Cwd = "C:\\foo",
             NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
             Reason = WaitingReason.Permission
-        };
-        _store.Upsert("s1", existing);
+        });
 
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1" });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1", Cwd = "C:\\foo" });
 
-        var entries = _store.Read();
-        Assert.IsTrue(entries.ContainsKey("s1"));
-        Assert.AreEqual(WaitingReason.Permission, entries["s1"].Reason);
-        Assert.AreEqual(existing.NotifiedAt, entries["s1"].NotifiedAt);
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason);
     }
 
     [TestMethod]
-    public void PostToolUse_NoMatchingEntry_IsNoop()
+    public void PostToolUse_NoMatchingEntry_CreatesWorking()
     {
-        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "unrelated" });
-        Assert.IsEmpty(_store.Read());
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "PostToolUse", SessionId = "s1", Cwd = "C:\\foo" });
+
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.Working, entries["s1"].Reason);
+    }
+
+    [TestMethod]
+    public void PostToolUse_WhenAlreadyWorking_DoesNotRewrite()
+    {
+        // PostToolUse fires after every tool; a no-op state must not rewrite the
+        // file (which would wake the dashboard watcher dozens of times per turn).
+        var existing = new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\foo\\t.jsonl",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-5),
+            Reason = WaitingReason.Working
+        };
+        _store.Upsert("s1", existing);
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "PostToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\foo\\t.jsonl"
+        });
+
+        Assert.AreEqual(existing.NotifiedAt, _store.Read()["s1"].NotifiedAt);
     }
 
     [TestMethod]
     public void SessionEnd_DeletesSession()
     {
         _store.Upsert("s1", new SessionEntry { Cwd = "C:\\foo", NotifiedAt = DateTimeOffset.UtcNow });
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
+
+        Assert.IsEmpty(_store.Read());
+    }
+
+    [TestMethod]
+    public void SessionEnd_DeletesAwaitingInputSession()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
         _dispatcher.Dispatch(new HookPayload { HookEventName = "SessionEnd", SessionId = "s1" });
 
         Assert.IsEmpty(_store.Read());

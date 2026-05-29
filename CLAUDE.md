@@ -90,7 +90,7 @@ Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it 
 - New `ClaudeSessionsCLI` binary with `list` (one-shot JSON / NDJSON stream / Spectre.Console live table) and `focus <prefix>` verbs
 - New MAUI Sessions tab (sibling to Display Manager via AppShell flyout) showing per-session cards: state badge, cwd, last-activity, Focus button, plus optional Refresh button
 - Session enumeration: `claude.exe` processes (filtered to those with a shell parent: `cmd.exe` / `powershell.exe` / `pwsh.exe`) each attributed to a specific `~/.claude/projects/<slug>/*.jsonl` by matching the process's `StartTimeUtc` to the JSONL's `CreationTimeUtc` within 30s (freshest-unassigned fallback for `claude --resume`), with subagent rollup
-- State classification: StateStore presence is the discriminator (no time gates) — `PendingPermission`/`AwaitingInput` from per-session files under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json`, `Working`/`Idle` from transcript tail-read
+- State classification is event-driven and authoritative (no time gates): every state-relevant hook event upserts the session's current state into a per-session file under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json` (`permission_prompt`→`PendingPermission`; `Stop`/`idle_prompt`→`AwaitingInput`; `UserPromptSubmit`/`PreToolUse`/`PostToolUse`→`Working`; `SessionEnd`→delete). `PostToolUse` is what clears a stale `PendingPermission` once an approved tool runs. The classifier maps the stored reason directly; transcript tail-read is only a fallback for sessions that have no state file yet (`Working`/`Idle`). The store therefore holds entries for **all** live sessions including `Working`, so the cycler's "any waiting" filter uses `WaitingReason.IsNeedy()` (Permission/AwaitingInput) to exclude Working.
 - Refresh is event-driven: two `FileSystemWatcher`s (`needy-sessions/*.json` directory + recursive on `~/.claude/projects/`) funnel into a `Channel<byte>` with 250ms debounce; no polling
 - State store is sharded one-file-per-session (changed 2026-05-23 from a single shared `needy-sessions.json`) so concurrent `ClaudeHookBridge.exe` invocations don't contend or drop events. A per-session named `Mutex` (`Local\\MegaSchoen.Session.<sessionId>`) serializes within-session writes. MAUI app does a one-time legacy-file delete + zombie sweep at startup (deletes per-session files whose session ID has no corresponding live transcript).
 
@@ -153,7 +153,8 @@ Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it 
 - `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile save/load/apply
 - `DisplayManagerCLI/Program.cs` - Display CLI commands
 - `Claude.Core/ActiveSessionEnumerator.cs` - The window ⨝ slug-JSONL ⨝ StateStore join
-- `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping (StateStore presence is the discriminator; no time gates)
+- `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping: stored `WaitingReason` → `SessionState` (Permission/AwaitingInput/Working), with transcript tail-read only as the no-state-file fallback
+- `Claude.Core/HookDispatcher.cs` - Maps each Claude Code hook event to a state upsert/delete; churn-guarded so the per-tool `PostToolUse`/`PreToolUse` floods don't rewrite unchanged state
 - `Claude.Core/SlugEncoder.cs` - cwd → `~/.claude/projects/<slug>` directory naming
 - `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - claude.exe process enumeration (parent-shell filter via `ProcessResolver`); each claude.exe's parent cmd.exe is then mapped to its visible terminal window for focus
 - `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs` - `BringToFront` via `Win32ForegroundHelper` (three-way `AttachThreadInput`)

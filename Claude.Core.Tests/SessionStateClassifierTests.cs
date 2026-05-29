@@ -37,6 +37,14 @@ public class SessionStateClassifierTests
     }
 
     [TestMethod]
+    public void Classify_StateStoreHitWithWorkingReason_ReturnsWorking()
+    {
+        var entry = new SessionEntry { Reason = WaitingReason.Working, TranscriptPath = _tempFile };
+        Assert.AreEqual(SessionState.Working,
+            SessionStateClassifier.Classify(entry, _tempFile));
+    }
+
+    [TestMethod]
     public void Classify_NoStateEntryAndAssistantLast_ReturnsWorking()
     {
         File.WriteAllText(_tempFile, """{"type":"assistant","message":{}}""" + "\n");

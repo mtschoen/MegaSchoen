@@ -16,6 +16,7 @@ public static class CheckCommand
         Print("Notification",     status.Notification,     status.NotificationPath);
         Print("UserPromptSubmit", status.UserPromptSubmit, status.UserPromptSubmitPath);
         Print("Stop",             status.Stop,             status.StopPath);
+        Print("PreToolUse",       status.PreToolUse,       status.PreToolUsePath);
         Print("PostToolUse",      status.PostToolUse,      status.PostToolUsePath);
         Print("SessionEnd",       status.SessionEnd,       status.SessionEndPath);
 
@@ -23,6 +24,7 @@ public static class CheckCommand
             status.Notification == InstallState.InstalledHere &&
             status.UserPromptSubmit == InstallState.InstalledHere &&
             status.Stop == InstallState.InstalledHere &&
+            status.PreToolUse == InstallState.InstalledHere &&
             status.PostToolUse == InstallState.InstalledHere &&
             status.SessionEnd == InstallState.InstalledHere;
 

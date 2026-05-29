@@ -15,12 +15,14 @@ public sealed class EventInstallStatus
     public InstallState Notification { get; set; }
     public InstallState UserPromptSubmit { get; set; }
     public InstallState Stop { get; set; }
+    public InstallState PreToolUse { get; set; }
     public InstallState PostToolUse { get; set; }
     public InstallState SessionEnd { get; set; }
 
     public string? NotificationPath { get; set; }
     public string? UserPromptSubmitPath { get; set; }
     public string? StopPath { get; set; }
+    public string? PreToolUsePath { get; set; }
     public string? PostToolUsePath { get; set; }
     public string? SessionEndPath { get; set; }
 }
@@ -28,7 +30,7 @@ public sealed class EventInstallStatus
 public sealed class SettingsJsonInstaller
 {
     static readonly string[] EventNames =
-        { "Notification", "UserPromptSubmit", "Stop", "PostToolUse", "SessionEnd" };
+        { "Notification", "UserPromptSubmit", "Stop", "PreToolUse", "PostToolUse", "SessionEnd" };
     static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 
     readonly string _settingsPath;
@@ -140,6 +142,10 @@ public sealed class SettingsJsonInstaller
                 case "Stop":
                     status.Stop = state;
                     status.StopPath = path;
+                    break;
+                case "PreToolUse":
+                    status.PreToolUse = state;
+                    status.PreToolUsePath = path;
                     break;
                 case "PostToolUse":
                     status.PostToolUse = state;
