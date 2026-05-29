@@ -23,7 +23,7 @@ public class ActiveSessionEnumeratorTests
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
-        Assert.AreEqual(0, result.Count, "no live process in any cwd => nothing surfaced (zombie pruned)");
+        Assert.IsEmpty(result, "no live process in any cwd => nothing surfaced (zombie pruned)");
     }
 
     [TestMethod]
@@ -40,7 +40,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual("abc-123", result[0].SessionId);
         Assert.AreEqual(cwd, result[0].Cwd);
         Assert.AreEqual(SessionState.Working, result[0].State);
@@ -66,7 +66,7 @@ public class ActiveSessionEnumeratorTests
         var locator = new FakeProcessLocator(); // terminal killed => no live proc
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(0, result.Count, "Working session whose process is gone is a zombie => pruned");
+        Assert.IsEmpty(result, "Working session whose process is gone is a zombie => pruned");
     }
 
     [TestMethod]
@@ -91,7 +91,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1), startUtc: stale)); // process still alive (blocked)
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count, "waiting sessions never time-expire while their process lives");
+        Assert.HasCount(1, result, "waiting sessions never time-expire while their process lives");
         Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
     }
 
@@ -108,7 +108,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual("fresh-1", result[0].SessionId);
         Assert.AreEqual(SessionState.Working, result[0].State, "assistant-last => Working via tail read");
     }
@@ -131,9 +131,9 @@ public class ActiveSessionEnumeratorTests
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
         var ids = result.Select(s => s.SessionId).ToHashSet();
-        Assert.AreEqual(2, result.Count, "cap to live-process count (2)");
+        Assert.HasCount(2, result, "cap to live-process count (2)");
         Assert.IsTrue(ids.Contains("new") && ids.Contains("mid"), "freshest two kept");
-        Assert.IsFalse(ids.Contains("old"), "oldest dropped");
+        Assert.DoesNotContain("old", ids, "oldest dropped");
     }
 
     [TestMethod]
@@ -153,7 +153,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual("resumed-1", result[0].SessionId, "identity is the filename, not a start-time guess");
         Assert.IsTrue(result[0].Window.IsZero, "no confident window match => Focus disabled, but session still shown");
     }
@@ -171,7 +171,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual("headless-1", result[0].SessionId);
         Assert.IsTrue(result[0].Window.IsZero);
     }
@@ -198,7 +198,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count, "only the transcript recorded with the live cwd surfaces");
+        Assert.HasCount(1, result, "only the transcript recorded with the live cwd surfaces");
         Assert.AreEqual("in-bar", result[0].SessionId);
     }
 
@@ -218,9 +218,9 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(1, result.Count);
+        Assert.HasCount(1, result);
         Assert.AreEqual(SessionState.Idle, result[0].State);
-        Assert.AreEqual(2, result[0].Subagents.Count);
+        Assert.HasCount(2, result[0].Subagents);
         Assert.AreEqual(SessionState.Working, result[0].RollupState);
     }
 
@@ -250,7 +250,7 @@ public class ActiveSessionEnumeratorTests
 
         var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
 
-        Assert.AreEqual(2, result.Count);
+        Assert.HasCount(2, result);
         Assert.AreEqual("session-b", result[0].SessionId);
         Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
         Assert.AreEqual("session-a", result[1].SessionId);

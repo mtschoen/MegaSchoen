@@ -2,7 +2,7 @@ using UIKit;
 
 namespace MegaSchoen
 {
-    public class Program
+    public static class Program
     {
         // This is the main entry point of the application.
         static void Main(string[] args)

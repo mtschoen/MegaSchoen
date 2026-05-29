@@ -74,10 +74,10 @@ public sealed class SessionLivenessVerifier
         return type switch
         {
             "assistant" => LastEntryClass.SessionPending,
-            "user"        => LastEntryClass.Resolved,
+            "user" => LastEntryClass.Resolved,
             "tool_result" => LastEntryClass.Resolved,
-            "system"      => LastEntryClass.Resolved,
-            _             => LastEntryClass.Resolved
+            "system" => LastEntryClass.Resolved,
+            _ => LastEntryClass.Resolved
         };
     }
 
