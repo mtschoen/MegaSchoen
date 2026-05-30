@@ -32,3 +32,71 @@ jobs:
       - name: Test
         shell: pwsh
         run: dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -c Release --no-build -v normal
+
+  lint:
+    name: Lint C# (format + analyzers)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore MegaSchoen.sln
+      # Formatting gate: whitespace / end-of-line per .editorconfig, across all .cs in
+      # the solution. (Style/analyzer categories are NOT run here: dotnet format's
+      # workspace mis-reports CA1416 platform-compat on the Windows-only MAUI code,
+      # which the authoritative MSBuild build does not — see the analyzer gate below.)
+      - name: Format check (whitespace)
+        shell: pwsh
+        run: dotnet format whitespace MegaSchoen.sln --verify-no-changes --no-restore
+      # Analyzer gate: zero warnings (Roslyn + Roslynator) as errors. Covers the managed
+      # projects that build under the dotnet CLI. DisplayManager.Core, DisplayManagerCLI
+      # and MegaSchoen reference the native DisplayManagerNative.vcxproj (and MegaSchoen is
+      # MAUI), so they require MSBuild + the C++/MAUI toolchain and are gated locally via
+      # `MSBuild MegaSchoen.sln -warnaserror` (see CLAUDE.md), not on this dotnet-only runner.
+      - name: Analyzer gate (warnings as errors)
+        shell: pwsh
+        run: |
+          dotnet build Claude.Core.Tests/Claude.Core.Tests.csproj -c Release --no-restore -warnaserror
+          dotnet build ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -c Release --no-restore -warnaserror
+          dotnet build ClaudeHookBridge/ClaudeHookBridge.csproj -c Release --no-restore -warnaserror
+
+  lint-cpp:
+    name: Lint C++ (cppcheck)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        shell: pwsh
+        run: choco install cppcheck -y
+      # The vendored single-header json.hpp (nlohmann/json) is excluded from analysis.
+      - name: cppcheck
+        shell: pwsh
+        run: >
+          cppcheck --enable=all --inline-suppr
+          --suppress=missingIncludeSystem --suppress=*:*json.hpp
+          --error-exitcode=1
+          DisplayManagerNative/DisplayManagerNative.cpp
+
+  # ── AI-slop gate (aislop) — READY-BUT-GATED ──────────────────────────────────
+  # aislop's C# engine has not shipped (as of 2026-05-29); on this C#-dominant repo it
+  # would false-green at 100. Config lives in .aislop/config.yml. UNCOMMENT this job once
+  # aislop ships C# support (pin a C#-capable version, never @latest). Gitea Actions must
+  # use the npx CLI, NOT the GitHub composite action.
+  #
+  # aislop:
+  #   name: Lint AI-slop (aislop)
+  #   runs-on: windows-latest
+  #   timeout-minutes: 15
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #     - name: aislop CI gate (whole-repo score >= failBelow)
+  #       shell: pwsh
+  #       run: npx --yes aislop@<C#-capable-version> ci .

@@ -2,5 +2,18 @@
   "enabledPlugins": {
     "csharp-lsp@claude-plugins-official": true,
     "microsoft-docs@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // .tool_response.filePath // empty'); case \"$f\" in *.cs) dotnet format whitespace \"$CLAUDE_PROJECT_DIR/MegaSchoen.sln\" --include \"$f\" >/dev/null 2>&1;; esac; exit 0"
+          }
+        ]
+      }
+    ]
   }
 }

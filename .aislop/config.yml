@@ -1,0 +1,24 @@
+# aislop — AI-slop quality gate (https://github.com/scanaislop/aislop)
+#
+# STATUS: READY-BUT-GATED. As of 2026-05-29 aislop's C# engine has NOT shipped, so on
+# this (C#-dominant) repo it scans no supported files and false-greens at a meaningless
+# 100. The real gate stays Roslyn + Roslynator + `dotnet format` (see Directory.Build.props
+# / .editorconfig / .gitea/workflows/ci.yml). aislop will cover C# on landing, but NEVER
+# the C++ in DisplayManagerNative/ (unsupported — clang-tidy/cppcheck gate that).
+#
+# FLIP IT ON once aislop's C# engine ships:
+#   1. CI gate (③): uncomment the `aislop` job in .gitea/workflows/ci.yml.
+#   2. On-save hook (①): `aislop hook install --claude --project`
+#      (pins the hook repo-locally; pin a C#-capable version, NEVER @latest — it
+#      network-checks every edit).
+#   Clean up to >= failBelow first, THEN enforce (don't ratchet from a noisy baseline).
+
+ci:
+  failBelow: 80          # fleet baseline (matches git-wizard)
+
+exclude:
+  - "**/obj/**"
+  - "**/bin/**"
+  - "**/*.g.cs"          # generated (XAML, source generators)
+  - "**/*.Designer.cs"   # generated designer code
+  - "DisplayManagerNative/**"   # C++ — aislop does not support C++ (json.hpp is vendored)
