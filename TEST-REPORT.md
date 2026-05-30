@@ -43,12 +43,14 @@ Lint (C#): 0 findings — the bar is met.
               CS8425 EnumeratorCancellation; CS0067 unused event removed; CS0649 Windows-
               only field #if-scoped; MSTEST0001 explicit DoNotParallelize).
 
-Lint (C++ — DisplayManagerNative): PENDING tool install.
-          .clang-format + .clang-format-ignore config added; cppcheck CI job wired
-          (.gitea/workflows/ci.yml). The local clang-format/cppcheck sweep has NOT been
-          run — clang-format and cppcheck are not installed on this machine yet. The
-          cppcheck CI job will enforce on first run; the local sweep + any fixes are the
-          one remaining rollout item.
+Lint (C++ — DisplayManagerNative): 0 findings.
+          clang-format 22.1.0 (Microsoft style): 0 drift on .cpp/.h (vendored json.hpp
+          excluded via .clang-format-ignore).
+          cppcheck 2.19.0 (--enable=all, json.hpp + system-include noise suppressed): 0
+          findings after fixes — deleted dead Utf8ToWide; const-ref locals
+          (sourceMode/targetMode/w); reduced monitorPath scope; path.substr(0,n)→resize(n);
+          raw '#'→'\\' loop → std::replace; count()+insert() → insert().second.
+          Native DLL rebuilds clean (MSBuild x64). cppcheck CI job (lint-cpp) wired.
 
 AI-slop gate (aislop): READY-BUT-GATED.
           aislop's C# engine has not shipped (2026-05-29) — it false-greens on C#. Config
