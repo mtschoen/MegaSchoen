@@ -52,6 +52,8 @@ MSBuild.exe DisplayManagerCLI\DisplayManagerCLI.csproj -p:Configuration=Debug
 MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
 ```
 
+**Use Visual Studio 18's MSBuild, not VS 2022's.** Only VS 18 ships the v145 native toolset *and* the .NET 10 SDK this solution needs; VS 2022's MSBuild resolves SDK 9.0.x and lacks v145, so it fails on both `DisplayManagerNative.vcxproj` (MSB8020 "v145 not found") and every net10 project (NETSDK1045 "does not support .NET 10"). Discover the right one with `vswhere -latest` — the VS install folder scheme flipped from year-based (`2022`) to sequential (`18`), so a plain numeric folder sort wrongly ranks `2022` above `18`. Build the **solution** (`MegaSchoen.sln`), never the bare `MegaSchoen.csproj` (it fans out to all four TFMs — android/ios/maccatalyst/windows — and fails). The `screenshot-editor.ps1` pipeline encodes this discovery.
+
 **`-p:Platform=x64` is no longer required.** The `.sln` maps every solution-level platform selection correctly: MegaSchoen (MAUI) always builds as `x64` (needed by `WindowsAppSDKSelfContained`), library projects always build as `AnyCPU`, and `DisplayManagerNative` always builds as `x64`. Passing the flag is harmless but redundant. IDE F5 also produces the right outputs without any config tweaks.
 
 Output locations after a successful build:
