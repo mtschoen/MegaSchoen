@@ -18,6 +18,7 @@
             <converters:HotkeyDisplayConverter x:Key="HotkeyDisplayConverter" />
             <converters:HotkeyButtonTextConverter x:Key="HotkeyButtonTextConverter" />
             <converters:IsNonEmptyStringConverter x:Key="IsNonEmptyStringConverter" />
+            <converters:DisplayModeConverter x:Key="DisplayModeConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

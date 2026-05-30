@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <tuple>
 #include <map>
 
 using json = nlohmann::json;
@@ -340,6 +341,76 @@ int GetAllDisplaysJson(char* buffer, int bufferSize)
     return jsonLength;
 }
 
+int GetSupportedModesJson(int edidManufactureId, int edidProductCodeId,
+                          char* buffer, int bufferSize)
+{
+    if (!buffer || bufferSize <= 0) {
+        return -1;
+    }
+
+    UINT32 pathCount = 0, modeCount = 0;
+    if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &pathCount, &modeCount) != ERROR_SUCCESS) {
+        return -2;
+    }
+    std::vector<DISPLAYCONFIG_PATH_INFO> paths(pathCount);
+    std::vector<DISPLAYCONFIG_MODE_INFO> modes(modeCount);
+    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &pathCount, paths.data(),
+            &modeCount, modes.data(), nullptr) != ERROR_SUCCESS) {
+        return -3;
+    }
+
+    std::wstring gdiName;
+    for (UINT32 i = 0; i < pathCount; i++) {
+        DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+        targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+        targetName.header.size = sizeof(targetName);
+        targetName.header.adapterId = paths[i].targetInfo.adapterId;
+        targetName.header.id = paths[i].targetInfo.id;
+        if (DisplayConfigGetDeviceInfo(&targetName.header) != ERROR_SUCCESS) continue;
+        if (targetName.edidManufactureId != edidManufactureId
+            || targetName.edidProductCodeId != edidProductCodeId) continue;
+
+        DISPLAYCONFIG_SOURCE_DEVICE_NAME sourceName = {};
+        sourceName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_SOURCE_NAME;
+        sourceName.header.size = sizeof(sourceName);
+        sourceName.header.adapterId = paths[i].sourceInfo.adapterId;
+        sourceName.header.id = paths[i].sourceInfo.id;
+        if (DisplayConfigGetDeviceInfo(&sourceName.header) == ERROR_SUCCESS) {
+            gdiName = sourceName.viewGdiDeviceName;
+        }
+        break;
+    }
+
+    if (gdiName.empty()) {
+        return -4;
+    }
+
+    std::set<std::tuple<int, int, int>> seen;
+    json modesArray = json::array();
+    DEVMODEW dm = {};
+    dm.dmSize = sizeof(dm);
+    for (DWORD m = 0; EnumDisplaySettingsExW(gdiName.c_str(), m, &dm, 0); m++) {
+        int w = static_cast<int>(dm.dmPelsWidth);
+        int h = static_cast<int>(dm.dmPelsHeight);
+        int hz = static_cast<int>(dm.dmDisplayFrequency);
+        if (w == 0 || h == 0) continue;
+        if (!seen.insert(std::make_tuple(w, h, hz)).second) continue;
+        json mode;
+        mode["width"] = w;
+        mode["height"] = h;
+        mode["refreshRate"] = static_cast<double>(hz);
+        modesArray.push_back(mode);
+    }
+
+    std::string jsonString = modesArray.dump(2);
+    int jsonLength = static_cast<int>(jsonString.length());
+    if (jsonLength >= bufferSize) {
+        return -(jsonLength + 1);
+    }
+    strcpy_s(buffer, bufferSize, jsonString.c_str());
+    return jsonLength;
+}
+
 // Apply a full display configuration
 // configJson: JSON array of display configs with EDID fields for matching
 // All displays in the list will be enabled; all others will be disabled
@@ -456,12 +527,11 @@ int ApplyConfiguration(const char* configJson)
         }
     }
 
-    // Apply using SDC_TOPOLOGY_SUPPLIED — tells Windows which paths to activate.
-    // Windows restores full config (positions, resolution, rotation) from its topology database.
-    // Step 1: SDC_TOPOLOGY_SUPPLIED activates the right monitors across adapters
-    // Step 2: Query active config, patch source modes with saved positions, re-apply
-
-    // Step 1: Build compact active paths for topology activation
+    // ---- Step 1: SDC_TOPOLOGY_SUPPLIED activates the right monitors across adapters.
+    // Windows restores resolution/refresh/rotation from its topology database. It also
+    // restores a *remembered* position layout — but that DB remembers only one layout per
+    // monitor-set, so different profiles sharing the same monitors get the wrong positions.
+    // Step 2 (below) overrides position with the profile's explicit values.
     std::vector<DISPLAYCONFIG_PATH_INFO> topoPaths;
     for (auto& [pathIdx, config] : pathsToEnable) {
         auto p = paths[pathIdx];
@@ -475,11 +545,108 @@ int ApplyConfiguration(const char* configJson)
     result = SetDisplayConfig(topoCount, topoPaths.data(), 0, nullptr,
         SDC_APPLY | SDC_TOPOLOGY_SUPPLIED | SDC_ALLOW_PATH_ORDER_CHANGES);
 
-    // SDC_TOPOLOGY_SUPPLIED restores the full configuration (positions, resolution,
-    // rotation, refresh rate) from the Windows topology database. No further patching needed.
-
     if (result != ERROR_SUCCESS) {
         return -300 - static_cast<int>(result);
+    }
+
+    // ---- Step 2: override topology's remembered positions with the profile's explicit
+    // positions. Spiked 2026-05-28: SDC_USE_SUPPLIED_DISPLAY_CONFIG on active paths works
+    // cross-adapter and lands exact. Map each active path -> monitor via its TARGET EDID,
+    // never the source-mode .id (that's a per-adapter sourceId, not globally unique).
+    // Positioning is best-effort: if it fails, the monitors are already activated by Step 1,
+    // so we surface a distinct -400 code rather than discarding the successful activation.
+    UINT32 activePathCount = 0, activeModeCount = 0;
+    if (GetDisplayConfigBufferSizes(QDC_ONLY_ACTIVE_PATHS, &activePathCount, &activeModeCount) != ERROR_SUCCESS) {
+        return 0;
+    }
+    std::vector<DISPLAYCONFIG_PATH_INFO> activePaths(activePathCount);
+    std::vector<DISPLAYCONFIG_MODE_INFO> activeModes(activeModeCount);
+    if (QueryDisplayConfig(QDC_ONLY_ACTIVE_PATHS, &activePathCount, activePaths.data(),
+            &activeModeCount, activeModes.data(), nullptr) != ERROR_SUCCESS) {
+        return 0;
+    }
+
+    bool patchedAny = false;
+    for (UINT32 i = 0; i < activePathCount; i++) {
+        // Resolve this active path's target EDID (manufacturer/product + registry serial).
+        DISPLAYCONFIG_TARGET_DEVICE_NAME targetName = {};
+        targetName.header.type = DISPLAYCONFIG_DEVICE_INFO_GET_TARGET_NAME;
+        targetName.header.size = sizeof(targetName);
+        targetName.header.adapterId = activePaths[i].targetInfo.adapterId;
+        targetName.header.id = activePaths[i].targetInfo.id;
+
+        UINT16 mfgId = 0, prodId = 0;
+        std::string serial;
+        if (DisplayConfigGetDeviceInfo(&targetName.header) == ERROR_SUCCESS) {
+            mfgId = targetName.edidManufactureId;
+            prodId = targetName.edidProductCodeId;
+            serial = ParseEdidSerial(ReadEdidFromRegistry(targetName.monitorDevicePath));
+        }
+        if (mfgId == 0 && prodId == 0) continue;
+
+        // Match to a wanted config using the same EDID cascade as activation.
+        const DisplayConfigRequest* match = nullptr;
+        for (const auto& w : wantedList) {
+            if (w.edidManufactureId != mfgId || w.edidProductCodeId != prodId) continue;
+            if (!w.edidSerialNumber.empty() && !serial.empty() && w.edidSerialNumber != serial) continue;
+            match = &w;
+            break;
+        }
+        if (!match) continue;
+
+        // Patch this active path's modes to the wanted config: position + resolution
+        // (source mode), rotation (path target info), and refresh (rebuilt target mode).
+        // Position is always patched; resolution/refresh/rotation only when the wanted
+        // value is non-zero/meaningful, so a position-only profile behaves as before.
+        UINT32 srcIdx = activePaths[i].sourceInfo.modeInfoIdx;
+        if (srcIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && srcIdx < activeModeCount
+            && activeModes[srcIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_SOURCE) {
+            auto& src = activeModes[srcIdx].sourceMode;
+            src.position.x = match->positionX;
+            src.position.y = match->positionY;
+            if (match->width > 0 && match->height > 0) {
+                src.width = static_cast<UINT32>(match->width);
+                src.height = static_cast<UINT32>(match->height);
+            }
+            patchedAny = true;
+        }
+
+        // Rotation: set the path's target rotation enum from the wanted degrees.
+        switch (match->rotation) {
+            case 90:  activePaths[i].targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE90;  break;
+            case 180: activePaths[i].targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE180; break;
+            case 270: activePaths[i].targetInfo.rotation = DISPLAYCONFIG_ROTATION_ROTATE270; break;
+            default:  activePaths[i].targetInfo.rotation = DISPLAYCONFIG_ROTATION_IDENTITY;  break;
+        }
+
+        // Refresh + resolution: rebuild the target mode's video signal so the requested
+        // refresh and active size take effect. Mirrors the pre-cb7da8e recipe.
+        UINT32 tgtIdx = activePaths[i].targetInfo.modeInfoIdx;
+        if (tgtIdx != DISPLAYCONFIG_PATH_MODE_IDX_INVALID && tgtIdx < activeModeCount
+            && activeModes[tgtIdx].infoType == DISPLAYCONFIG_MODE_INFO_TYPE_TARGET
+            && match->refreshRate > 0.0 && match->width > 0 && match->height > 0) {
+            auto& vsi = activeModes[tgtIdx].targetMode.targetVideoSignalInfo;
+            vsi.vSyncFreq.Numerator = static_cast<UINT32>(match->refreshRate * 1000.0);
+            vsi.vSyncFreq.Denominator = 1000;
+            vsi.hSyncFreq.Numerator = 0;
+            vsi.hSyncFreq.Denominator = 0;
+            vsi.activeSize.cx = static_cast<UINT32>(match->width);
+            vsi.activeSize.cy = static_cast<UINT32>(match->height);
+            vsi.totalSize.cx = static_cast<UINT32>(match->width);
+            vsi.totalSize.cy = static_cast<UINT32>(match->height);
+            vsi.videoStandard = 255; // D3DKMDT_VSS_OTHER
+            vsi.scanLineOrdering = DISPLAYCONFIG_SCANLINE_ORDERING_PROGRESSIVE;
+            patchedAny = true;
+        }
+    }
+
+    if (patchedAny) {
+        LONG posResult = SetDisplayConfig(activePathCount, activePaths.data(),
+            activeModeCount, activeModes.data(),
+            SDC_APPLY | SDC_USE_SUPPLIED_DISPLAY_CONFIG | SDC_SAVE_TO_DATABASE | SDC_ALLOW_CHANGES);
+        if (posResult != ERROR_SUCCESS) {
+            return -400 - static_cast<int>(posResult);
+        }
     }
 
     return 0;

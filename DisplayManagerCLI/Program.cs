@@ -12,6 +12,7 @@ if (args.Length == 0)
     Console.WriteLine("  save <name> [description] - Save current configuration as a profile");
     Console.WriteLine("  profiles                  - List all saved profiles");
     Console.WriteLine("  load <name>               - Apply a saved profile by name");
+    Console.WriteLine("  verify <name> [--apply]   - Compare live config to a profile (optionally apply first)");
     Console.WriteLine("  delete <name>             - Delete a saved profile");
     Console.WriteLine("  config                    - Show configuration file location");
     return;
@@ -38,6 +39,9 @@ switch (command)
         break;
     case "delete":
         await DeleteProfile(args);
+        break;
+    case "verify":
+        await VerifyProfile(args);
         break;
     case "config":
         ShowConfigPath();
@@ -229,4 +233,61 @@ void ShowConfigPath()
     var storage = new ProfileStorageService();
     Console.WriteLine($"Configuration directory: {storage.GetConfigDirectory()}");
     Console.WriteLine($"Configuration file: {storage.GetConfigFilePath()}");
+}
+
+async Task VerifyProfile(string[] args)
+{
+    if (args.Length < 2)
+    {
+        Console.WriteLine("Usage: verify <name> [--apply]");
+        return;
+    }
+
+    var name = args[1];
+    var applyFirst = args.Skip(2).Any(a => string.Equals(a, "--apply", StringComparison.OrdinalIgnoreCase));
+
+    try
+    {
+        var profiles = await profileService.GetAllProfilesAsync();
+        var profile = profiles.FirstOrDefault(p =>
+            string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        if (profile == null)
+        {
+            Console.WriteLine($"Profile '{name}' not found.");
+            return;
+        }
+
+        if (applyFirst)
+        {
+            Console.WriteLine($"Applying profile '{profile.Name}' before verifying...");
+            var applyResult = profileService.ApplyProfile(profile);
+            if (!applyResult.Success)
+            {
+                foreach (var error in applyResult.Errors)
+                {
+                    Console.WriteLine($"  Apply error: {error}");
+                }
+                Console.WriteLine("Apply failed — skipping verification (comparison would reflect the pre-apply state).");
+                return;
+            }
+            await Task.Delay(500); // let Windows settle before reading back
+        }
+
+        var report = new DisplayDriftService().CompareToLive(profile);
+
+        Console.WriteLine($"Drift report for '{profile.Name}': {(report.Matches ? "MATCHES" : "DRIFT DETECTED")}");
+        foreach (var monitor in report.Monitors)
+        {
+            Console.WriteLine($"  [{monitor.Kind}] {monitor.MonitorName}");
+            foreach (var mismatch in monitor.Mismatches)
+            {
+                Console.WriteLine($"      - {mismatch}");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error verifying profile: {ex.Message}");
+    }
 }

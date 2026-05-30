@@ -116,6 +116,21 @@ Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it 
 - Path selection picks non-conflicting (adapter, sourceId) pairs to avoid clone conflicts
 - Requires each profile's layout to have been manually configured at least once via Windows Display Settings
 
+### ✅ Visual Layout Editor (verified-before-commit)
+
+A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit** on each preset card → `Application.Current.OpenWindow`, multi-instance). It edits a *draft* of the preset and only writes it back after the layout has been applied to live hardware and read back with **no drift** — a preset is never overwritten by an untested layout.
+
+**What's Working:**
+- Canvas of draggable monitor rectangles (`AbsoluteLayout` + `PanGestureRecognizer`); tap to select, drag to move, optional edge **snapping**, and a **Normalize** button (one primary, primary anchored at (0,0), overlaps pushed right; footprint respects rotation).
+- Per-monitor **Set as Primary**, **Rotation** (0/90/180/270), and an **Advanced** panel for **resolution + refresh** populated from the monitor's enumerated supported modes.
+- **Test → Stash → Commit** action bar. **Test** applies the draft and compares live config to it; **Commit** is enabled only after a clean Test, and editing afterward re-disables it (hash invalidation). **Stash** saves the draft without touching the preset; commit is blocked if the target preset was deleted elsewhere.
+
+**Key Implementation Details:**
+- Native `ApplyConfiguration` Step 2 now patches **all** verified fields (position, resolution, rotation, refresh), not just position — so a resolution/rotation/refresh edit no longer reads back as drift. Position-only profiles are unaffected (resolution/refresh patched only when non-zero). New native export `GetSupportedModesJson` feeds the Advanced dropdowns (EDID → GDI device name → `EnumDisplaySettingsExW`).
+- Managed core (all in `DisplayManager.Core`, unit-tested): `LayoutDraft` model; `LayoutHasher` (stable order-independent SHA-256 over exactly the drift-compared fields, EDID-keyed); `LayoutNormalizer` (pure overlap/primary/origin normalization); `LayoutDraftStore` (one JSON file per preset under `%APPDATA%\MegaSchoen\layout-drafts\`, separate from `configs.json`); `LayoutCommitService` (the test→verify→commit gate; apply + drift + preset-existence injected for testability). The "verified" stamp is `LayoutHasher.Hash(draft)` recorded on a clean Test; `CanCommit` = stamp non-empty && equals the current draft's hash.
+- Verify gate reuses Phase-1 `DisplayDriftService.CompareToLive`.
+- Known follow-ups (need the multi-GPU rig to validate): canvas drag uses a DIP-agnostic scale (may need a DPI density factor at non-100% scaling); `TestAsync` applies synchronously on the UI thread (a multi-second GPU switch will block the editor window).
+
 ### 🎯 Next Steps
 
 **Priority 1: Test GPU Swap Survival** (Display Manager)

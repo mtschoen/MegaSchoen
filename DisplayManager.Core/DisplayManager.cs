@@ -23,6 +23,9 @@ public static class DisplayManager
     [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyConfiguration", CharSet = CharSet.Ansi)]
     static extern int ApplyConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string activeDevicesJson);
 
+    [DllImport("DisplayManagerNative.dll")]
+    static extern int GetSupportedModesJson(int edidManufactureId, int edidProductCodeId, byte[] buffer, int bufferSize);
+
     static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -74,6 +77,34 @@ public static class DisplayManager
     }
 
     /// <summary>
+    /// Enumerates the supported display modes for a monitor identified by EDID.
+    /// Returns an empty list if the monitor is not currently active or on error.
+    /// </summary>
+    public static List<DisplayMode> GetSupportedModes(int edidManufactureId, int edidProductCodeId)
+    {
+        const int bufferSize = 64 * 1024;
+        var buffer = new byte[bufferSize];
+
+        try
+        {
+            var result = GetSupportedModesJson(edidManufactureId, edidProductCodeId, buffer, bufferSize);
+            if (result < 0)
+            {
+                return [];
+            }
+
+            var jsonString = System.Text.Encoding.UTF8.GetString(buffer, 0, result);
+            var modes = JsonSerializer.Deserialize<DisplayMode[]>(jsonString, JsonOptions);
+            return modes?.ToList() ?? [];
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get supported modes: {ex.Message}");
+            return [];
+        }
+    }
+
+    /// <summary>
     /// Apply a display configuration. All displays in the list will be enabled,
     /// all displays NOT in the list will be disabled.
     /// </summary>
@@ -100,14 +131,20 @@ public static class DisplayManager
             else
             {
                 result.Success = false;
+                // Native encodes each failure stage as -(stageBase) - win32error, stage bases 100 apart:
+                // 100 = GetDisplayConfigBufferSizes, 200 = QueryDisplayConfig, 300 = SetDisplayConfig (Step 1
+                // topology activation), 400 = SetDisplayConfig (Step 2 positioning). Arms are bounded to their
+                // 100-wide band so a stage's win32error (<100 in practice) can't bleed into a neighbouring
+                // stage's message; an out-of-band code falls through to "Unknown" rather than being mislabeled.
                 var errorMessage = nativeResult switch
                 {
                     -1 => "Invalid parameter (null JSON)",
                     -2 => "JSON is not an array",
                     -3 => "JSON parse error",
-                    _ when nativeResult <= -300 => $"SetDisplayConfig failed with error {-(nativeResult + 300)}",
-                    _ when nativeResult <= -200 => $"QueryDisplayConfig failed with error {-(nativeResult + 200)}",
-                    _ when nativeResult <= -100 => $"GetDisplayConfigBufferSizes failed with error {-(nativeResult + 100)}",
+                    _ when nativeResult is <= -400 and > -500 => $"Monitors activated, but positioning failed: SetDisplayConfig error {-(nativeResult + 400)}",
+                    _ when nativeResult is <= -300 and > -400 => $"SetDisplayConfig failed with error {-(nativeResult + 300)}",
+                    _ when nativeResult is <= -200 and > -300 => $"QueryDisplayConfig failed with error {-(nativeResult + 200)}",
+                    _ when nativeResult is <= -100 and > -200 => $"GetDisplayConfigBufferSizes failed with error {-(nativeResult + 100)}",
                     _ => $"Unknown error: {nativeResult}"
                 };
                 result.Errors.Add(errorMessage);

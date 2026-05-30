@@ -11,3 +11,10 @@
 # Claude Code
 .claude/*
 !.claude/settings.json
+
+# Superpowers brainstorming visual companion
+.superpowers/
+.claude/spikes/
+
+# Scratch output (screenshots from screenshot-editor.ps1, throwaway artifacts)
+scratch/

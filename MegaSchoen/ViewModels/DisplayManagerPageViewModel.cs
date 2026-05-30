@@ -99,6 +99,7 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
     public ICommand RefreshCommand { get; }
     public ICommand ApplyProfileCommand { get; }
     public ICommand OverwriteProfileCommand { get; }
+    public ICommand EditLayoutCommand { get; }
     public ICommand SetHotkeyCommand { get; }
     public ICommand ClearHotkeyCommand { get; }
 
@@ -114,6 +115,7 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
         DeleteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await DeleteProfileAsync(profile));
         ApplyProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await ApplyProfileAsync(profile));
         OverwriteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await OverwriteProfileAsync(profile));
+        EditLayoutCommand = new Command<SavedDisplayProfile>(OpenLayoutEditor);
         SetHotkeyCommand = new Command<SavedDisplayProfile>(StartHotkeyCapture);
         ClearHotkeyCommand = new Command<SavedDisplayProfile>(async (profile) => await ClearHotkeyAsync(profile));
         RefreshCommand = new Command(async () => await RefreshAllAsync());
@@ -202,6 +204,24 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
         }
     }
 #endif
+
+    void OpenLayoutEditor(SavedDisplayProfile? profile)
+    {
+        if (profile is null)
+        {
+            return;
+        }
+
+        var viewModel = new LayoutEditorViewModel(profile);
+        var page = new MegaSchoen.LayoutEditorPage(viewModel);
+        var window = new Window(page)
+        {
+            Title = $"Edit Layout — {profile.Name}",
+            Width = 1100,
+            Height = 880
+        };
+        Application.Current?.OpenWindow(window);
+    }
 
     void StartHotkeyCapture(SavedDisplayProfile? profile)
     {

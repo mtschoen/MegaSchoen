@@ -24,4 +24,11 @@ extern "C" {
     //   -200 - x: QueryDisplayConfig failed with error x
     //   -300 - x: SetDisplayConfig failed with error x
     DISPLAYMANAGER_API int ApplyConfiguration(const char* activeDevicesJson);
+
+    // Enumerate supported display modes for a monitor identified by EDID
+    // (manufacturerId + productCodeId). Writes a JSON array of
+    // {width, height, refreshRate} into buffer. Returns bytes written, or a
+    // negative error code.
+    DISPLAYMANAGER_API int GetSupportedModesJson(int edidManufactureId, int edidProductCodeId,
+                                                 char* buffer, int bufferSize);
 }
