@@ -16,7 +16,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_NoLiveProcesses_ReturnsEmpty()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
+        const string cwd = @"C:\repo\proj";
         fixture.AddSession(SlugEncoder.Encode(cwd), "abc-123",
             """{"type":"assistant","message":{}}""", DateTime.UtcNow);
         var locator = new FakeProcessLocator(); // no live procs
@@ -30,7 +30,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_LiveProcWithTranscript_SurfacesTrueId()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
+        const string cwd = @"C:\repo\proj";
         fixture.AddSession(SlugEncoder.Encode(cwd), "abc-123",
             """{"type":"assistant","message":{}}""", DateTime.UtcNow);
 
@@ -51,7 +51,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_StoreEntryNoLiveProc_IsPruned()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\dead";
+        const string cwd = @"C:\repo\dead";
         var slug = SlugEncoder.Encode(cwd);
         fixture.AddSession(slug, "dead-1", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
@@ -73,7 +73,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_WaitingState_StaleTranscript_StillSurfaced_NoTimeCutoff()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\waiting";
+        const string cwd = @"C:\repo\waiting";
         var slug = SlugEncoder.Encode(cwd);
         // Transcript last touched 3 hours ago; the user walked away from a prompt.
         var stale = DateTime.UtcNow.AddHours(-3);
@@ -99,7 +99,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_TranscriptOnly_NoStoreEntry_UsesTailReadFallback()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\fresh";
+        const string cwd = @"C:\repo\fresh";
         fixture.AddSession(SlugEncoder.Encode(cwd), "fresh-1",
             """{"type":"assistant","message":{}}""", DateTime.UtcNow);
         var locator = new FakeProcessLocator();
@@ -117,7 +117,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_SharedCwd_TwoProcsThreeTranscripts_KeepsTwoFreshest()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\shared";
+        const string cwd = @"C:\repo\shared";
         var slug = SlugEncoder.Encode(cwd);
         fixture.AddSession(slug, "old", """{"type":"user","message":{}}""", DateTime.UtcNow.AddMinutes(-30));
         fixture.AddSession(slug, "mid", """{"type":"assistant","message":{}}""", DateTime.UtcNow.AddMinutes(-10));
@@ -140,7 +140,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_ResumeStartTimeFarFromCreation_StillCorrectId_WindowMayBeNull()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\resumed";
+        const string cwd = @"C:\repo\resumed";
         var slug = SlugEncoder.Encode(cwd);
         var created = DateTime.UtcNow.AddDays(-2); // old transcript (resumed)
         fixture.AddSession(slug, "resumed-1", """{"type":"assistant","message":{}}""",
@@ -162,7 +162,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_WindowlessLiveProc_SurfacesWithNullWindow()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\headless";
+        const string cwd = @"C:\repo\headless";
         fixture.AddSession(SlugEncoder.Encode(cwd), "headless-1",
             """{"type":"assistant","message":{}}""", DateTime.UtcNow);
         var locator = new FakeProcessLocator();
@@ -180,8 +180,8 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_SlugCollision_DifferentRealCwds_NotCrossAttributed()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwdA = @"C:\foo\bar";   // encodes to C--foo-bar
-        var cwdB = @"C:\foo-bar";   // ALSO encodes to C--foo-bar
+        const string cwdA = @"C:\foo\bar";   // encodes to C--foo-bar
+        const string cwdB = @"C:\foo-bar";   // ALSO encodes to C--foo-bar
         var slug = SlugEncoder.Encode(cwdA);
         Assert.AreEqual(slug, SlugEncoder.Encode(cwdB), "precondition: real collision");
 
@@ -206,7 +206,7 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_SessionWithSubagents_RollsUp()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\proj";
+        const string cwd = @"C:\repo\proj";
         var slug = SlugEncoder.Encode(cwd);
         fixture.AddSession(slug, "parent-1", """{"type":"user","message":{}}""", DateTime.UtcNow.AddSeconds(-10));
         fixture.AddSubagent(slug, "parent-1", "abc", """{"type":"assistant","message":{}}""", DateTime.UtcNow);
@@ -272,8 +272,8 @@ public class ActiveSessionEnumeratorTests
     public void Enumerate_WaitingSortsAboveWorking()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwdA = @"C:\repo\a";
-        var cwdB = @"C:\repo\b";
+        const string cwdA = @"C:\repo\a";
+        const string cwdB = @"C:\repo\b";
         var slugA = SlugEncoder.Encode(cwdA);
         var slugB = SlugEncoder.Encode(cwdB);
         fixture.AddSession(slugA, "session-a", """{"type":"assistant","message":{}}""", DateTime.UtcNow);

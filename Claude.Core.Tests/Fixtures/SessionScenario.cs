@@ -17,7 +17,7 @@ public sealed class SessionScenario
             ?? throw new InvalidOperationException($"Could not parse scenario: {path}");
 
     public static IEnumerable<string> FixtureFiles(string fixturesDir) =>
-        Directory.EnumerateFiles(fixturesDir, "*.json").OrderBy(p => p);
+        Directory.EnumerateFiles(fixturesDir, "*.json").Order();
 }
 
 public sealed class ScenarioStep

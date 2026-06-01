@@ -122,7 +122,7 @@ sealed class TrayIconService : IDisposable
         _iconCreated = Shell_NotifyIcon(NIM_ADD, ref _iconData);
     }
 
-    IntPtr LoadApplicationIcon()
+    static IntPtr LoadApplicationIcon()
     {
         // Preferred: load the MAUI-generated appicon.ico that sits next to the exe.
         // Unpackaged MAUI builds don't embed the icon as a Win32 resource in the exe,

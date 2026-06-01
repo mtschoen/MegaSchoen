@@ -9,7 +9,7 @@ using Claude.Core.Remote;
 
 namespace MegaSchoen.ViewModels;
 
-public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
+public sealed class SessionsPageViewModel : IDisposable
 {
     readonly ActiveSessionEnumerator _enumerator;
     readonly IClaudeWindowFocuser _focuser;
@@ -190,7 +190,5 @@ public sealed class SessionsPageViewModel : INotifyPropertyChanged, IDisposable
         _remoteClients.Clear();
         HostStatuses.Clear();
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 }
 #endif

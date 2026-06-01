@@ -18,7 +18,7 @@ if (args.Length == 0)
     return;
 }
 
-var command = args[0].ToLower();
+var command = args[0].ToLowerInvariant();
 
 switch (command)
 {
@@ -135,7 +135,7 @@ async Task ListProfiles()
                 Console.WriteLine($"    {profile.Description}");
             }
             Console.WriteLine($"    Displays: {string.Join(", ", profile.Displays.Select(d => d.MonitorName))}");
-            if (profile.Hotkey != null && profile.Hotkey.Enabled)
+            if (profile.Hotkey?.Enabled == true)
             {
                 var modifiers = string.Join("+", profile.Hotkey.Modifiers);
                 Console.WriteLine($"    Hotkey: {modifiers}+{profile.Hotkey.Key}");

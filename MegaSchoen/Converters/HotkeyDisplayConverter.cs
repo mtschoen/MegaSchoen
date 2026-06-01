@@ -6,7 +6,7 @@ namespace MegaSchoen.Converters;
 /// <summary>
 /// Converts a HotkeyDefinition to a display string like "Ctrl+Alt+1".
 /// </summary>
-class HotkeyDisplayConverter : IValueConverter
+sealed class HotkeyDisplayConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

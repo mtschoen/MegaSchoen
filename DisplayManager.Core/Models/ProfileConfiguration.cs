@@ -2,9 +2,10 @@ namespace DisplayManager.Core.Models;
 
 /// <summary>
 /// Root configuration object that contains all profiles and settings.
-/// This is the object serialized to/from configs.json.
+/// This is the object serialized to/from configs.json. Named ...Configuration
+/// (not ...Collection) because it is the config root, not an ICollection (CA1711).
 /// </summary>
-public class ProfileCollection
+public class ProfileConfiguration
 {
     /// <summary>
     /// Schema version for migration support.

@@ -10,6 +10,8 @@ namespace Claude.Core;
 // the session).
 public static class BackgroundSessionParser
 {
+    static readonly char[] _whitespace = [' ', '\t'];
+
     public static bool TryParseWorkerSessionId(string? commandLine, out string sessionId)
     {
         sessionId = "";
@@ -22,7 +24,7 @@ public static class BackgroundSessionParser
         if (index < 0) return false;
 
         var rest = commandLine[(index + flag.Length)..].TrimStart();
-        var end = rest.IndexOfAny(new[] { ' ', '\t' });
+        var end = rest.IndexOfAny(_whitespace);
         var token = (end < 0 ? rest : rest[..end]).Trim().Trim('"');
         if (!Guid.TryParse(token, out var guid)) return false;
 

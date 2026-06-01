@@ -44,7 +44,7 @@ public partial class LayoutEditorPage : ContentPage
         }
     }
 
-    View BuildRectView(MonitorRectViewModel rect)
+    Border BuildRectView(MonitorRectViewModel rect)
     {
         var border = new Border
         {
@@ -107,7 +107,7 @@ public partial class LayoutEditorPage : ContentPage
     // Monitor name, a gold "★ PRIMARY" caption on the primary (the fill alone was hard to read),
     // and an orientation arrow pointing to the display's physical "top" edge so the 0/180 and
     // 90/270 rotations are distinguishable (e.g. ▼ = upside-down).
-    static View BuildRectContent(MonitorRectViewModel rect)
+    static Grid BuildRectContent(MonitorRectViewModel rect)
     {
         var center = new VerticalStackLayout
         {
@@ -196,7 +196,7 @@ public partial class LayoutEditorPage : ContentPage
 
     async void OnResetClicked(object? sender, EventArgs e)
     {
-        var confirmed = await DisplayAlert(
+        var confirmed = await DisplayAlertAsync(
             "Reset layout",
             "Discard all edits and revert to the saved preset? Any stashed draft will be deleted.",
             "Reset", "Cancel");
@@ -287,7 +287,7 @@ public partial class LayoutEditorPage : ContentPage
 
     static readonly List<IdentifyOverlay> _identifyOverlays = [];
 
-    void IdentifyAllActiveDisplays()
+    static void IdentifyAllActiveDisplays()
     {
         CloseAllOverlays();
         foreach (var display in DisplayManager.Core.DisplayManager.GetAllDisplays()
@@ -302,7 +302,7 @@ public partial class LayoutEditorPage : ContentPage
 
     // Flash a specific draft monitor's name on its matching PHYSICAL screen, using live desktop
     // coordinates (the draft positions are not yet applied). Matched by EDID.
-    void IdentifyMonitors(IReadOnlyList<MonitorRectViewModel> rects)
+    static void IdentifyMonitors(IReadOnlyList<MonitorRectViewModel> rects)
     {
         CloseAllOverlays();
         var liveDisplays = DisplayManager.Core.DisplayManager.GetAllDisplays();
@@ -394,12 +394,12 @@ public partial class LayoutEditorPage : ContentPage
         _identifyOverlays.Clear();
     }
 #else
-    void IdentifyAllActiveDisplays()
+    static void IdentifyAllActiveDisplays()
     {
         // Identify is only meaningful on Windows (needs live display coordinates).
     }
 
-    void IdentifyMonitors(IReadOnlyList<MonitorRectViewModel> rects)
+    static void IdentifyMonitors(IReadOnlyList<MonitorRectViewModel> rects)
     {
         // Identify is only meaningful on Windows (needs live display coordinates).
     }

@@ -14,26 +14,24 @@ public sealed class StateStore
 {
     static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    readonly string _directory;
-
     public StateStore() : this(Paths.NeedySessionsDirectory) { }
 
     public StateStore(string directory)
     {
-        _directory = directory;
+        Directory = directory;
     }
 
-    public string Directory => _directory;
+    public string Directory { get; }
 
     public IReadOnlyDictionary<string, SessionEntry> Read()
     {
         var result = new Dictionary<string, SessionEntry>();
-        if (!System.IO.Directory.Exists(_directory))
+        if (!System.IO.Directory.Exists(Directory))
         {
             return result;
         }
 
-        foreach (var path in System.IO.Directory.EnumerateFiles(_directory, "*.json"))
+        foreach (var path in System.IO.Directory.EnumerateFiles(Directory, "*.json"))
         {
             var sessionId = Path.GetFileNameWithoutExtension(path);
             if (string.IsNullOrEmpty(sessionId)) continue;
@@ -57,8 +55,8 @@ public sealed class StateStore
 
     public IReadOnlyCollection<string> EnumerateSessionIds()
     {
-        if (!System.IO.Directory.Exists(_directory)) return Array.Empty<string>();
-        return System.IO.Directory.EnumerateFiles(_directory, "*.json")
+        if (!System.IO.Directory.Exists(Directory)) return Array.Empty<string>();
+        return System.IO.Directory.EnumerateFiles(Directory, "*.json")
             .Select(Path.GetFileNameWithoutExtension)
             .Where(name => !string.IsNullOrEmpty(name))
             .Cast<string>()
@@ -82,7 +80,7 @@ public sealed class StateStore
 
     public void Upsert(string sessionId, SessionEntry entry)
     {
-        System.IO.Directory.CreateDirectory(_directory);
+        System.IO.Directory.CreateDirectory(Directory);
         var path = GetPath(sessionId);
         var tempPath = path + ".tmp";
         var serialized = JsonSerializer.Serialize(entry, JsonOptions);
@@ -108,8 +106,8 @@ public sealed class StateStore
 
     public void DeleteAll()
     {
-        if (!System.IO.Directory.Exists(_directory)) return;
-        foreach (var path in System.IO.Directory.EnumerateFiles(_directory, "*.json"))
+        if (!System.IO.Directory.Exists(Directory)) return;
+        foreach (var path in System.IO.Directory.EnumerateFiles(Directory, "*.json"))
         {
             var sessionId = Path.GetFileNameWithoutExtension(path);
             if (string.IsNullOrEmpty(sessionId)) continue;
@@ -124,7 +122,7 @@ public sealed class StateStore
         }
     }
 
-    string GetPath(string sessionId) => Paths.GetSessionFilePath(sessionId, _directory);
+    string GetPath(string sessionId) => Paths.GetSessionFilePath(sessionId, Directory);
 
     static void WithSessionMutex(string sessionId, Action action)
     {

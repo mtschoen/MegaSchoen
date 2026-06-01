@@ -54,13 +54,13 @@ public sealed class RemoteSessionStreamClient
         }
     }
 
-    IReadOnlyList<SessionSnapshot>? Parse(string ndjsonLine)
+    List<SessionSnapshot>? Parse(string ndjsonLine)
     {
         try
         {
             var snaps = JsonSerializer.Deserialize<List<SessionSnapshot>>(ndjsonLine, JsonOptions);
             if (snaps is null) return null;
-            return snaps.Select(s => s with { Host = _host }).ToList();
+            return snaps.ConvertAll(s => s with { Host = _host });
         }
         catch { return null; }   // skip malformed line, keep stream alive
     }

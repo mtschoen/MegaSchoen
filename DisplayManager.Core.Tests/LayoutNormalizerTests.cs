@@ -124,7 +124,7 @@ public class LayoutNormalizerTests
 
     // Every monitor shares a positive-length edge with the cluster, and the whole set is
     // one connected (gap-free) region — Windows' multi-monitor requirement.
-    static bool Contiguous(IReadOnlyList<SavedDisplayConfig> displays)
+    static bool Contiguous(List<SavedDisplayConfig> displays)
     {
         if (displays.Count <= 1)
         {
@@ -159,7 +159,7 @@ public class LayoutNormalizerTests
         return touchVertical || touchHorizontal;
     }
 
-    static bool Overlaps(IReadOnlyList<SavedDisplayConfig> displays)
+    static bool Overlaps(List<SavedDisplayConfig> displays)
     {
         for (var i = 0; i < displays.Count; i++)
         {

@@ -52,7 +52,7 @@ public class DisplayDriftServiceTests
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, primary: true)));
 
         Assert.IsTrue(report.Matches);
-        Assert.AreEqual(1, report.Monitors.Count);
+        Assert.HasCount(1, report.Monitors);
         Assert.AreEqual(DriftKind.Match, report.Monitors[0].Kind);
     }
 
@@ -64,7 +64,7 @@ public class DisplayDriftServiceTests
 
         Assert.IsFalse(report.Matches);
         Assert.AreEqual(DriftKind.FieldMismatch, report.Monitors[0].Kind);
-        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("position")));
+        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("position", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -84,7 +84,7 @@ public class DisplayDriftServiceTests
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, hz: 60.0, primary: true)));
 
         Assert.AreEqual(DriftKind.FieldMismatch, report.Monitors[0].Kind);
-        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("refresh")));
+        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("refresh", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -93,7 +93,7 @@ public class DisplayDriftServiceTests
         var live = new List<DisplayInfo> { Live(1, 2, "A", 0, 0, rot: 0, primary: true) };
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, rot: 270, primary: true)));
 
-        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("rotation")));
+        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("rotation", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -102,7 +102,7 @@ public class DisplayDriftServiceTests
         var live = new List<DisplayInfo> { Live(1, 2, "A", 0, 0, primary: false) };
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, primary: true)));
 
-        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("primary")));
+        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("primary", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -165,7 +165,7 @@ public class DisplayDriftServiceTests
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, w: 3840, h: 2160, primary: true)));
 
         Assert.AreEqual(DriftKind.FieldMismatch, report.Monitors[0].Kind);
-        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("resolution")));
+        Assert.IsTrue(report.Monitors[0].Mismatches.Exists(m => m.StartsWith("resolution", StringComparison.Ordinal)));
     }
 
     [TestMethod]
@@ -175,6 +175,6 @@ public class DisplayDriftServiceTests
         // so it can never serve as a satisfied commit gate.
         var report = new DisplayDriftService().Compare(new List<DisplayInfo>(), Profile());
         Assert.IsFalse(report.Matches);
-        Assert.AreEqual(0, report.Monitors.Count);
+        Assert.IsEmpty(report.Monitors);
     }
 }

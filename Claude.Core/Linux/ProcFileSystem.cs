@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Claude.Core.Linux;
 
 public sealed class ProcFileSystem : IProcFileSystem
@@ -30,17 +32,17 @@ public sealed class ProcFileSystem : IProcFileSystem
         }
     }
 
-    public string? ReadComm(int pid) => SafeReadAllText(Path.Combine(_root, pid.ToString(), "comm"))?.Trim();
+    public string? ReadComm(int pid) => SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "comm"))?.Trim();
 
     public string? ReadCwd(int pid)
     {
-        try { return new FileInfo(Path.Combine(_root, pid.ToString(), "cwd")).LinkTarget; }
+        try { return new FileInfo(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "cwd")).LinkTarget; }
         catch { return null; }
     }
 
     public long? ReadStartTicks(int pid)
     {
-        var stat = SafeReadAllText(Path.Combine(_root, pid.ToString(), "stat"));
+        var stat = SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "stat"));
         if (stat is null) return null;
         // comm (field 2) may contain spaces/parens; it is wrapped in (), so split after the last ')'.
         var close = stat.LastIndexOf(')');

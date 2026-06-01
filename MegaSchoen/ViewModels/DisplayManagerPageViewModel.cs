@@ -18,13 +18,12 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
     bool _hideInactiveDisplays = true;
     bool _minimizeToTray = true;
     bool _startWithWindows;
-    SavedDisplayProfile? _hotkeyCapturingProfile = null;
+    SavedDisplayProfile? _hotkeyCapturingProfile;
 
 #if WINDOWS
     KeyCaptureService? _keyCaptureService;
     GlobalHotkeyService? _globalHotkeyService;
     TrayIconService? _trayIconService;
-    StartupService? _startupService;
 #endif
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -84,7 +83,7 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
                 _startWithWindows = value;
                 OnPropertyChanged();
 #if WINDOWS
-                _startupService?.SetStartupEnabled(value);
+                StartupService.SetStartupEnabled(value);
 #endif
             }
         }
@@ -137,7 +136,6 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
             _keyCaptureService = services.GetService<KeyCaptureService>();
             _globalHotkeyService = services.GetService<GlobalHotkeyService>();
             _trayIconService = services.GetService<TrayIconService>();
-            _startupService = services.GetService<StartupService>();
 
             if (_keyCaptureService != null)
             {
@@ -145,11 +143,8 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
                 _keyCaptureService.CaptureCancelled += OnCaptureCancelled;
             }
 
-            if (_startupService != null)
-            {
-                _startWithWindows = _startupService.IsStartupEnabled;
-                OnPropertyChanged(nameof(StartWithWindows));
-            }
+            _startWithWindows = StartupService.IsStartupEnabled;
+            OnPropertyChanged(nameof(StartWithWindows));
         }
     }
 
@@ -491,27 +486,27 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
         }
     }
 
-    async Task ShowErrorAsync(string message)
+    static async Task ShowErrorAsync(string message)
     {
-        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        var page = Application.Current?.Windows is { Count: > 0 } windows ? windows[0].Page : null;
         if (page != null)
         {
             await page.DisplayAlertAsync("Error", message, "OK");
         }
     }
 
-    async Task ShowSuccessAsync(string message)
+    static async Task ShowSuccessAsync(string message)
     {
-        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        var page = Application.Current?.Windows is { Count: > 0 } windows ? windows[0].Page : null;
         if (page != null)
         {
             await page.DisplayAlertAsync("Success", message, "OK");
         }
     }
 
-    async Task<bool> ConfirmAsync(string title, string message)
+    static async Task<bool> ConfirmAsync(string title, string message)
     {
-        var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+        var page = Application.Current?.Windows is { Count: > 0 } windows ? windows[0].Page : null;
         if (page != null)
         {
             return await page.DisplayAlertAsync(title, message, "Yes", "No");

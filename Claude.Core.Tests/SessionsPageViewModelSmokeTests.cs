@@ -91,9 +91,9 @@ public class SessionsPageViewModelSmokeTests
     public void Enumerate_WithSessionAndSubagent_ProducesOneSnapshot()
     {
         using var fixture = new ClaudeProjectsFixture();
-        var cwd = @"C:\repo\myproject";
+        const string cwd = @"C:\repo\myproject";
         var slug = SlugEncoder.Encode(cwd);
-        var sessionId = "test-session-id-1";
+        const string sessionId = "test-session-id-1";
 
         fixture.AddSession(slug, sessionId,
             """{"type":"user","message":{"role":"user","content":[{"type":"tool_result"}]}}""",

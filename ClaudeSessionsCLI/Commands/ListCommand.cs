@@ -10,6 +10,10 @@ namespace ClaudeSessionsCLI.Commands;
 
 static class ListCommand
 {
+    // Cached per CA1869: a JsonSerializerOptions instance is reusable and thread-safe
+    // once configured, so it should not be reallocated on every serialize call.
+    static readonly JsonSerializerOptions IndentedJson = new() { WriteIndented = true };
+
     public static async Task<int> Run(string[] arguments)
     {
         var options = CliOptions.Parse(arguments);
@@ -55,7 +59,7 @@ static class ListCommand
         var snapshots = enumerator.Enumerate();
         var json = JsonSerializer.Serialize(
             snapshots.Select(SnapshotDto.From).ToArray(),
-            new JsonSerializerOptions { WriteIndented = true });
+            IndentedJson);
         Console.Out.Write(json);
         Console.Out.Write('\n');
         return 0;
@@ -98,7 +102,7 @@ static class ListCommand
             var snapshots = enumerator.Enumerate();
             var json = JsonSerializer.Serialize(
                 snapshots.Select(SnapshotDto.From).ToArray(),
-                new JsonSerializerOptions { WriteIndented = true });
+                IndentedJson);
             Console.Out.Write(json);
             Console.Out.Write('\n');
             return 0;

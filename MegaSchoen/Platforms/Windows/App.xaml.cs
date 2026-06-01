@@ -10,7 +10,11 @@ namespace MegaSchoen.WinUI;
 /// </summary>
 public partial class App : MauiWinUIApplication
 {
-    SingleInstanceService? _singleInstance;
+    // Process-global single-instance guard: the mutex must live for the whole process,
+    // so it is held in a static field (not an instance field that would make App own a
+    // disposable and require IDisposable on a WinUI Application).
+    static SingleInstanceService? _singleInstance;
+    static readonly string[] CtrlAlt = ["Control", "Alt"];
 
     /// <summary>
     /// Initializes the singleton application object.
@@ -37,7 +41,7 @@ public partial class App : MauiWinUIApplication
         InitializeWindowsServices();
     }
 
-    void InitializeWindowsServices()
+    static void InitializeWindowsServices()
     {
         var services = MauiWinUIApplication.Current.Services;
 
@@ -162,11 +166,11 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        if (!hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", new[] { "Control", "Alt" }))
+        if (!hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", CtrlAlt))
         {
             Claude.Core.Logger.Log("Failed to register Ctrl+Alt+9 (claude-cycle-perms) — likely already bound system-wide");
         }
-        if (!hotkeys.RegisterNamedHotkey("claude-cycle-any", "0", new[] { "Control", "Alt" }))
+        if (!hotkeys.RegisterNamedHotkey("claude-cycle-any", "0", CtrlAlt))
         {
             Claude.Core.Logger.Log("Failed to register Ctrl+Alt+0 (claude-cycle-any) — likely already bound system-wide");
         }
@@ -210,7 +214,7 @@ public partial class App : MauiWinUIApplication
             await Task.Delay(100);
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                var window = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault();
+                var window = Microsoft.Maui.Controls.Application.Current?.Windows is { Count: > 0 } windows ? windows[0] : null;
                 if (window != null)
                 {
                     var mauiWindow = window.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
@@ -309,10 +313,10 @@ public partial class App : MauiWinUIApplication
         Claude.Core.Logger.Log($"STALE BRIDGE: app={appVersion} bridge={bridgeVersion}");
         MainThread.BeginInvokeOnMainThread(async () =>
         {
-            var page = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Page;
+            var page = Microsoft.Maui.Controls.Application.Current?.Windows is { Count: > 0 } windows ? windows[0].Page : null;
             if (page is not null)
             {
-                await page.DisplayAlert(
+                await page.DisplayAlertAsync(
                     "Hook bridge is stale",
                     $"App is {appVersion} but the embedded ClaudeHookBridge is {bridgeVersion}. " +
                     "Rebuild the solution (VS18 MSBuild) so session status detection is correct.",
@@ -321,11 +325,11 @@ public partial class App : MauiWinUIApplication
         });
     }
 
-    void ShowMainWindow()
+    static void ShowMainWindow()
     {
         MainThread.BeginInvokeOnMainThread(() =>
         {
-            var window = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault();
+            var window = Microsoft.Maui.Controls.Application.Current?.Windows is { Count: > 0 } windows ? windows[0] : null;
             if (window != null)
             {
                 var mauiWindow = window.Handler?.PlatformView as Microsoft.UI.Xaml.Window;

@@ -8,7 +8,7 @@ public class EnvironmentProcessLocatorTests
     [TestMethod]
     public void Parse_JsonArray_YieldsWindowlessLiveSessionsPerCount()
     {
-        var json = """[{"cwd":"C:/a","count":2},{"cwd":"C:/b","count":1}]""";
+        const string json = """[{"cwd":"C:/a","count":2},{"cwd":"C:/b","count":1}]""";
         var sessions = EnvironmentProcessLocator.Parse(json);
 
         Assert.HasCount(3, sessions);

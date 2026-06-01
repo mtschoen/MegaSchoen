@@ -96,11 +96,11 @@ sealed class MessageWindow : IDisposable
         switch (msg)
         {
             case WM_HOTKEY:
-                HotkeyPressed?.Invoke(this, (int)wParam);
+                HotkeyPressed?.Invoke(this, checked((int)wParam));
                 return IntPtr.Zero;
 
             case WM_TRAYICON:
-                var trayMsg = (int)lParam;
+                var trayMsg = checked((int)lParam);
                 if (trayMsg == WM_LBUTTONUP)
                 {
                     TrayIconLeftClicked?.Invoke(this, EventArgs.Empty);

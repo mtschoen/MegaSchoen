@@ -20,7 +20,7 @@ public static class DisplayManager
     [DllImport("DisplayManagerNative.dll")]
     static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
 
-    [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyConfiguration", CharSet = CharSet.Ansi)]
+    [DllImport("DisplayManagerNative.dll", EntryPoint = "ApplyConfiguration", CharSet = CharSet.Ansi, BestFitMapping = false, ThrowOnUnmappableChar = true)]
     static extern int ApplyConfigurationNative([MarshalAs(UnmanagedType.LPStr)] string activeDevicesJson);
 
     [DllImport("DisplayManagerNative.dll")]

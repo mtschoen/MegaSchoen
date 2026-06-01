@@ -3,7 +3,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// <summary>
 /// Manages Windows startup registration via shortcut in the Startup folder.
 /// </summary>
-class StartupService
+static class StartupService
 {
     const string ShortcutName = "MegaSchoen.lnk";
 
@@ -14,12 +14,12 @@ class StartupService
     /// <summary>
     /// Checks if the application is configured to start with Windows.
     /// </summary>
-    public bool IsStartupEnabled => File.Exists(StartupFolderPath);
+    public static bool IsStartupEnabled => File.Exists(StartupFolderPath);
 
     /// <summary>
     /// Enables or disables startup with Windows.
     /// </summary>
-    public void SetStartupEnabled(bool enabled)
+    public static void SetStartupEnabled(bool enabled)
     {
         if (enabled)
         {
@@ -31,7 +31,7 @@ class StartupService
         }
     }
 
-    void CreateStartupShortcut()
+    static void CreateStartupShortcut()
     {
         var exePath = Environment.ProcessPath;
         if (string.IsNullOrEmpty(exePath))
@@ -69,7 +69,7 @@ class StartupService
         }
     }
 
-    void RemoveStartupShortcut()
+    static void RemoveStartupShortcut()
     {
         if (File.Exists(StartupFolderPath))
         {

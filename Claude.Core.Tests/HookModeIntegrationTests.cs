@@ -15,7 +15,7 @@ public class HookModeIntegrationTests
         Directory.CreateDirectory(tempLocalAppData);
         try
         {
-            var payload = """
+            const string payload = """
             {
               "hook_event_name": "Notification",
               "notification_type": "permission_prompt",
