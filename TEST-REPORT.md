@@ -43,20 +43,23 @@ Lint (enforced gates - all GREEN, analyzers now ACTUALLY enabled):
     - [assembly: DoNotParallelize] for DisplayManager.Core.Tests + MegaSchoen.UITests (MSTEST0001)
     - obsolete DisplayAlert -> DisplayAlertAsync (CS0618)
 
-aislop (AI-slop gate - READY-BUT-GATED, NOT enforced in CI):
-  Engine: local mtschoen/aislop fork, v0.10.1 (C#-capable). Score 22/100 ("Critical"),
-  ~34 findings (unchanged by this analyzer pass). CI aislop job stays gated: the
-  C#-capable engine is not on npm (upstream npm aislop has no C# support).
+aislop (AI-slop gate - CLEARED, still NOT enforced in CI):
+  Engine: local mtschoen/aislop fork, v0.10.1 (C#-capable). Score 100/100 ("Healthy"),
+  0 findings (was 22/100, 34 findings). CI aislop job stays gated regardless: the
+  C#-capable engine is not on npm (upstream npm aislop has no C# support), so the job
+  cannot run in CI yet - un-gate only once the fork is published/vendorable.
 
-  Baseline (recorded; deferred to a tracked follow-up):
-     4  swallowed-exception (err) - AUDITED: intentional best-effort resilience patterns
-        (process enumeration, optional/locked state-file IO, window-focus/hotkey). NOT
-        rethrown; no bug-hiding swallow.
-    13  csharp-console-leftover  - Debug/Trace diagnostic output in MAUI/Windows glue.
-    11  csharp-null-forgiving    - mostly MAUI binding idiom.
-     5  file-too-large / function-too-long - structural; splitting deferred.
-     1  redundant-doc-comment.
+  Burned down (all 34 findings cleared):
+     4  swallowed-exception (err) - AUDITED intentional best-effort; documented in place
+        with /* */ block comments (zero compiler warnings) per escalate-over-shortcut.
+    13  csharp-console-leftover  - Debug/Trace removed; the existing fallback return/throw
+        is the real handling (Debug.WriteLine is [Conditional("DEBUG")], dead in Release).
+    11  csharp-null-forgiving    - fixed per-site (guards, is-not-null/pattern, ?? , a
+        nullable ExtractIconEx P/Invoke, sessionId threaded through HookDispatcher).
+     5  file-too-large / function-too-long - split via partial classes + method extraction
+        (Win32Interop, DisplayManagerPageViewModel, LayoutEditorViewModel; Enumerate;
+        InitializeWindowsServices). No behavior change; public API unchanged.
+     1  redundant-doc-comment   - reworded DriftReport.UnexpectedActiveMonitor summary.
 
-Follow-up (tracked): per-case justify-or-restructure the swallowed-exception sites,
-gate or remove the Debug/Trace leftovers, null-safe the converters, split the oversized
-files/functions, then un-gate the CI aislop job once a C#-capable aislop is on npm.
+  Verified: aislop scan . = 100/100; aislop ci . exit 0; clean -t:Rebuild = 0 analyzer
+  warnings; 155 logic tests green (Claude.Core 116 + DisplayManager.Core 39).

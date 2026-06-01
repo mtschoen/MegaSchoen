@@ -46,7 +46,12 @@ static class StartupService
             throw new InvalidOperationException("WScript.Shell is not available");
         }
 
-        dynamic shell = Activator.CreateInstance(shellType)!;
+        var shellInstance = Activator.CreateInstance(shellType);
+        if (shellInstance is null)
+        {
+            throw new InvalidOperationException("Could not create a WScript.Shell instance");
+        }
+        dynamic shell = shellInstance;
         try
         {
             dynamic shortcut = shell.CreateShortcut(StartupFolderPath);

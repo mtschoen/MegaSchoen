@@ -57,9 +57,8 @@ public class LayoutDraftStore
             using var stream = File.OpenRead(path);
             return await JsonSerializer.DeserializeAsync<LayoutDraft>(stream, _jsonOptions);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading draft: {ex.Message}");
             return null;
         }
     }

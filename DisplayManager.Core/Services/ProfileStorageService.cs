@@ -48,9 +48,8 @@ public class ProfileStorageService
             var collection = await JsonSerializer.DeserializeAsync<ProfileConfiguration>(stream, _jsonOptions);
             return collection ?? new ProfileConfiguration();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            System.Diagnostics.Debug.WriteLine($"Error loading profiles: {ex.Message}");
             return new ProfileConfiguration();
         }
     }
@@ -60,30 +59,22 @@ public class ProfileStorageService
     /// </summary>
     public async Task SaveAsync(ProfileConfiguration collection)
     {
-        try
+        // Create backup if file exists
+        if (File.Exists(_configFilePath))
         {
-            // Create backup if file exists
-            if (File.Exists(_configFilePath))
-            {
-                var backupPath = $"{_configFilePath}.backup";
-                File.Copy(_configFilePath, backupPath, overwrite: true);
-            }
-
-            // Write to temp file first (atomic write)
-            var tempPath = $"{_configFilePath}.tmp";
-            using (var stream = File.Create(tempPath))
-            {
-                await JsonSerializer.SerializeAsync(stream, collection, _jsonOptions);
-            }
-
-            // Atomically replace the config file
-            File.Move(tempPath, _configFilePath, overwrite: true);
+            var backupPath = $"{_configFilePath}.backup";
+            File.Copy(_configFilePath, backupPath, overwrite: true);
         }
-        catch (Exception ex)
+
+        // Write to temp file first (atomic write)
+        var tempPath = $"{_configFilePath}.tmp";
+        using (var stream = File.Create(tempPath))
         {
-            System.Diagnostics.Debug.WriteLine($"Error saving profiles: {ex.Message}");
-            throw;
+            await JsonSerializer.SerializeAsync(stream, collection, _jsonOptions);
         }
+
+        // Atomically replace the config file
+        File.Move(tempPath, _configFilePath, overwrite: true);
     }
 
     /// <summary>

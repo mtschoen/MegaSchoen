@@ -158,7 +158,7 @@ sealed class TrayIconService : IDisposable
 
         // Last resort: shell32.dll default icon
         var shell32Icons = new IntPtr[1];
-        ExtractIconEx("shell32.dll", 15, shell32Icons, null!, 1); // Monitor icon
+        ExtractIconEx("shell32.dll", 15, shell32Icons, null, 1); // Monitor icon
         return shell32Icons[0];
     }
 

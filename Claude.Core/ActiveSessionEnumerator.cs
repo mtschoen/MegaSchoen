@@ -39,85 +39,105 @@ public sealed class ActiveSessionEnumerator
         // claude process runs in its cwd.
         var procsByCwd = liveProcesses
             .Where(p => p.SessionId is null && !string.IsNullOrEmpty(p.WorkingDirectory))
-            .GroupBy(p => NormalizeCwd(p.WorkingDirectory!), StringComparer.OrdinalIgnoreCase)
+            .GroupBy(p => NormalizeCwd(p.WorkingDirectory), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var snapshots = new List<SessionSnapshot>();
-
         foreach (var (cwd, procs) in procsByCwd)
         {
-            var slug = SlugEncoder.Encode(cwd);
-            var slugDir = Path.Combine(_projectsRoot, slug);
+            snapshots.AddRange(BuildCwdSessions(cwd, procs, stateBySessionId));
+        }
 
-            // Candidate sessions for THIS cwd, keyed by real session id. Source
-            // of truth = transcripts on disk ∪ StateStore entries. Identity is
-            // the file/key name — never a window guess.
-            var candidates = new Dictionary<string, Candidate>(StringComparer.OrdinalIgnoreCase);
+        AddAuthoritativeIdSessions(liveProcesses, stateBySessionId, snapshots);
 
-            if (Directory.Exists(slugDir))
+        snapshots.Sort(CompareForDisplay);
+        return snapshots;
+    }
+
+    // The cwd-keyed pass for one anonymous-process cwd: builds candidate
+    // sessions (transcripts on disk ∪ StateStore entries, keyed by real session
+    // id), caps them to the live-process count, and emits a snapshot each.
+    List<SessionSnapshot> BuildCwdSessions(
+        string cwd, List<ClaudeWindow> procs, IReadOnlyDictionary<string, SessionEntry> stateBySessionId)
+    {
+        var slugDir = Path.Combine(_projectsRoot, SlugEncoder.Encode(cwd));
+
+        // Candidate sessions for THIS cwd, keyed by real session id. Source
+        // of truth = transcripts on disk ∪ StateStore entries. Identity is
+        // the file/key name — never a window guess.
+        var candidates = new Dictionary<string, Candidate>(StringComparer.OrdinalIgnoreCase);
+
+        if (Directory.Exists(slugDir))
+        {
+            foreach (var path in Directory.GetFiles(slugDir, "*.jsonl", SearchOption.TopDirectoryOnly))
             {
-                foreach (var path in Directory.GetFiles(slugDir, "*.jsonl", SearchOption.TopDirectoryOnly))
-                {
-                    // Slug-collision guard: only accept a transcript whose own
-                    // recorded cwd matches this cwd (null = unreadable = accept).
-                    if (!CwdMatches(ReadTranscriptCwd(path), cwd)) continue;
-                    var id = Path.GetFileNameWithoutExtension(path);
-                    candidates[id] = new Candidate(
-                        id, path, File.GetCreationTimeUtc(path), File.GetLastWriteTimeUtc(path));
-                }
-            }
-
-            foreach (var (id, entry) in stateBySessionId)
-            {
-                if (!CwdMatches(entry.Cwd, cwd)) continue;
-                if (candidates.ContainsKey(id)) continue; // transcript already covered it
-                var path = entry.TranscriptPath ?? "";
-                var hasFile = !string.IsNullOrEmpty(path) && File.Exists(path);
-                // Transcript-less store entries fall back to NotifiedAt for both
-                // timestamps, so they rank in the freshest-N cap on a different
-                // clock than transcript-backed peers (file mtime). Edge-only: a
-                // live store entry almost always carries a transcript path.
-                var creation = hasFile ? File.GetCreationTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
-                var lastWrite = hasFile ? File.GetLastWriteTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
-                candidates[id] = new Candidate(id, path, creation, lastWrite);
-            }
-
-            if (candidates.Count == 0) continue;
-
-            // Shared-cwd cap: at most procs.Count sessions are alive here. Keep
-            // the freshest by last write (relative rank — NOT a time cutoff).
-            var kept = candidates.Values
-                .OrderByDescending(c => c.LastWriteUtc)
-                .Take(procs.Count)
-                .ToList();
-
-            var usedProcesses = new HashSet<uint>();
-            foreach (var candidate in kept)
-            {
-                var entry = stateBySessionId.TryGetValue(candidate.Id, out var e) ? e : null;
-                var state = SessionStateClassifier.Classify(entry, candidate.TranscriptPath);
-                var (window, title) = AttachWindow(procs, candidate.CreationUtc, usedProcesses);
-                var subagents = EnumerateSubagents(slugDir, candidate.Id);
-
-                snapshots.Add(new SessionSnapshot(
-                    SessionId: candidate.Id,
-                    Cwd: cwd,
-                    TranscriptPath: candidate.TranscriptPath,
-                    LastActivityUtc: new DateTimeOffset(candidate.LastWriteUtc, TimeSpan.Zero),
-                    State: state,
-                    PendingMessage: entry?.Message,
-                    Window: window,
-                    WindowTitle: string.IsNullOrEmpty(title) ? null : title,
-                    Subagents: subagents));
+                // Slug-collision guard: only accept a transcript whose own
+                // recorded cwd matches this cwd (null = unreadable = accept).
+                if (!CwdMatches(ReadTranscriptCwd(path), cwd)) continue;
+                var id = Path.GetFileNameWithoutExtension(path);
+                candidates[id] = new Candidate(
+                    id, path, File.GetCreationTimeUtc(path), File.GetLastWriteTimeUtc(path));
             }
         }
 
-        // Authoritative-id pass (design rule: authoritative identity wins). A
-        // background/daemon worker carries its real session_id on the command
-        // line — surface it by id even when its cwd has no transcript, is the
-        // shared home dir, or the anonymous cwd cap would have dropped it. The
-        // hook-recorded cwd (store entry) is preferred over the worker's PEB cwd,
-        // which is often just the daemon's home dir.
+        foreach (var (id, entry) in stateBySessionId)
+        {
+            if (!CwdMatches(entry.Cwd, cwd)) continue;
+            if (candidates.ContainsKey(id)) continue; // transcript already covered it
+            var path = entry.TranscriptPath ?? "";
+            var hasFile = !string.IsNullOrEmpty(path) && File.Exists(path);
+            // Transcript-less store entries fall back to NotifiedAt for both
+            // timestamps, so they rank in the freshest-N cap on a different
+            // clock than transcript-backed peers (file mtime). Edge-only: a
+            // live store entry almost always carries a transcript path.
+            var creation = hasFile ? File.GetCreationTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
+            var lastWrite = hasFile ? File.GetLastWriteTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
+            candidates[id] = new Candidate(id, path, creation, lastWrite);
+        }
+
+        var result = new List<SessionSnapshot>();
+        if (candidates.Count == 0) return result;
+
+        // Shared-cwd cap: at most procs.Count sessions are alive here. Keep
+        // the freshest by last write (relative rank — NOT a time cutoff).
+        var kept = candidates.Values
+            .OrderByDescending(c => c.LastWriteUtc)
+            .Take(procs.Count)
+            .ToList();
+
+        var usedProcesses = new HashSet<uint>();
+        foreach (var candidate in kept)
+        {
+            var entry = stateBySessionId.TryGetValue(candidate.Id, out var e) ? e : null;
+            var state = SessionStateClassifier.Classify(entry, candidate.TranscriptPath);
+            var (window, title) = AttachWindow(procs, candidate.CreationUtc, usedProcesses);
+            var subagents = EnumerateSubagents(slugDir, candidate.Id);
+
+            result.Add(new SessionSnapshot(
+                SessionId: candidate.Id,
+                Cwd: cwd,
+                TranscriptPath: candidate.TranscriptPath,
+                LastActivityUtc: new DateTimeOffset(candidate.LastWriteUtc, TimeSpan.Zero),
+                State: state,
+                PendingMessage: entry?.Message,
+                Window: window,
+                WindowTitle: string.IsNullOrEmpty(title) ? null : title,
+                Subagents: subagents));
+        }
+        return result;
+    }
+
+    // Authoritative-id pass (design rule: authoritative identity wins). A
+    // background/daemon worker carries its real session_id on the command
+    // line — surface it by id even when its cwd has no transcript, is the
+    // shared home dir, or the anonymous cwd cap would have dropped it. The
+    // hook-recorded cwd (store entry) is preferred over the worker's PEB cwd,
+    // which is often just the daemon's home dir.
+    void AddAuthoritativeIdSessions(
+        IReadOnlyList<ClaudeWindow> liveProcesses,
+        IReadOnlyDictionary<string, SessionEntry> stateBySessionId,
+        List<SessionSnapshot> snapshots)
+    {
         var emitted = new HashSet<string>(snapshots.Select(s => s.SessionId), StringComparer.OrdinalIgnoreCase);
         foreach (var process in liveProcesses)
         {
@@ -133,27 +153,26 @@ public sealed class ActiveSessionEnumerator
                 var byId = Path.Combine(slugDir, $"{id}.jsonl");
                 if (File.Exists(byId)) transcriptPath = byId;
             }
-            var hasFile = !string.IsNullOrEmpty(transcriptPath) && File.Exists(transcriptPath);
-            var lastWrite = hasFile
-                ? File.GetLastWriteTimeUtc(transcriptPath!)
+            var existingTranscript = !string.IsNullOrEmpty(transcriptPath) && File.Exists(transcriptPath)
+                ? transcriptPath
+                : null;
+            var lastWrite = existingTranscript is not null
+                ? File.GetLastWriteTimeUtc(existingTranscript)
                 : entry?.NotifiedAt.UtcDateTime ?? DateTime.UtcNow;
 
             snapshots.Add(new SessionSnapshot(
                 SessionId: id,
                 Cwd: cwd,
-                TranscriptPath: hasFile ? transcriptPath! : "",
+                TranscriptPath: existingTranscript ?? "",
                 LastActivityUtc: new DateTimeOffset(lastWrite, TimeSpan.Zero),
-                State: SessionStateClassifier.Classify(entry, hasFile ? transcriptPath! : ""),
+                State: SessionStateClassifier.Classify(entry, existingTranscript ?? ""),
                 PendingMessage: entry?.Message,
                 Window: process.Window,
                 WindowTitle: null,
-                Subagents: hasFile && slugDir.Length > 0
+                Subagents: existingTranscript is not null && slugDir.Length > 0
                     ? EnumerateSubagents(slugDir, id)
                     : Array.Empty<SubagentSnapshot>()));
         }
-
-        snapshots.Sort(CompareForDisplay);
-        return snapshots;
     }
 
     sealed record Candidate(string Id, string TranscriptPath, DateTime CreationUtc, DateTime LastWriteUtc);
@@ -185,7 +204,7 @@ public sealed class ActiveSessionEnumerator
         return (WindowToken.Null, string.Empty);
     }
 
-    static string NormalizeCwd(string cwd) => cwd.TrimEnd('\\', '/');
+    static string NormalizeCwd(string? cwd) => (cwd ?? "").TrimEnd('\\', '/');
 
     static bool CwdMatches(string? a, string b) =>
         a is null || string.Equals(NormalizeCwd(a), NormalizeCwd(b), StringComparison.OrdinalIgnoreCase);

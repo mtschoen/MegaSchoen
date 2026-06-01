@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using DisplayManager.Core.Models;
@@ -48,9 +47,8 @@ public static class DisplayManager
             var displays = JsonSerializer.Deserialize<DisplayInfo[]>(jsonString, JsonOptions);
             return displays?.ToList() ?? [];
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Debug.WriteLine($"Failed to get displays from native DLL: {ex.Message}");
             return [];
         }
     }
@@ -97,9 +95,8 @@ public static class DisplayManager
             var modes = JsonSerializer.Deserialize<DisplayMode[]>(jsonString, JsonOptions);
             return modes?.ToList() ?? [];
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Debug.WriteLine($"Failed to get supported modes: {ex.Message}");
             return [];
         }
     }

@@ -56,7 +56,8 @@ namespace MegaSchoen
             }
             catch
             {
-                // Native enumeration unavailable — fall through to the synthetic layout.
+                /* Native enumeration unavailable (headless / RDP): fall through to
+                   the synthetic layout so the screenshot pipeline still works. */
             }
 
             return new SavedDisplayProfile

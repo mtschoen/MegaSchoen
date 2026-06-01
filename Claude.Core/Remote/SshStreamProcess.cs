@@ -39,7 +39,7 @@ public sealed class SshStreamProcess : IStreamProcess
         }
     }
 
-    public void Kill() { try { if (!_process.HasExited) _process.Kill(entireProcessTree: true); } catch { } }
+    public void Kill() { try { if (!_process.HasExited) _process.Kill(entireProcessTree: true); } catch { /* best-effort teardown; the process may already have exited or be unkillable */ } }
 
     public void Dispose() { Kill(); _process.Dispose(); }
 }

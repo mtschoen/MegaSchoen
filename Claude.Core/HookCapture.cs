@@ -42,7 +42,8 @@ public static class HookCapture
         }
         catch
         {
-            // Never throw from the capture tee.
+            /* Never throw from the capture tee: it is diagnostic-only and must
+               not disturb the hook handler it runs inside. */
         }
     }
 

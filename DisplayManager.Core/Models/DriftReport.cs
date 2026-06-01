@@ -9,7 +9,7 @@ public enum DriftKind
     FieldMismatch,
     /// <summary>Profile expects this monitor, but it is not currently active.</summary>
     MonitorNotConnected,
-    /// <summary>An active monitor that the profile does not mention.</summary>
+    /// <summary>Monitor is active in hardware but the profile does not mention it.</summary>
     UnexpectedActiveMonitor
 }
 

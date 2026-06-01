@@ -1,5 +1,10 @@
 # Handoff: aislop burndown to 100/100
 
+> **STATUS: DONE (2026-05-31)** - all 34 findings cleared, `aislop scan .` = 100/100,
+> `aislop ci .` exit 0, clean `-t:Rebuild` = 0 analyzer warnings, 155 logic tests green.
+> The CI aislop job stays gated as planned (the C#-capable fork is still not on npm).
+> See the updated aislop section in `TEST-REPORT.md`.
+
 **Created:** 2026-05-31
 **Base:** `main` @ `8e89d01` (linter rollout fully landed; Roslyn/Roslynator/cppcheck/format all 0, CI green)
 **Goal:** drive the gated aislop AI-slop gate from **22/100 (34 findings)** to **100/100**, then un-gate the CI aislop job.

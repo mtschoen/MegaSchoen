@@ -48,7 +48,11 @@ public sealed class SettingsJsonInstaller
         // as escapes. Forward slashes work on Windows in both JSON and bash contexts.
         var normalizedPath = bridgeExePath.Replace('\\', '/');
 
-        Directory.CreateDirectory(Path.GetDirectoryName(_settingsPath)!);
+        var settingsDir = Path.GetDirectoryName(_settingsPath);
+        if (!string.IsNullOrEmpty(settingsDir))
+        {
+            Directory.CreateDirectory(settingsDir);
+        }
 
         JsonObject root;
         if (File.Exists(_settingsPath))
@@ -62,19 +66,19 @@ public sealed class SettingsJsonInstaller
             root = new JsonObject();
         }
 
-        if (!root.ContainsKey("hooks"))
+        if (root["hooks"] is not JsonObject hooksObj)
         {
-            root["hooks"] = new JsonObject();
+            hooksObj = new JsonObject();
+            root["hooks"] = hooksObj;
         }
-        var hooksObj = root["hooks"]!.AsObject();
 
         foreach (var eventName in EventNames)
         {
-            if (!hooksObj.ContainsKey(eventName))
+            if (hooksObj[eventName] is not JsonArray eventArray)
             {
-                hooksObj[eventName] = new JsonArray();
+                eventArray = new JsonArray();
+                hooksObj[eventName] = eventArray;
             }
-            var eventArray = hooksObj[eventName]!.AsArray();
 
             var alreadyInstalled = false;
             foreach (var group in eventArray)

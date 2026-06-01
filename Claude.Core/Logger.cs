@@ -17,7 +17,8 @@ public static class Logger
         }
         catch
         {
-            // Never throw from logging — this runs inside hook handlers.
+            /* Never throw from logging: this runs inside hook handlers and the
+               logger is the last resort, so there is nowhere else to report to. */
         }
     }
 }

@@ -65,7 +65,6 @@ sealed class GlobalHotkeyService : IDisposable
         var vk = KeyToVirtualKey(hotkey.Key);
         if (vk == 0)
         {
-            System.Diagnostics.Debug.WriteLine($"Unknown key: {hotkey.Key}");
             return false;
         }
 
@@ -81,12 +80,6 @@ sealed class GlobalHotkeyService : IDisposable
         if (success)
         {
             _hotkeyToProfile[hotkeyId] = profileId;
-            System.Diagnostics.Debug.WriteLine($"Registered hotkey {hotkeyId} for profile {profileId}");
-        }
-        else
-        {
-            var error = GetLastError();
-            System.Diagnostics.Debug.WriteLine($"Failed to register hotkey for profile {profileId}: error {error}");
         }
 
         return success;
@@ -97,7 +90,6 @@ sealed class GlobalHotkeyService : IDisposable
         var vk = KeyToVirtualKey(key);
         if (vk == 0)
         {
-            System.Diagnostics.Debug.WriteLine($"Unknown key: {key}");
             return false;
         }
 
@@ -113,11 +105,6 @@ sealed class GlobalHotkeyService : IDisposable
         if (success)
         {
             _hotkeyToName[hotkeyId] = name;
-            System.Diagnostics.Debug.WriteLine($"Registered named hotkey {hotkeyId} for \"{name}\"");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine($"Failed to register named hotkey \"{name}\": error {GetLastError()}");
         }
 
         return success;
@@ -140,14 +127,12 @@ sealed class GlobalHotkeyService : IDisposable
     {
         if (_hotkeyToProfile.TryGetValue(hotkeyId, out var profileId))
         {
-            System.Diagnostics.Debug.WriteLine($"Hotkey {hotkeyId} pressed, triggering profile {profileId}");
             HotkeyTriggered?.Invoke(this, profileId);
             return;
         }
 
         if (_hotkeyToName.TryGetValue(hotkeyId, out var name))
         {
-            System.Diagnostics.Debug.WriteLine($"Hotkey {hotkeyId} pressed, triggering named hotkey \"{name}\"");
             NamedHotkeyTriggered?.Invoke(this, name);
         }
     }

@@ -1,4 +1,5 @@
 using Claude.Core.Models;
+using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
 using MegaSchoen.Platforms.Windows.Services;
 using Microsoft.UI.Xaml;
@@ -59,6 +60,16 @@ public partial class App : MauiWinUIApplication
         tray.Initialize(profiles);
         hotkeys.RefreshFromProfiles(profiles);
 
+        WireTrayEvents(tray, hotkeys, messageWindow, claudeWindowService, profileService, profiles);
+        WireHotkeyEvents(hotkeys, tray, claudeWindowService, profileService, profiles);
+        WireWindowLifecycle(messageWindow, tray);
+    }
+
+    static void WireTrayEvents(
+        TrayIconService tray, GlobalHotkeyService hotkeys, MessageWindow messageWindow,
+        ClaudeWindowService claudeWindowService, DisplayProfileService profileService,
+        List<SavedDisplayProfile> profiles)
+    {
         // Wire up tray icon events
         tray.ProfileSelected += (s, profileId) =>
         {
@@ -147,7 +158,13 @@ public partial class App : MauiWinUIApplication
                 tray.ShowNotification("MegaSchoen", $"Clear failed: {exception.Message}", NotificationIcon.Error);
             }
         };
+    }
 
+    static void WireHotkeyEvents(
+        GlobalHotkeyService hotkeys, TrayIconService tray,
+        ClaudeWindowService claudeWindowService, DisplayProfileService profileService,
+        List<SavedDisplayProfile> profiles)
+    {
         // Wire up hotkey events
         hotkeys.HotkeyTriggered += (s, profileId) =>
         {
@@ -199,7 +216,10 @@ public partial class App : MauiWinUIApplication
                 tray.ShowNotification("MegaSchoen", $"Cycle failed: {exception.Message}", NotificationIcon.Error);
             }
         };
+    }
 
+    static void WireWindowLifecycle(MessageWindow messageWindow, TrayIconService tray)
+    {
         // Wire up activation message for single instance
         messageWindow.CustomMessageReceived += (s, msg) =>
         {
