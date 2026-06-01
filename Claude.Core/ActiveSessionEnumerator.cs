@@ -32,10 +32,13 @@ public sealed class ActiveSessionEnumerator
         var liveProcesses = _locator.EnumerateLiveSessions();
         var stateBySessionId = _store.Read();
 
-        // cwd is the liveness unit: a session is live iff a claude process runs
-        // in its cwd. Group live processes by their real working directory.
+        // Processes that carry an authoritative session id (background/daemon
+        // workers) are surfaced by id in the pass below; only anonymous
+        // (foreground/headless) processes feed the cwd-keyed correlation + cap.
+        // cwd is the liveness unit for the anonymous set: a session is live iff a
+        // claude process runs in its cwd.
         var procsByCwd = liveProcesses
-            .Where(p => !string.IsNullOrEmpty(p.WorkingDirectory))
+            .Where(p => p.SessionId is null && !string.IsNullOrEmpty(p.WorkingDirectory))
             .GroupBy(p => NormalizeCwd(p.WorkingDirectory!), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
@@ -107,6 +110,46 @@ public sealed class ActiveSessionEnumerator
                     WindowTitle: string.IsNullOrEmpty(title) ? null : title,
                     Subagents: subagents));
             }
+        }
+
+        // Authoritative-id pass (design rule: authoritative identity wins). A
+        // background/daemon worker carries its real session_id on the command
+        // line — surface it by id even when its cwd has no transcript, is the
+        // shared home dir, or the anonymous cwd cap would have dropped it. The
+        // hook-recorded cwd (store entry) is preferred over the worker's PEB cwd,
+        // which is often just the daemon's home dir.
+        var emitted = new HashSet<string>(snapshots.Select(s => s.SessionId), StringComparer.OrdinalIgnoreCase);
+        foreach (var process in liveProcesses)
+        {
+            if (process.SessionId is not { } id || !emitted.Add(id)) continue;
+
+            var entry = stateBySessionId.TryGetValue(id, out var e) ? e : null;
+            var cwd = NormalizeCwd(entry?.Cwd ?? process.WorkingDirectory ?? "");
+            var slugDir = cwd.Length > 0 ? Path.Combine(_projectsRoot, SlugEncoder.Encode(cwd)) : "";
+
+            var transcriptPath = entry?.TranscriptPath;
+            if (string.IsNullOrEmpty(transcriptPath) && slugDir.Length > 0)
+            {
+                var byId = Path.Combine(slugDir, $"{id}.jsonl");
+                if (File.Exists(byId)) transcriptPath = byId;
+            }
+            var hasFile = !string.IsNullOrEmpty(transcriptPath) && File.Exists(transcriptPath);
+            var lastWrite = hasFile
+                ? File.GetLastWriteTimeUtc(transcriptPath!)
+                : entry?.NotifiedAt.UtcDateTime ?? DateTime.UtcNow;
+
+            snapshots.Add(new SessionSnapshot(
+                SessionId: id,
+                Cwd: cwd,
+                TranscriptPath: hasFile ? transcriptPath! : "",
+                LastActivityUtc: new DateTimeOffset(lastWrite, TimeSpan.Zero),
+                State: SessionStateClassifier.Classify(entry, hasFile ? transcriptPath! : ""),
+                PendingMessage: entry?.Message,
+                Window: process.Window,
+                WindowTitle: null,
+                Subagents: hasFile && slugDir.Length > 0
+                    ? EnumerateSubagents(slugDir, id)
+                    : Array.Empty<SubagentSnapshot>()));
         }
 
         snapshots.Sort(CompareForDisplay);

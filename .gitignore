@@ -11,6 +11,7 @@
 # Claude Code
 .claude/*
 !.claude/settings.json
+!.claude/scripts/
 
 # Superpowers brainstorming visual companion
 .superpowers/

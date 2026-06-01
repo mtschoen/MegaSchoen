@@ -36,4 +36,7 @@
   <ItemGroup>
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Fixtures/sessions/*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

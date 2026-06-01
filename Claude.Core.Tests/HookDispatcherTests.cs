@@ -59,6 +59,64 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void Notification_ElicitationDialog_UpsertsAwaitingInput()
+    {
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Notification",
+            NotificationType = "elicitation_dialog",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            Message = "Claude is asking a question"
+        });
+
+        var entries = _store.Read();
+        Assert.IsTrue(entries.ContainsKey("s1"));
+        Assert.AreEqual(WaitingReason.AwaitingInput, entries["s1"].Reason);
+        Assert.AreEqual("Claude is asking a question", entries["s1"].Message);
+    }
+
+    [TestMethod]
+    public void Notification_ElicitationComplete_OverwritesAwaitingInputWithWorking()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.AwaitingInput
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Notification",
+            NotificationType = "elicitation_complete",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
+        });
+
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason);
+    }
+
+    [TestMethod]
+    public void Permission_ThenNextToolEvent_ClearsLatch_DenyPath()
+    {
+        // Deny fires no PostToolUse for the denied call, but the session keeps
+        // going: the next PreToolUse (or Stop) must move it off PendingPermission.
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "Notification", NotificationType = "permission_prompt",
+            SessionId = "s1", Cwd = "C:\\foo", Message = "needs permission"
+        });
+        Assert.AreEqual(WaitingReason.Permission, _store.Read()["s1"].Reason);
+
+        // user denies; assistant continues; next tool attempt:
+        _dispatcher.Dispatch(new HookPayload { HookEventName = "PreToolUse", SessionId = "s1", Cwd = "C:\\foo" });
+
+        Assert.AreEqual(WaitingReason.Working, _store.Read()["s1"].Reason,
+            "the next tool event after a deny clears the stale permission latch");
+    }
+
+    [TestMethod]
     public void Notification_OtherType_LeavesEntryIntact()
     {
         var existing = new SessionEntry

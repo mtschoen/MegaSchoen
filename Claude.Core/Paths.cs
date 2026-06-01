@@ -19,6 +19,11 @@ public static class Paths
     public static string HookBridgeLog { get; } =
         Path.Combine(AppDataDirectory, "hook-bridge.log");
 
+    // Default destination for the diagnostic hook-payload capture tee
+    // (see HookCapture). Only written when MEGASCHOEN_HOOK_CAPTURE is set.
+    public static string HookCaptureLog { get; } =
+        Path.Combine(AppDataDirectory, "hook-capture.ndjson");
+
     public static string ClaudeSettingsFile { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "settings.json");
 

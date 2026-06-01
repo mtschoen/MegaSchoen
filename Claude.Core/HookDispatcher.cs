@@ -38,8 +38,18 @@ public sealed class HookDispatcher
                     SetState(payload, WaitingReason.AwaitingInput, message: null);
                     break;
 
+                // A mid-task question dialog blocks on the user like a permission prompt.
+                case "Notification" when payload.NotificationType == "elicitation_dialog":
+                    SetState(payload, WaitingReason.AwaitingInput, payload.Message);
+                    break;
+
+                // The user answered the question; the turn resumes.
+                case "Notification" when payload.NotificationType is "elicitation_complete" or "elicitation_response":
+                    SetState(payload, WaitingReason.Working, message: null);
+                    break;
+
                 case "Notification":
-                    // auth_success, elicitation_*, etc. carry no state meaning.
+                    // auth_success, etc. carry no state meaning.
                     Logger.Log($"HookDispatcher: ignoring Notification type {payload.NotificationType}");
                     break;
 

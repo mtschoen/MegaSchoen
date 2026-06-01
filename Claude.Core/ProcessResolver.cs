@@ -79,6 +79,38 @@ public static class ProcessResolver
         return results;
     }
 
+    // Background ("claude agents" / /bg) sessions: claude.exe workers that carry
+    // --session-id on the command line, parented by a --bg-pty-host under the
+    // daemon. They fail the shell-parent filter in EnumerateClaudeCliProcesses,
+    // so enumerate them separately and carry the authoritative session id out.
+    public static List<ClaudeCliProcess> EnumerateBackgroundClaudeSessions(out Dictionary<uint, string> sessionIdByPid)
+    {
+        sessionIdByPid = new Dictionary<uint, string>();
+        var results = new List<ClaudeCliProcess>();
+        foreach (var process in Process.GetProcessesByName("claude"))
+        {
+            using (process)
+            {
+                try
+                {
+                    var pid = (uint)process.Id;
+                    var commandLine = TryGetProcessCommandLine(pid);
+                    if (!BackgroundSessionParser.TryParseWorkerSessionId(commandLine, out var sessionId)) continue;
+                    var parentPid = TryGetParentPid(pid) ?? 0;
+                    var cwd = TryGetProcessCwd(pid);
+                    var startTime = new DateTimeOffset(process.StartTime.ToUniversalTime(), TimeSpan.Zero);
+                    results.Add(new ClaudeCliProcess(pid, parentPid, cwd, startTime));
+                    sessionIdByPid[pid] = sessionId;
+                }
+                catch (Exception exception)
+                {
+                    Logger.Log($"EnumerateBackgroundClaudeSessions skipping pid {process.Id}: {exception.Message}");
+                }
+            }
+        }
+        return results;
+    }
+
     // shell pid -> visible terminal window (root owner). Lets the locator
     // attach each claude CLI process's parent shell to the user-facing terminal.
     public static Dictionary<uint, (IntPtr WindowHandle, string WindowTitle)> GetTerminalWindowsByCmdPid()
@@ -218,6 +250,53 @@ public static class ProcessResolver
         catch (Exception exception)
         {
             Logger.Log($"TryGetProcessCwd({pid}) failed: {exception.Message}");
+            return null;
+        }
+        finally
+        {
+            Kernel32.CloseHandle(handle);
+        }
+    }
+
+    // Reads a process's command line from its PEB. Mirrors TryGetProcessCwd but
+    // reads RTL_USER_PROCESS_PARAMETERS.CommandLine (UNICODE_STRING at
+    // ProcessParameters + 0x70 on x64: Length at +0x00, Buffer at +0x08).
+    // Best-effort: returns null on any failure.
+    static unsafe string? TryGetProcessCommandLine(uint pid)
+    {
+        var handle = Kernel32.OpenProcess(Kernel32.PROCESS_QUERY_LIMITED_INFORMATION | Kernel32.PROCESS_VM_READ, false, pid);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            var pbi = default(ProcessBasicInformation);
+            var status = NtDll.NtQueryInformationProcess(handle, NtDll.PROCESSBASICINFORMATION, ref pbi, Marshal.SizeOf<ProcessBasicInformation>(), out _);
+            if (status != 0 || pbi.PebBaseAddress == IntPtr.Zero) return null;
+
+            IntPtr processParameters;
+            if (!Kernel32.ReadProcessMemory(handle, pbi.PebBaseAddress + 0x20, &processParameters, (nuint)IntPtr.Size, out _))
+                return null;
+
+            ushort length;
+            if (!Kernel32.ReadProcessMemory(handle, processParameters + 0x70, &length, sizeof(ushort), out _))
+                return null;
+            if (length == 0 || length > 8192) return null;
+
+            IntPtr bufferPtr;
+            if (!Kernel32.ReadProcessMemory(handle, processParameters + 0x70 + 8, &bufferPtr, (nuint)IntPtr.Size, out _))
+                return null;
+            if (bufferPtr == IntPtr.Zero) return null;
+
+            var chars = new char[length / 2];
+            fixed (char* dest = chars)
+            {
+                if (!Kernel32.ReadProcessMemory(handle, bufferPtr, dest, length, out _))
+                    return null;
+            }
+            return new string(chars);
+        }
+        catch (Exception exception)
+        {
+            Logger.Log($"TryGetProcessCommandLine({pid}) failed: {exception.Message}");
             return null;
         }
         finally

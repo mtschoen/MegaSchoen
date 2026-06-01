@@ -1,0 +1,12 @@
+{
+  "name": "elicitation-midtask",
+  "cwd": "C:/replay/elicitation-midtask",
+  "sessionId": "replay-elicit",
+  "steps": [
+    { "event": "UserPromptSubmit", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "PreToolUse", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Notification", "notificationType": "elicitation_dialog", "message": "Claude is asking a question", "delayMs": 0, "expectAfter": "AwaitingInput" },
+    { "event": "Notification", "notificationType": "elicitation_complete", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Stop", "delayMs": 0, "expectAfter": "AwaitingInput" }
+  ]
+}

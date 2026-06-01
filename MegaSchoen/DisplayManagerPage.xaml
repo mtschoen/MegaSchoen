@@ -4,6 +4,7 @@
              xmlns:viewmodels="clr-namespace:MegaSchoen.ViewModels"
              xmlns:models="clr-namespace:DisplayManager.Core.Models;assembly=DisplayManager.Core"
              xmlns:core="clr-namespace:DisplayManager.Core;assembly=DisplayManager.Core"
+             xmlns:controls="clr-namespace:MegaSchoen.Controls"
              x:Class="MegaSchoen.DisplayManagerPage"
              Title="Display Manager">
 
@@ -11,6 +12,7 @@
         <viewmodels:DisplayManagerPageViewModel />
     </ContentPage.BindingContext>
 
+    <Grid>
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="20">
 
@@ -255,5 +257,7 @@
 
         </VerticalStackLayout>
     </ScrollView>
+        <controls:VersionStampView />
+    </Grid>
 
 </ContentPage>

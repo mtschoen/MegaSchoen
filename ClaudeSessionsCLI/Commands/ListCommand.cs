@@ -28,12 +28,25 @@ static class ListCommand
 
     static ActiveSessionEnumerator BuildEnumerator()
     {
+        // Replay/test seams (no-ops when the env vars are unset):
+        //   MEGASCHOEN_FAKE_PROCESSES → run with no real claude.exe (windowless procs)
+        //   MEGASCHOEN_STATE_DIR      → isolate the needy-sessions state directory
+        IClaudeProcessLocator locator;
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(EnvironmentProcessLocator.EnvironmentVariable)))
+        {
+            locator = new EnvironmentProcessLocator();
+        }
+        else
+        {
 #if WINDOWS
-        IClaudeProcessLocator locator = new WindowsClaudeProcessLocator();
+            locator = new WindowsClaudeProcessLocator();
 #else
-        IClaudeProcessLocator locator = new Claude.Core.Linux.LinuxClaudeProcessLocator();
+            locator = new Claude.Core.Linux.LinuxClaudeProcessLocator();
 #endif
-        var store = new StateStore();
+        }
+
+        var stateDir = Environment.GetEnvironmentVariable("MEGASCHOEN_STATE_DIR");
+        var store = string.IsNullOrWhiteSpace(stateDir) ? new StateStore() : new StateStore(stateDir);
         return new ActiveSessionEnumerator(locator, store);
     }
 

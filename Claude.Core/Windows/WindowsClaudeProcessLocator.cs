@@ -6,9 +6,8 @@ public sealed class WindowsClaudeProcessLocator : IClaudeProcessLocator
 {
     public IReadOnlyList<ClaudeWindow> EnumerateLiveSessions()
     {
+        // Foreground sessions: shell-parented claude.exe, possibly with a window.
         var processes = ProcessResolver.EnumerateClaudeCliProcesses();
-        if (processes.Count == 0) return Array.Empty<ClaudeWindow>();
-
         var terminalsByCmdPid = ProcessResolver.GetTerminalWindowsByCmdPid();
         var result = new List<ClaudeWindow>(processes.Count);
         foreach (var process in processes)
@@ -23,6 +22,21 @@ public sealed class WindowsClaudeProcessLocator : IClaudeProcessLocator
                 Title: hasTerminal ? terminal.WindowTitle : string.Empty,
                 WorkingDirectory: process.WorkingDirectory,
                 StartTimeUtc: process.StartTimeUtc));
+        }
+
+        // Background/daemon workers ("claude agents" / /bg): windowless, but they
+        // carry their authoritative --session-id. Disjoint from the foreground
+        // set (those are shell-parented; these are daemon-parented), so no dedup.
+        var backgroundProcesses = ProcessResolver.EnumerateBackgroundClaudeSessions(out var sessionIdByPid);
+        foreach (var process in backgroundProcesses)
+        {
+            result.Add(new ClaudeWindow(
+                ProcessId: process.Pid,
+                Window: WindowToken.Null,
+                Title: string.Empty,
+                WorkingDirectory: process.WorkingDirectory,
+                StartTimeUtc: process.StartTimeUtc,
+                SessionId: sessionIdByPid[process.Pid]));
         }
         return result;
     }

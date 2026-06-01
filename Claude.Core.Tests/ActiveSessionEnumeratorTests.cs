@@ -224,6 +224,50 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual(SessionState.Working, result[0].RollupState);
     }
 
+    // Background/daemon worker: windowless, carries its authoritative --session-id.
+    static ClaudeWindow BackgroundProc(uint pid, string sessionId, string cwd) =>
+        new(pid, WindowToken.Null, "", cwd, DateTimeOffset.UtcNow, sessionId);
+
+    [TestMethod]
+    public void Enumerate_AuthoritativeId_NoStoreNoTranscript_StillSurfaces()
+    {
+        using var fixture = new ClaudeProjectsFixture(); // no transcript, empty store
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(BackgroundProc(5000, "bg-375e9c68", @"C:\work\proj"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        var session = result.SingleOrDefault(s => s.SessionId == "bg-375e9c68");
+        Assert.IsNotNull(session, "a live background worker surfaces by its authoritative id with no transcript/state yet");
+        Assert.IsTrue(session!.Window.IsZero, "background worker is windowless");
+    }
+
+    [TestMethod]
+    public void Enumerate_AuthoritativeId_PrefersStoreCwdOverProcessHomeCwd()
+    {
+        using var fixture = new ClaudeProjectsFixture(); // no transcript
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        // Live finding: a background worker's PEB cwd is often the shared home dir,
+        // but its hook recorded the real task cwd. Trust the id; prefer that cwd.
+        store.Upsert("bg-674a8820", new SessionEntry
+        {
+            Cwd = @"C:\actual\task",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.AwaitingInput
+        });
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(BackgroundProc(5001, "bg-674a8820", @"C:\Users\mtsch"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        var session = result.SingleOrDefault(s => s.SessionId == "bg-674a8820");
+        Assert.IsNotNull(session, "authoritative id surfaces even when cwd-keying would mis-bucket the home dir");
+        Assert.AreEqual(SessionState.AwaitingInput, session!.State);
+        Assert.AreEqual(@"C:\actual\task", session.Cwd, "prefer the hook-recorded cwd over the worker's home-dir PEB cwd");
+    }
+
     [TestMethod]
     public void Enumerate_WaitingSortsAboveWorking()
     {

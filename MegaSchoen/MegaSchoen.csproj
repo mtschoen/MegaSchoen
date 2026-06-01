@@ -1,8 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.26100.0</TargetFrameworks>
+		<!-- Windows-only. Every active feature (display management, Claude sessions,
+		     remote hosts) is Windows-only: the Claude.Core project ref and several
+		     viewmodels (e.g. HostStatusViewModel) are #if WINDOWS, and SessionsPage.xaml
+		     binds those types unconditionally, so the android/ios/maccatalyst TFMs never
+		     actually compiled ("Cannot resolve type … HostStatusViewModel"). Re-add the
+		     mobile TFMs alongside a genuinely cross-platform SessionsPage if/when that
+		     work is done (the deferred cross-platform Sessions dashboard). -->
+		<TargetFrameworks>net10.0-windows10.0.26100.0</TargetFrameworks>
 
 		<!-- Both AnyCPU and x64 are declared so the .sln mapping (AnyCPU/x64/x86 selections all -->
 		<!-- route to Debug|x64) can resolve. Actual builds produced by our .sln mapping are x64. -->

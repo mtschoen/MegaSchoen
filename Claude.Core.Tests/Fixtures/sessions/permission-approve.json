@@ -1,0 +1,11 @@
+{
+  "name": "permission-approve",
+  "cwd": "C:/replay/permission-approve",
+  "sessionId": "replay-perm-approve",
+  "steps": [
+    { "event": "UserPromptSubmit", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Notification", "notificationType": "permission_prompt", "message": "Claude needs your permission to use Bash", "delayMs": 0, "expectAfter": "PendingPermission" },
+    { "event": "PostToolUse", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Stop", "delayMs": 0, "expectAfter": "AwaitingInput" }
+  ]
+}

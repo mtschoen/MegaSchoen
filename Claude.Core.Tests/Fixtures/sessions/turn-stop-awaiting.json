@@ -1,0 +1,10 @@
+{
+  "name": "turn-stop-awaiting",
+  "cwd": "C:/replay/turn-stop-awaiting",
+  "sessionId": "replay-stop",
+  "steps": [
+    { "event": "UserPromptSubmit", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "PostToolUse", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Stop", "delayMs": 0, "expectAfter": "AwaitingInput" }
+  ]
+}

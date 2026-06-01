@@ -1,0 +1,27 @@
+<Project>
+  <!-- Project-wide version idiom: SemVer base + git short-hash + -dirty.
+       The .NET 8+ SDK appends SourceRevisionId (full commit hash) to
+       AssemblyInformationalVersion automatically; this target shortens it and
+       flags uncommitted local builds so a stale/dirty binary is obvious.
+       See ~/.claude/notes/idioms_dotnet_version_stamp.md -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <Target Name="StampGitVersion" BeforeTargets="GetAssemblyVersion;CoreCompile">
+    <Exec Command="git rev-parse --short=7 HEAD" ConsoleToMSBuild="true"
+          ContinueOnError="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitShortHash" />
+    </Exec>
+    <Exec Command="git status --porcelain" ConsoleToMSBuild="true"
+          ContinueOnError="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitStatusOutput" />
+    </Exec>
+    <PropertyGroup>
+      <GitDirtySuffix Condition="'$(GitStatusOutput)' != ''">-dirty</GitDirtySuffix>
+      <InformationalVersion Condition="'$(GitShortHash)' != ''">$(Version)+$(GitShortHash)$(GitDirtySuffix)</InformationalVersion>
+      <InformationalVersion Condition="'$(GitShortHash)' == ''">$(Version)+nogit</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+</Project>

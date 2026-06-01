@@ -1,0 +1,10 @@
+{
+  "name": "session-end-falls-back",
+  "cwd": "C:/replay/session-end",
+  "sessionId": "replay-session-end",
+  "steps": [
+    { "event": "UserPromptSubmit", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Stop", "delayMs": 0, "expectAfter": "AwaitingInput" },
+    { "event": "SessionEnd", "delayMs": 0, "expectAfter": "Working" }
+  ]
+}

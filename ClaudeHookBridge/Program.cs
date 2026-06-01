@@ -50,6 +50,10 @@ public static class Program
                 return 0;
             }
 
+            // Diagnostic tee: capture the raw payload before deserialization so
+            // we record exactly what Claude sent, including unmodeled fields.
+            HookCapture.Capture(stdin);
+
             var payload = JsonSerializer.Deserialize<HookPayload>(stdin);
             if (payload is null)
             {
@@ -57,7 +61,9 @@ public static class Program
                 return 0;
             }
 
-            var dispatcher = new HookDispatcher(new StateStore());
+            var stateDir = Environment.GetEnvironmentVariable("MEGASCHOEN_STATE_DIR");
+            var store = string.IsNullOrWhiteSpace(stateDir) ? new StateStore() : new StateStore(stateDir);
+            var dispatcher = new HookDispatcher(store);
             dispatcher.Dispatch(payload);
             return 0;
         }

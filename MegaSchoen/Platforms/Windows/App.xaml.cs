@@ -44,6 +44,7 @@ public partial class App : MauiWinUIApplication
         var services = MauiWinUIApplication.Current.Services;
 
         MigrateAndSweepSessionState(services);
+        CheckBridgeFreshness();
 
         var messageWindow = services.GetRequiredService<MessageWindow>();
         var tray = services.GetRequiredService<TrayIconService>();
@@ -286,6 +287,42 @@ public partial class App : MauiWinUIApplication
         {
             Claude.Core.Logger.Log($"Startup zombie sweep failed: {exception.Message}");
         }
+    }
+
+    // Stale-binary guardrail: settings.json runs the MAUI-embedded ClaudeHookBridge
+    // copy. If its version diverges from the app's, the embedded copy was not
+    // rebuilt and status detection will be wrong (the 35k stale-event incident).
+    // App and bridge are built from the same tree, so their version stamps match
+    // unless the CopyClaudeHookBridge target failed to refresh the embedded copy.
+    static void CheckBridgeFreshness()
+    {
+        var appVersion = Claude.Core.BuildInfo.VersionFor(typeof(App).Assembly);
+        // The CopyClaudeHookBridge target drops ClaudeHookBridge.dll next to the app.
+        var bridgeDll = Path.Combine(AppContext.BaseDirectory, "ClaudeHookBridge.dll");
+        var bridgeVersion = Claude.Core.BuildInfo.VersionOfFile(bridgeDll);
+
+        // Compare the git stamp, not the full version: the MAUI app's SemVer
+        // prefix comes from ApplicationDisplayVersion (1.0) while the bridge's
+        // comes from Directory.Build.props (0.1.0), so they never match as whole
+        // strings. The "<hash>[-dirty]" suffix is the real same-commit signal.
+        if (Claude.Core.BuildInfo.BuildStamp(bridgeVersion) == Claude.Core.BuildInfo.BuildStamp(appVersion))
+        {
+            return;
+        }
+
+        Claude.Core.Logger.Log($"STALE BRIDGE: app={appVersion} bridge={bridgeVersion}");
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            var page = Microsoft.Maui.Controls.Application.Current?.Windows.FirstOrDefault()?.Page;
+            if (page is not null)
+            {
+                await page.DisplayAlert(
+                    "Hook bridge is stale",
+                    $"App is {appVersion} but the embedded ClaudeHookBridge is {bridgeVersion}. " +
+                    "Rebuild the solution (VS18 MSBuild) so session status detection is correct.",
+                    "OK");
+            }
+        });
     }
 
     void ShowMainWindow()

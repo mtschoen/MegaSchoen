@@ -1,0 +1,10 @@
+{
+  "name": "deny-then-continue",
+  "cwd": "C:/replay/deny-then-continue",
+  "sessionId": "replay-deny",
+  "steps": [
+    { "event": "Notification", "notificationType": "permission_prompt", "message": "Claude needs your permission to use Bash", "delayMs": 0, "expectAfter": "PendingPermission" },
+    { "event": "PreToolUse", "delayMs": 0, "expectAfter": "Working" },
+    { "event": "Stop", "delayMs": 0, "expectAfter": "AwaitingInput" }
+  ]
+}
