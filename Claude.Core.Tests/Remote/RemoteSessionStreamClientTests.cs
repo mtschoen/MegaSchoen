@@ -14,7 +14,8 @@ public class RemoteSessionStreamClientTests
         public void Emit(string line) => _lines.Writer.TryWrite(line);
         public void EndStream() => _lines.Writer.TryComplete();
         public void Start() => Started = true;
-        public async IAsyncEnumerable<string> ReadLinesAsync(CancellationToken ct)
+        public async IAsyncEnumerable<string> ReadLinesAsync(
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
         {
             await foreach (var l in _lines.Reader.ReadAllAsync(ct)) yield return l;
         }
@@ -33,9 +34,9 @@ public class RemoteSessionStreamClientTests
         var cts = new CancellationTokenSource();
         var run = client.RunAsync(cts.Token);
         fake.Emit("""[{"SessionId":"abc","Cwd":"/home/schoen/pr-crew","TranscriptPath":"/x","LastActivityUtc":"2026-05-24T03:00:00+00:00","State":"PendingPermission","RollupState":"PendingPermission","PendingMessage":null,"WindowTitle":"t","Subagents":[]}]""");
-        await Task.Delay(50);
+        await Task.Delay(50, TestContext.CancellationToken);
 
-        Assert.AreEqual(1, received.Count);
+        Assert.HasCount(1, received);
         Assert.AreEqual("abc", received[0][0].SessionId);
         Assert.AreEqual("llamabox", received[0][0].Host);   // tagged by the client
 
@@ -43,4 +44,6 @@ public class RemoteSessionStreamClientTests
         cts.Cancel();          // RunAsync catches OperationCanceledException and returns
         await run;
     }
+
+    public TestContext TestContext { get; set; }
 }

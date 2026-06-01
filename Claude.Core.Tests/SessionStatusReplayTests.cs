@@ -20,7 +20,7 @@ public class SessionStatusReplayTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(Scenarios), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(Scenarios))]
     public void Replay_StateMatchesExpectationAfterEachStep(string name, string path)
     {
         var scenario = SessionScenario.Load(path);

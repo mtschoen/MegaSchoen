@@ -23,7 +23,6 @@ public class ProfileStorageService
         // Ensure directory exists
         Directory.CreateDirectory(_configDirectory);
 
-        // Configure JSON serialization for human-readable output
         _jsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
@@ -52,7 +51,6 @@ public class ProfileStorageService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Error loading profiles: {ex.Message}");
-            // Return empty collection on error
             return new ProfileCollection();
         }
     }

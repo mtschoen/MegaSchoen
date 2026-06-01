@@ -17,7 +17,6 @@ public partial class App : MauiWinUIApplication
     /// </summary>
     public App()
     {
-        // Check for single instance before initializing
         _singleInstance = new SingleInstanceService();
         if (!_singleInstance.TryAcquire())
         {
@@ -35,7 +34,6 @@ public partial class App : MauiWinUIApplication
     {
         base.OnLaunched(args);
 
-        // Initialize tray icon and hotkeys after services are ready
         InitializeWindowsServices();
     }
 
@@ -178,8 +176,8 @@ public partial class App : MauiWinUIApplication
             WaitingReason? filter = name switch
             {
                 "claude-cycle-perms" => WaitingReason.Permission,
-                "claude-cycle-any"   => null,
-                _                    => null
+                "claude-cycle-any" => null,
+                _ => null
             };
 
             if (name is not ("claude-cycle-perms" or "claude-cycle-any"))
@@ -204,11 +202,9 @@ public partial class App : MauiWinUIApplication
             ShowMainWindow();
         };
 
-        // Check for --minimized argument
         var cmdArgs = Environment.GetCommandLineArgs();
         var startMinimized = cmdArgs.Contains("--minimized");
 
-        // Set up window close interception after window is ready
         Task.Run(async () =>
         {
             await Task.Delay(100);

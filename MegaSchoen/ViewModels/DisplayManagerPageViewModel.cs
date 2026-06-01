@@ -124,7 +124,6 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
         InitializeWindowsServices();
 #endif
 
-        // Load initial data
         _ = RefreshAllAsync();
     }
 
@@ -146,7 +145,6 @@ public class DisplayManagerPageViewModel : INotifyPropertyChanged
                 _keyCaptureService.CaptureCancelled += OnCaptureCancelled;
             }
 
-            // Initialize startup state from actual shortcut
             if (_startupService != null)
             {
                 _startWithWindows = _startupService.IsStartupEnabled;

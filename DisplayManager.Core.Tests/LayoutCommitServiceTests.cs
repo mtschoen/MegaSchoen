@@ -10,8 +10,14 @@ public class LayoutCommitServiceTests
     static SavedDisplayConfig Monitor(string serial, int x = 0, bool primary = false) =>
         new()
         {
-            EdidManufactureId = 1, EdidProductCodeId = 2, EdidSerialNumber = serial,
-            PositionX = x, Width = 1920, Height = 1080, RefreshRate = 60, IsPrimary = primary
+            EdidManufactureId = 1,
+            EdidProductCodeId = 2,
+            EdidSerialNumber = serial,
+            PositionX = x,
+            Width = 1920,
+            Height = 1080,
+            RefreshRate = 60,
+            IsPrimary = primary
         };
 
     static SavedDisplayProfile Preset() => new()

@@ -104,8 +104,11 @@ public class HookDispatcherTests
         // going: the next PreToolUse (or Stop) must move it off PendingPermission.
         _dispatcher.Dispatch(new HookPayload
         {
-            HookEventName = "Notification", NotificationType = "permission_prompt",
-            SessionId = "s1", Cwd = "C:\\foo", Message = "needs permission"
+            HookEventName = "Notification",
+            NotificationType = "permission_prompt",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            Message = "needs permission"
         });
         Assert.AreEqual(WaitingReason.Permission, _store.Read()["s1"].Reason);
 

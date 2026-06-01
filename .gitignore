@@ -19,3 +19,6 @@
 
 # Scratch output (screenshots from screenshot-editor.ps1, throwaway artifacts)
 scratch/
+
+# aislop runtime logs (keep .aislop/config.yml tracked)
+.aislop/*.jsonl

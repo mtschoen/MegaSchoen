@@ -11,18 +11,35 @@ public class DisplayDriftServiceTests
         int w = 3840, int h = 2160, double hz = 60.0, int rot = 0, bool primary = false)
         => new()
         {
-            MonitorName = $"{mfg}-{prod}", IsActive = true, IsPrimary = primary,
-            EdidManufactureId = mfg, EdidProductCodeId = prod, EdidSerialNumber = serial,
-            PositionX = x, PositionY = y, Width = w, Height = h, RefreshRate = hz, Rotation = rot
+            MonitorName = $"{mfg}-{prod}",
+            IsActive = true,
+            IsPrimary = primary,
+            EdidManufactureId = mfg,
+            EdidProductCodeId = prod,
+            EdidSerialNumber = serial,
+            PositionX = x,
+            PositionY = y,
+            Width = w,
+            Height = h,
+            RefreshRate = hz,
+            Rotation = rot
         };
 
     static SavedDisplayConfig Cfg(int mfg, int prod, string serial, int x, int y,
         int w = 3840, int h = 2160, double hz = 60.0, int rot = 0, bool primary = false)
         => new()
         {
-            MonitorName = $"{mfg}-{prod}", EdidManufactureId = mfg, EdidProductCodeId = prod,
-            EdidSerialNumber = serial, PositionX = x, PositionY = y, Width = w, Height = h,
-            RefreshRate = hz, Rotation = rot, IsPrimary = primary
+            MonitorName = $"{mfg}-{prod}",
+            EdidManufactureId = mfg,
+            EdidProductCodeId = prod,
+            EdidSerialNumber = serial,
+            PositionX = x,
+            PositionY = y,
+            Width = w,
+            Height = h,
+            RefreshRate = hz,
+            Rotation = rot,
+            IsPrimary = primary
         };
 
     static SavedDisplayProfile Profile(params SavedDisplayConfig[] displays)

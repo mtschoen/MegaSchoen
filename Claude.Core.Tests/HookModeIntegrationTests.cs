@@ -43,8 +43,8 @@ public class HookModeIntegrationTests
             var stateFile = Path.Combine(tempLocalAppData, "MegaSchoen", "needy-sessions", "integration-s1.json");
             Assert.IsTrue(File.Exists(stateFile), $"per-session state file was not created at {stateFile}");
             var contents = File.ReadAllText(stateFile);
-            StringAssert.Contains(contents, "C:\\\\foo");
-            StringAssert.Contains(contents, "Claude needs your permission");
+            Assert.Contains("C:\\\\foo", contents);
+            Assert.Contains("Claude needs your permission", contents);
         }
         finally
         {

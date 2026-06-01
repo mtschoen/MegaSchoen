@@ -121,7 +121,6 @@ sealed class MessageWindow : IDisposable
                 return IntPtr.Zero;
 
             default:
-                // Check for custom activation message
                 if (msg == ActivateMessage)
                 {
                     CustomMessageReceived?.Invoke(this, msg);

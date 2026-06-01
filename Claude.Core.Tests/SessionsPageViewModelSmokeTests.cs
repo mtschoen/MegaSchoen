@@ -22,7 +22,7 @@ public class SessionsPageViewModelSmokeTests
 
         var snapshots = enumerator.Enumerate();
 
-        Assert.AreEqual(0, snapshots.Count);
+        Assert.IsEmpty(snapshots);
     }
 
     [TestMethod]
@@ -114,8 +114,8 @@ public class SessionsPageViewModelSmokeTests
 
         var snapshots = enumerator.Enumerate();
 
-        Assert.AreEqual(1, snapshots.Count);
+        Assert.HasCount(1, snapshots);
         Assert.AreEqual(sessionId, snapshots[0].SessionId);
-        Assert.AreEqual(1, snapshots[0].Subagents.Count);
+        Assert.HasCount(1, snapshots[0].Subagents);
     }
 }

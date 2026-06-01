@@ -9,9 +9,16 @@ public class LayoutHasherTests
     static SavedDisplayConfig Monitor(string serial, int x, int y, int w = 1920, int h = 1080, double hz = 60, int rot = 0, bool primary = false) =>
         new()
         {
-            EdidManufactureId = 1, EdidProductCodeId = 2, EdidSerialNumber = serial,
-            PositionX = x, PositionY = y, Width = w, Height = h, RefreshRate = hz,
-            Rotation = rot, IsPrimary = primary
+            EdidManufactureId = 1,
+            EdidProductCodeId = 2,
+            EdidSerialNumber = serial,
+            PositionX = x,
+            PositionY = y,
+            Width = w,
+            Height = h,
+            RefreshRate = hz,
+            Rotation = rot,
+            IsPrimary = primary
         };
 
     [TestMethod]

@@ -105,7 +105,6 @@ sealed class KeyCaptureService : IDisposable
                 // Non-modifier key pressed
                 var keyName = VirtualKeyToKeyName(vkCode);
 
-                // Check for Escape to cancel
                 if (vkCode == VK_ESCAPE && _currentModifiers.Count == 0)
                 {
                     StopCapture();

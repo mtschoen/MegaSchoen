@@ -26,10 +26,10 @@ public class SettingsJsonInstallerTests
 
         Assert.IsTrue(File.Exists(_tempSettings));
         var contents = File.ReadAllText(_tempSettings);
-        StringAssert.Contains(contents, "Notification");
-        StringAssert.Contains(contents, "UserPromptSubmit");
-        StringAssert.Contains(contents, "Stop");
-        StringAssert.Contains(contents, "C:/bridge.exe");
+        Assert.Contains("Notification", contents);
+        Assert.Contains("UserPromptSubmit", contents);
+        Assert.Contains("Stop", contents);
+        Assert.Contains("C:/bridge.exe", contents);
     }
 
     [TestMethod]
@@ -39,11 +39,11 @@ public class SettingsJsonInstallerTests
         installer.Install("C:\\bridge.exe");
 
         var contents = File.ReadAllText(_tempSettings);
-        StringAssert.Contains(contents, "Notification");
-        StringAssert.Contains(contents, "UserPromptSubmit");
-        StringAssert.Contains(contents, "Stop");
-        StringAssert.Contains(contents, "PostToolUse");
-        StringAssert.Contains(contents, "SessionEnd");
+        Assert.Contains("Notification", contents);
+        Assert.Contains("UserPromptSubmit", contents);
+        Assert.Contains("Stop", contents);
+        Assert.Contains("PostToolUse", contents);
+        Assert.Contains("SessionEnd", contents);
     }
 
     [TestMethod]
@@ -68,7 +68,7 @@ public class SettingsJsonInstallerTests
 
         var contents = File.ReadAllText(_tempSettings);
         Assert.DoesNotContain("\\\\", contents, "settings JSON must not contain escaped backslashes in the command path");
-        StringAssert.Contains(contents, "C:/Program Files/Foo/bridge.exe");
+        Assert.Contains("C:/Program Files/Foo/bridge.exe", contents);
     }
 
     [TestMethod]
@@ -82,8 +82,8 @@ public class SettingsJsonInstallerTests
         installer.Install("C:\\bridge.exe");
 
         var contents = File.ReadAllText(_tempSettings);
-        StringAssert.Contains(contents, "permissions");
-        StringAssert.Contains(contents, "Bash(*:*)");
+        Assert.Contains("permissions", contents);
+        Assert.Contains("Bash(*:*)", contents);
     }
 
     [TestMethod]

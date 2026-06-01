@@ -13,12 +13,12 @@ public static class CheckCommand
         Console.WriteLine($"Bridge exe:     {bridgeExePath}");
         Console.WriteLine($"Settings file:  {Paths.ClaudeSettingsFile}");
         Console.WriteLine();
-        Print("Notification",     status.Notification,     status.NotificationPath);
+        Print("Notification", status.Notification, status.NotificationPath);
         Print("UserPromptSubmit", status.UserPromptSubmit, status.UserPromptSubmitPath);
-        Print("Stop",             status.Stop,             status.StopPath);
-        Print("PreToolUse",       status.PreToolUse,       status.PreToolUsePath);
-        Print("PostToolUse",      status.PostToolUse,      status.PostToolUsePath);
-        Print("SessionEnd",       status.SessionEnd,       status.SessionEndPath);
+        Print("Stop", status.Stop, status.StopPath);
+        Print("PreToolUse", status.PreToolUse, status.PreToolUsePath);
+        Print("PostToolUse", status.PostToolUse, status.PostToolUsePath);
+        Print("SessionEnd", status.SessionEnd, status.SessionEndPath);
 
         var allInstalled =
             status.Notification == InstallState.InstalledHere &&

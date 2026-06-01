@@ -6,6 +6,7 @@ namespace Claude.Core.Tests;
 public class StateStoreTests
 {
     string _tempDir = "";
+    private static readonly string[] expected = new[] { "a", "b" };
 
     [TestInitialize]
     public void Setup()
@@ -144,7 +145,7 @@ public class StateStoreTests
         store.Upsert("a", new SessionEntry { Cwd = "C:\\a", NotifiedAt = DateTimeOffset.UtcNow });
         store.Upsert("b", new SessionEntry { Cwd = "C:\\b", NotifiedAt = DateTimeOffset.UtcNow });
 
-        CollectionAssert.AreEquivalent(new[] { "a", "b" }, store.EnumerateSessionIds().ToList());
+        CollectionAssert.AreEquivalent(expected, store.EnumerateSessionIds().ToList());
     }
 
     [TestMethod]
