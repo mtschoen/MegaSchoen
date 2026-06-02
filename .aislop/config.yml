@@ -1,17 +1,19 @@
 # aislop — AI-slop quality gate (https://github.com/scanaislop/aislop)
 #
-# STATUS: READY-BUT-GATED. As of 2026-05-29 aislop's C# engine has NOT shipped, so on
-# this (C#-dominant) repo it scans no supported files and false-greens at a meaningless
-# 100. The real gate stays Roslyn + Roslynator + `dotnet format` (see Directory.Build.props
-# / .editorconfig / .gitea/workflows/ci.yml). aislop will cover C# on landing, but NEVER
-# the C++ in DisplayManagerNative/ (unsupported — clang-tidy/cppcheck gate that).
+# STATUS: ENABLED (2026-06-01). aislop's C# engine ships in the mtschoen/aislop fork
+# and this repo scans clean at 100/100, so the CI gate (the `aislop` job in
+# .gitea/workflows/ci.yml) is now live. It complements - does not replace - the Roslyn
+# + Roslynator + `dotnet format` gate (see Directory.Build.props / .editorconfig). aislop
+# covers the C# only; the C++ in DisplayManagerNative/ stays on clang-tidy/cppcheck.
 #
-# FLIP IT ON once aislop's C# engine ships:
-#   1. CI gate (③): uncomment the `aislop` job in .gitea/workflows/ci.yml.
-#   2. On-save hook (①): `aislop hook install --claude --project`
-#      (pins the hook repo-locally; pin a C#-capable version, NEVER @latest — it
-#      network-checks every edit).
-#   Clean up to >= failBelow first, THEN enforce (don't ratchet from a noisy baseline).
+# How CI runs it: `npx --yes "github:mtschoen/aislop#<commit>" ci .` - pinned to a fork
+# COMMIT, never npm and never @latest. Upstream npm aislop reuses version 0.10.1 with NO
+# C# engine, so a version pin would false-green; only the github-commit ref gets C#.
+#
+# NOT enabled: the on-save hook (`aislop hook install --claude --project`). It would pin
+# the hook to an npm version (no C# = useless here) and cannot easily target the fork
+# commit, so until the fork's C# support lands on npm, run `aislop scan .` manually
+# (the globally-installed fork build has the C# rules) and rely on the CI gate.
 
 ci:
   failBelow: 80          # fleet baseline (matches git-wizard)

@@ -123,21 +123,38 @@ jobs:
           --error-exitcode=1
           DisplayManagerNative/DisplayManagerNative.cpp
 
-  # ── AI-slop gate (aislop) — READY-BUT-GATED ──────────────────────────────────
-  # aislop's C# engine has not shipped (as of 2026-05-29); on this C#-dominant repo it
-  # would false-green at 100. Config lives in .aislop/config.yml. UNCOMMENT this job once
-  # aislop ships C# support (pin a C#-capable version, never @latest). Gitea Actions must
-  # use the npx CLI, NOT the GitHub composite action.
-  #
-  # aislop:
-  #   name: Lint AI-slop (aislop)
-  #   runs-on: windows-latest
-  #   timeout-minutes: 15
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #     - name: aislop CI gate (whole-repo score >= failBelow)
-  #       shell: pwsh
-  #       run: npx --yes aislop@<C#-capable-version> ci .
+  # ── AI-slop gate (aislop) ────────────────────────────────────────────────────
+  # aislop's C# engine ships in the mtschoen/aislop fork (upstream npm has no C#).
+  # The fork is published as @schoen/aislop to the self-hosted Gitea npm registry
+  # (see .npmrc): a prebuilt, integrity-pinned tarball, so the runner does not
+  # rebuild from source (the previous github-commit git dep rebuilt on the runner
+  # and hit the POSIX-only build script). roslynator (installed below) is aislop's
+  # C# analysis backend; without it the C# pass is heuristic-only. Threshold and
+  # excludes live in .aislop/config.yml (failBelow gates the whole-repo score).
+  # Bump the pinned version deliberately + re-validate (a newer ruleset can
+  # surface new findings).
+  aislop:
+    name: Lint AI-slop (aislop)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      # Trust Gitea's self-signed (mkcert) cert so npx can pull @schoen/aislop
+      # from the Gitea registry. Appends to Node's CA bundle (public deps still
+      # verify), unlike the blanket NODE_TLS_REJECT_UNAUTHORIZED=0 elsewhere.
+      NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/.gitea-ca.pem
+    steps:
+      - uses: actions/checkout@v4
+      # No actions/setup-node here: this is a host-mode Windows runner with
+      # Node LTS pre-installed (v24, the same node actions/checkout uses). On
+      # host mode setup-node@v4 tries to download a node .7z and extract it with
+      # act's bundled 7zr.exe, which fails with exit code 2 and breaks the job.
+      # The host node (>= aislop's node>=20 floor) serves npx directly.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+      - name: Install roslynator (aislop's C# analysis backend)
+        shell: pwsh
+        run: dotnet tool install -g roslynator.dotnet.cli
+      - name: aislop CI gate (whole-repo score >= failBelow)
+        shell: pwsh
+        run: npx --yes "@schoen/aislop@0.10.1" ci .
