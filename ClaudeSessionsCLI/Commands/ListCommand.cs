@@ -189,7 +189,8 @@ sealed record SnapshotDto(
     string RollupState,
     string? PendingMessage,
     string? WindowTitle,
-    SubagentDto[] Subagents)
+    SubagentDto[] Subagents,
+    int? SshClientPort)
 {
     public static SnapshotDto From(SessionSnapshot snapshot) => new(
         snapshot.SessionId,
@@ -200,7 +201,8 @@ sealed record SnapshotDto(
         snapshot.RollupState.ToString(),
         snapshot.PendingMessage,
         snapshot.WindowTitle,
-        snapshot.Subagents.Select(s => new SubagentDto(s.AgentId, s.LastActivityUtc, s.State.ToString())).ToArray());
+        snapshot.Subagents.Select(s => new SubagentDto(s.AgentId, s.LastActivityUtc, s.State.ToString())).ToArray(),
+        snapshot.SshClientPort);
 }
 
 sealed record SubagentDto(string AgentId, DateTimeOffset LastActivityUtc, string State);

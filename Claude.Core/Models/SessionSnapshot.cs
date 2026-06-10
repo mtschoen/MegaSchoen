@@ -10,7 +10,8 @@ public sealed record SessionSnapshot(
     WindowToken Window,
     string? WindowTitle,
     IReadOnlyList<SubagentSnapshot> Subagents,
-    string? Host = null)
+    string? Host = null,
+    int? SshClientPort = null)
 {
     public SessionState RollupState
     {

@@ -10,4 +10,5 @@ public interface IProcFileSystem
     string? ReadComm(int pid);          // /proc/<pid>/comm, trimmed (no trailing newline)
     string? ReadCwd(int pid);           // readlink /proc/<pid>/cwd
     long? ReadStartTicks(int pid);      // field 22 of /proc/<pid>/stat
+    string? ReadEnviron(int pid);       // raw NUL-delimited /proc/<pid>/environ, or null
 }

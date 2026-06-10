@@ -40,6 +40,9 @@ public sealed class ProcFileSystem : IProcFileSystem
         catch { return null; }
     }
 
+    public string? ReadEnviron(int pid) =>
+        SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "environ"));
+
     public long? ReadStartTicks(int pid)
     {
         var stat = SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "stat"));

@@ -64,4 +64,7 @@ public sealed class RemoteSessionStreamClient
         }
         catch { return null; }   // skip malformed line, keep stream alive
     }
+
+    // Test seam: exercise the NDJSON -> SessionSnapshot mapping without a process.
+    internal List<SessionSnapshot>? ParseForTest(string ndjsonLine) => Parse(ndjsonLine);
 }

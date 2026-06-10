@@ -137,7 +137,7 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
-    public void Enumerate_ResumeStartTimeFarFromCreation_StillCorrectId_WindowMayBeNull()
+    public void Enumerate_ResumeStartTimeFarFromCreation_StillCorrectId_WindowAttachedViaSingleProcessRule()
     {
         using var fixture = new ClaudeProjectsFixture();
         const string cwd = @"C:\repo\resumed";
@@ -155,7 +155,10 @@ public class ActiveSessionEnumeratorTests
 
         Assert.HasCount(1, result);
         Assert.AreEqual("resumed-1", result[0].SessionId, "identity is the filename, not a start-time guess");
-        Assert.IsTrue(result[0].Window.IsZero, "no confident window match => Focus disabled, but session still shown");
+        // The start-time match fails (2 days apart), but a single live process
+        // in the cwd is an unambiguous association: a resumed session in the
+        // cwd's only terminal is focusable.
+        Assert.IsFalse(result[0].Window.IsZero, "single-process cwd attaches the window even on a start-time miss");
     }
 
     [TestMethod]
@@ -223,6 +226,10 @@ public class ActiveSessionEnumeratorTests
         Assert.HasCount(2, result[0].Subagents);
         Assert.AreEqual(SessionState.Working, result[0].RollupState);
     }
+
+    static ClaudeWindow LiveProcWithPort(uint pid, string cwd, int sshClientPort, DateTime startUtc) =>
+        new(pid, WindowToken.Null, "", cwd, new DateTimeOffset(startUtc, TimeSpan.Zero),
+            SessionId: null, SshClientPort: sshClientPort);
 
     // Background/daemon worker: windowless, carries its authoritative --session-id.
     static ClaudeWindow BackgroundProc(uint pid, string sessionId, string cwd) =>
@@ -298,5 +305,127 @@ public class ActiveSessionEnumeratorTests
         Assert.AreEqual("session-b", result[0].SessionId);
         Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
         Assert.AreEqual("session-a", result[1].SessionId);
+    }
+
+    [TestMethod]
+    public void Enumerate_ThreadsSshClientPort_FromMatchedProcess()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\ssh";
+        var created = DateTime.UtcNow;
+        fixture.AddSession(SlugEncoder.Encode(cwd), "ssh-1",
+            """{"type":"assistant","message":{}}""", created);
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProcWithPort(100, cwd, 51000, created));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(51000, result[0].SshClientPort);
+    }
+
+    [TestMethod]
+    public void Enumerate_SingleProcess_CarriesSshClientPort_EvenWhenStartTimeDoesNotMatch()
+    {
+        // Regression (found on llamabox): on Linux .NET's file creation time
+        // tracks mtime, so an active remote session's transcript drifts past
+        // AttachWindow's 30s tolerance and no window attaches. The SshClientPort
+        // must still thread through when the cwd has a single unambiguous live
+        // process, instead of being dropped with the failed window match.
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\ssh-drift";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "ssh-2",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        // Process start time deliberately far from the transcript creation time,
+        // so AttachWindow's start-time match fails (no window attaches).
+        locator.Sessions.Add(LiveProcWithPort(100, cwd, 54861, DateTime.UtcNow.AddMinutes(-5)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(54861, result[0].SshClientPort, "port must thread even without a window match");
+        Assert.IsTrue(result[0].Window.IsZero, "no window should attach on a failed start-time match");
+    }
+
+    [TestMethod]
+    public void Enumerate_SingleProcessWithWindow_AttachesWindow_EvenWhenStartTimeDoesNotMatch()
+    {
+        // Rider rig find (2026-06-10): a freshly started claude creates no
+        // transcript until the first prompt, so the cwd's freshest OLD
+        // transcript surfaces as the session and its creation time is days
+        // away from the process start. With a single live process in the cwd
+        // the association is unambiguous - attach its window (the same rule
+        // the SshClientPort carry uses), otherwise Focus stays grayed out.
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\rider";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "rider-1",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow.AddDays(-6));
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(0x1234), "liminal - Rider", DateTime.UtcNow.AddMinutes(-5)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.IsFalse(result[0].Window.IsZero, "single live process in cwd must attach its window");
+        Assert.AreEqual("liminal - Rider", result[0].WindowTitle);
+    }
+
+    [TestMethod]
+    public void Enumerate_MultipleProcessesInCwd_DoesNotGuessWindow()
+    {
+        // The single-process rule must not extend to ambiguous cwds: with two
+        // live windowed processes and stale transcripts, attaching either
+        // window would risk focusing the wrong terminal.
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\rider-multi";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "rider-2",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow.AddDays(-6));
+        fixture.AddSession(SlugEncoder.Encode(cwd), "rider-3",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow.AddDays(-3));
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(0x1111), "term-a", DateTime.UtcNow.AddMinutes(-5)));
+        locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0x2222), "term-b", DateTime.UtcNow.AddMinutes(-5)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(2, result);
+        Assert.IsTrue(result[0].Window.IsZero, "ambiguous multi-process cwd must not guess a window");
+        Assert.IsTrue(result[1].Window.IsZero, "ambiguous multi-process cwd must not guess a window");
+    }
+
+    [TestMethod]
+    public void Enumerate_MultipleProcessesInCwd_DoesNotGuessSshClientPort()
+    {
+        // Pins the documented best-effort rule: with more than one live process
+        // in a cwd the session-to-process association is ambiguous, so no port
+        // may be carried unless the start-time window match attributes one.
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\ssh-multi";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "ssh-3",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+        fixture.AddSession(SlugEncoder.Encode(cwd), "ssh-4",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        // Both start times far from the transcript creation times, so the
+        // window match fails and neither port has an unambiguous owner.
+        locator.Sessions.Add(LiveProcWithPort(100, cwd, 51000, DateTime.UtcNow.AddMinutes(-5)));
+        locator.Sessions.Add(LiveProcWithPort(101, cwd, 52000, DateTime.UtcNow.AddMinutes(-5)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(2, result);
+        Assert.IsNull(result[0].SshClientPort, "ambiguous multi-process cwd must not guess a port");
+        Assert.IsNull(result[1].SshClientPort, "ambiguous multi-process cwd must not guess a port");
     }
 }

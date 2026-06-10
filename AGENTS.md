@@ -171,6 +171,8 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 - `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping: stored `WaitingReason` → `SessionState` (Permission/AwaitingInput/Working), with transcript tail-read only as the no-state-file fallback
 - `Claude.Core/HookDispatcher.cs` - Maps each Claude Code hook event to a state upsert/delete; churn-guarded so the per-tool `PostToolUse`/`PreToolUse` floods don't rewrite unchanged state
 - `Claude.Core/SlugEncoder.cs` - cwd → `~/.claude/projects/<slug>` directory naming
+- `Claude.Core/AncestorWindowResolver.cs` - pure process-ancestor → first-windowed-ancestor walk (shared by embedded-IDE and ssh Focus; see "Exotic-context session Focus" below)
+- `Claude.Core/SshSessionWindowResolver.cs` - ssh client port → owning `ssh.exe` pid → hosting terminal window (pure orchestration, Win32 injected)
 - `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - `EnumerateLiveSessions()`: every live claude.exe (via `ProcessResolver`), each mapped to its parent shell's terminal window when one exists; windowless processes are **kept** (emitted with `WindowToken.Null`), not dropped, so headless sessions still count for liveness
 - `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs` - `BringToFront` via `Win32ForegroundHelper` (three-way `AttachThreadInput`)
 - `ClaudeSessionsCLI/Commands/ListCommand.cs` - Three-mode list (human/JSON/NDJSON)
@@ -179,6 +181,20 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 - `MegaSchoen/SessionsPage.xaml(.cs)` - Sessions UI; `OnAppearing` calls `_viewModel.Start()`, `OnDisappearing` calls `Dispose`
 - `MegaSchoen/ViewModels/SessionsPageViewModel.cs` - FileSystemWatcher → bounded `Channel<byte>` → 250ms debounce → re-enumerate; idempotent `Start()`
 - `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs` - Display Manager UI logic
+
+### Exotic-context session Focus
+
+Focus works beyond the plain "claude in its own terminal window" case via two resolution paths sharing one primitive:
+
+- **Shared primitive:** `AncestorWindowResolver.Resolve` walks the process-ancestor chain from a start pid to the first ancestor owning a visible top-level window. Pure and platform-neutral: Win32 is injected as delegates (parent-pid lookup + a prebuilt pid→window map), cycle-guarded and depth-bounded. A stop-set halts the climb *without* matching, so a standalone-terminal chain never resolves to explorer.exe (the desktop).
+- **Embedded IDE terminals** (Rider / VS Code / devenv): claude descends from the IDE via a windowless shell, so the walk starts at the shell pid and climbs to the IDE's own top-level window.
+- **Remote ssh sessions** (cmd/Windows Terminal → `ssh.exe` → remote claude): the Linux enumerator reads `/proc/<pid>/environ` for `SSH_CONNECTION` and serializes the client source port as `SshClientPort` on the NDJSON stream. Locally, `SshSessionWindowResolver` maps that port → owning pid via `TcpConnectionTable` (`GetExtendedTcpTable`), rejects any owner that is not `ssh` (stale port reuse), then ancestor-walks to the hosting terminal window. **Limitation:** claude inside remote `tmux`/`mosh` doesn't inherit `SSH_CONNECTION`, so those sessions list with Focus hidden (graceful degradation).
+
+Rig-verified gotchas baked into the implementation (do not "simplify" these away):
+
+- When a cwd has exactly one live process, `ActiveSessionEnumerator` attaches that process's window/title and carries its `SshClientPort` even when the 30s start-time match misses - the association is unambiguous. The match misses in two rig-verified ways: on Linux .NET, file *creation* time tracks mtime (drops the piggybacked port); on Windows, a freshly started claude creates no transcript until the first prompt, so the cwd's freshest *old* transcript surfaces as the session (its creation time is days from the process start - found via Rider, where this grayed out Focus; also fixes resumed sessions). Multi-process cwds stay best-effort: never guess a window or port there.
+- `TcpConnectionTable` queries **both** the IPv4 and IPv6 owner-pid tables - ssh to a link-local host runs over IPv6, and the AF_INET table alone finds nothing.
+- The resolver's window map merges `GetTerminalWindowsByCmdPid` (keyed by shell pid) into `GetVisibleTopLevelWindowsByPid` (keyed by root-owner pid): a cmd/pwsh hosting ssh owns only a ConPTY pseudoconsole window whose root owner is the terminal host, so without the merge the ssh→cmd walk dead-ends.
 
 ### Native API Functions
 

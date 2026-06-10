@@ -32,6 +32,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<GlobalHotkeyService>();
         builder.Services.AddSingleton<KeyCaptureService>();
         builder.Services.AddSingleton<IClaudeWindowFocuser, WindowsClaudeWindowFocuser>();
+        builder.Services.AddSingleton<ISshSessionWindowResolver, Claude.Core.Windows.WindowsSshSessionWindowResolver>();
         builder.Services.AddSingleton<ClaudeWindowService>();
         builder.Services.AddSingleton<IClaudeProcessLocator, Claude.Core.Windows.WindowsClaudeProcessLocator>();
         builder.Services.AddSingleton<StateStore>();

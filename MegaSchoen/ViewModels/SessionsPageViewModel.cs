@@ -13,6 +13,7 @@ public sealed class SessionsPageViewModel : IDisposable
 {
     readonly ActiveSessionEnumerator _enumerator;
     readonly IClaudeWindowFocuser _focuser;
+    readonly ISshSessionWindowResolver _sshWindowResolver;
     readonly IDispatcher _dispatcher;
 
     readonly Channel<byte> _refreshSignal =
@@ -39,10 +40,12 @@ public sealed class SessionsPageViewModel : IDisposable
     public SessionsPageViewModel(
         ActiveSessionEnumerator enumerator,
         IClaudeWindowFocuser focuser,
+        ISshSessionWindowResolver sshWindowResolver,
         IDispatcher dispatcher)
     {
         _enumerator = enumerator;
         _focuser = focuser;
+        _sshWindowResolver = sshWindowResolver;
         _dispatcher = dispatcher;
 
         FocusCommand = new Command<SessionCardViewModel>(card =>
@@ -137,8 +140,18 @@ public sealed class SessionsPageViewModel : IDisposable
 
     void MergeRemote(string host, IReadOnlyList<SessionSnapshot> snapshots)
     {
-        _remoteByHost[host] = snapshots;
+        _remoteByHost[host] = snapshots.Select(EnrichRemoteWindow).ToList();
         RebuildMergedView();
+    }
+
+    // For a remote session that reported an ssh client port, find the local
+    // ssh/cmd window hosting it and stamp it onto the snapshot so Focus works.
+    SessionSnapshot EnrichRemoteWindow(SessionSnapshot snapshot)
+    {
+        if (snapshot.SshClientPort is not { } port) return snapshot;
+        return _sshWindowResolver.ResolveWindow(port) is { } resolved
+            ? snapshot with { Window = resolved.Window, WindowTitle = resolved.Title }
+            : snapshot;
     }
 
     void RebuildMergedView()

@@ -23,6 +23,9 @@ static partial class User32
     [LibraryImport("user32.dll")]
     public static partial int GetWindowTextLengthW(IntPtr hWnd);
 
+    [LibraryImport("user32.dll", EntryPoint = "GetClassNameW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int GetClassName(IntPtr hWnd, [Out] char[] buffer, int maxCount);
+
     [LibraryImport("user32.dll")]
     public static partial IntPtr GetAncestor(IntPtr hWnd, uint flags);
 

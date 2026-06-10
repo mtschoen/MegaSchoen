@@ -25,12 +25,16 @@ public sealed class LinuxClaudeProcessLocator : IClaudeProcessLocator
             if (ticks is null) continue;
 
             var startEpoch = _proc.BootTimeEpochSeconds + (ticks.Value / _proc.ClockTicksPerSecond);
+            int? sshClientPort = SshConnectionParser.TryParseClientPort(_proc.ReadEnviron(pid), out var port)
+                ? port
+                : null;
             result.Add(new ClaudeWindow(
                 ProcessId: (uint)pid,
                 Window: WindowToken.Null,
                 Title: string.Empty,
                 WorkingDirectory: cwd,
-                StartTimeUtc: DateTimeOffset.FromUnixTimeSeconds(startEpoch)));
+                StartTimeUtc: DateTimeOffset.FromUnixTimeSeconds(startEpoch),
+                SshClientPort: sshClientPort));
         }
         return result;
     }

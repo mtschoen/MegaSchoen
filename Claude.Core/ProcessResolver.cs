@@ -133,7 +133,65 @@ public static class ProcessResolver
         return result;
     }
 
-    static uint? TryGetParentPid(uint pid)
+    // Desktop-shell window classes that must never be treated as a focusable
+    // host (Progman/WorkerW = desktop, Shell_TrayWnd = taskbar, etc.).
+    static readonly HashSet<string> DesktopShellClasses = new(StringComparer.Ordinal)
+    {
+        "Progman", "WorkerW", "Shell_TrayWnd", "Shell_SecondaryTrayWnd",
+        "Button", "DV2ControlHost", "NotifyIconOverflowWindow",
+    };
+
+    // Every visible top-level (root-owner) window, keyed by owning PID. Unlike
+    // GetTerminalWindowsByCmdPid this is NOT restricted to shell PIDs - it is
+    // the map the ancestor resolver climbs into to find an IDE/host window.
+    public static Dictionary<uint, (IntPtr Hwnd, string Title)> GetVisibleTopLevelWindowsByPid()
+    {
+        var result = new Dictionary<uint, (IntPtr, string)>();
+        var seenRoots = new HashSet<IntPtr>();
+        User32.EnumWindowsProc callback = (hwnd, _) =>
+        {
+            var root = User32.GetAncestor(hwnd, User32.GA_ROOTOWNER);
+            if (root == IntPtr.Zero) root = hwnd;
+            if (!seenRoots.Add(root)) return true;
+            if (!User32.IsWindowVisible(root)) return true;
+            if (DesktopShellClasses.Contains(GetWindowClass(root))) return true;
+            User32.GetWindowThreadProcessId(root, out var pid);
+            // First visible window per PID wins; good enough for an IDE main window.
+            if (!result.ContainsKey(pid)) result[pid] = (root, GetWindowTitle(root));
+            return true;
+        };
+        User32.EnumWindows(callback, IntPtr.Zero);
+        return result;
+    }
+
+    // explorer.exe is the launcher of standalone terminals; treat it as a STOP
+    // boundary for the ancestor walk so a chain that reaches it never resolves
+    // to a File Explorer or desktop window.
+    public static HashSet<uint> GetExplorerPids()
+    {
+        var pids = new HashSet<uint>();
+        try
+        {
+            foreach (var process in Process.GetProcessesByName("explorer"))
+            {
+                using (process) pids.Add((uint)process.Id);
+            }
+        }
+        catch (Exception exception)
+        {
+            Logger.Log($"GetExplorerPids failed: {exception.Message}");
+        }
+        return pids;
+    }
+
+    static string GetWindowClass(IntPtr hwnd)
+    {
+        var buffer = new char[256];
+        var copied = User32.GetClassName(hwnd, buffer, buffer.Length);
+        return copied > 0 ? new string(buffer, 0, copied) : "";
+    }
+
+    public static uint? TryGetParentPid(uint pid)
     {
         var handle = Kernel32.OpenProcess(Kernel32.PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
         if (handle == IntPtr.Zero) return null;

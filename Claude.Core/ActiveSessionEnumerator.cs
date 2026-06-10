@@ -110,7 +110,26 @@ public sealed class ActiveSessionEnumerator
         {
             var entry = stateBySessionId.TryGetValue(candidate.Id, out var e) ? e : null;
             var state = SessionStateClassifier.Classify(entry, candidate.TranscriptPath);
-            var (window, title) = AttachWindow(procs, candidate.CreationUtc, usedProcesses);
+            var (window, title, sshClientPort) = AttachWindow(procs, candidate.CreationUtc, usedProcesses);
+            // Neither the window nor the SSH client port may depend solely on
+            // AttachWindow's start-time match: when the cwd has a single live
+            // process the session-to-process association is unambiguous, so its
+            // facts attach directly. The match misses in two rig-verified ways:
+            //  - Linux remote: .NET's file creation time tracks mtime, so an
+            //    active session's transcript drifts past the 30s tolerance and
+            //    the piggybacked port is dropped (Linux has no window anyway).
+            //  - Windows (Rider find, 2026-06-10): a freshly started claude has
+            //    no transcript until the first prompt, so the cwd's freshest OLD
+            //    transcript surfaces as the session; its creation time is days
+            //    from the process start and Focus grays out without this attach.
+            // Multi-session-per-cwd stays best-effort (no guessing).
+            if (window.IsZero && procs.Count == 1 && !usedProcesses.Contains(procs[0].ProcessId))
+            {
+                usedProcesses.Add(procs[0].ProcessId);
+                window = procs[0].Window;
+                title = procs[0].Title;
+            }
+            sshClientPort ??= procs.Count == 1 ? procs[0].SshClientPort : null;
             var subagents = EnumerateSubagents(slugDir, candidate.Id);
 
             result.Add(new SessionSnapshot(
@@ -122,7 +141,8 @@ public sealed class ActiveSessionEnumerator
                 PendingMessage: entry?.Message,
                 Window: window,
                 WindowTitle: string.IsNullOrEmpty(title) ? null : title,
-                Subagents: subagents));
+                Subagents: subagents,
+                SshClientPort: sshClientPort));
         }
         return result;
     }
@@ -171,7 +191,8 @@ public sealed class ActiveSessionEnumerator
                 WindowTitle: null,
                 Subagents: existingTranscript is not null && slugDir.Length > 0
                     ? EnumerateSubagents(slugDir, id)
-                    : Array.Empty<SubagentSnapshot>()));
+                    : Array.Empty<SubagentSnapshot>(),
+                SshClientPort: process.SshClientPort));
         }
     }
 
@@ -181,7 +202,7 @@ public sealed class ActiveSessionEnumerator
     // tolerance of the transcript's creation time, and surface its window.
     // Returns (Null, "") when no confident match or the matched process is
     // windowless.
-    static (WindowToken Window, string Title) AttachWindow(
+    static (WindowToken Window, string Title, int? SshClientPort) AttachWindow(
         List<ClaudeWindow> procs, DateTime creationUtc, HashSet<uint> usedProcesses)
     {
         ClaudeWindow? best = null;
@@ -199,9 +220,9 @@ public sealed class ActiveSessionEnumerator
         if (best is { } match && bestDelta <= StartTimeMatchTolerance)
         {
             usedProcesses.Add(match.ProcessId);
-            return (match.Window, match.Title);
+            return (match.Window, match.Title, match.SshClientPort);
         }
-        return (WindowToken.Null, string.Empty);
+        return (WindowToken.Null, string.Empty, null);
     }
 
     static string NormalizeCwd(string? cwd) => (cwd ?? "").TrimEnd('\\', '/');

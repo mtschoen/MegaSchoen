@@ -90,11 +90,11 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
     public IReadOnlyList<SubagentSnapshot> Subagents => _snapshot.Subagents;
 
     public bool IsRemote => _snapshot.Host is not null;
-    // Visible for all local sessions; remote sessions can't be focused at all.
-    public bool FocusButtonVisible => !IsRemote;
-    // Enabled only when a terminal window was attached. Windowless local
-    // sessions (headless -p, unresolved --resume) show a greyed-out button.
-    public bool CanFocus => !IsRemote && !_snapshot.Window.IsZero;
+    // Local sessions always show the button (greyed when windowless). Remote
+    // sessions show it ONLY once a hosting ssh/cmd window was resolved.
+    public bool FocusButtonVisible => !IsRemote || !_snapshot.Window.IsZero;
+    // Enabled whenever a window is attached - local terminal OR resolved remote ssh.
+    public bool CanFocus => !_snapshot.Window.IsZero;
     public string HostLabel => _snapshot.Host ?? "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
