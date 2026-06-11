@@ -52,6 +52,8 @@ MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
 
 **Use Visual Studio 18's MSBuild, not VS 2022's.** Only VS 18 ships the v145 native toolset *and* the .NET 10 SDK this solution needs; VS 2022's MSBuild resolves SDK 9.0.x and lacks v145, so it fails on both `DisplayManagerNative.vcxproj` (MSB8020 "v145 not found") and every net10 project (NETSDK1045 "does not support .NET 10"). Discover the right one with `vswhere -latest` — the VS install folder scheme flipped from year-based (`2022`) to sequential (`18`), so a plain numeric folder sort wrongly ranks `2022` above `18`. Build the **solution** (`MegaSchoen.sln`), never the bare `MegaSchoen.csproj` (it fans out to all four TFMs — android/ios/maccatalyst/windows — and fails). The `screenshot-editor.ps1` pipeline encodes this discovery.
 
+**Stale incremental Release output crashes the app at startup.** If MegaSchoen.exe (Release) dies instantly with `0xc000027b` in `Microsoft.UI.Xaml.dll` (WER APPCRASH P7=`80131522`, TypeLoadException), the incremental Release `bin/obj` is mixing assemblies from before and after merged work. Wipe `MegaSchoen\bin\x64\Release` + `MegaSchoen\obj\x64\Release` and rebuild the solution clean (hit 2026-06-10 after three PRs landed between Release builds). The autostart daily-driver app runs from the Release output path, so rebuild Release after merging session-dashboard changes.
+
 **`-p:Platform=x64` is no longer required.** The `.sln` maps every solution-level platform selection correctly: MegaSchoen (MAUI) always builds as `x64` (needed by `WindowsAppSDKSelfContained`), library projects always build as `AnyCPU`, and `DisplayManagerNative` always builds as `x64`. Passing the flag is harmless but redundant. IDE F5 also produces the right outputs without any config tweaks.
 
 Output locations after a successful build:
@@ -82,7 +84,18 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 ```
 Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it emits one-shot JSON instead of an ANSI live table.
 
-## Current Status (Last updated: 2026-05-23)
+## Current Status (Last updated: 2026-06-10)
+
+### ✅ Exotic-context Focus Merged (PR #20)
+
+Focus now works for every session host context (merged to main 2026-06-10, all verified on-screen):
+
+- **Plain terminal windows** - the original shell-pid terminal map.
+- **Embedded IDE terminals** (Rider / VS Code / devenv) - ancestor walk from the windowless shell to the IDE's top-level window.
+- **Remote ssh sessions** - `SSH_CONNECTION` client port over the NDJSON stream, mapped locally to the owning `ssh.exe` and its hosting terminal window (IPv4+IPv6). `tmux`/`mosh` degrade gracefully (no Focus).
+- **Fresh and resumed sessions** - a cwd with exactly one live process attaches that process's window even when the 30s start-time match misses.
+
+See "Exotic-context session Focus" under Architecture Overview for the design.
 
 ### ✅ Active Claude Sessions Dashboard Working
 
