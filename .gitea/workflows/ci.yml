@@ -24,12 +24,66 @@ jobs:
       - name: Restore
         shell: pwsh
         run: dotnet restore Claude.Core.Tests/Claude.Core.Tests.csproj
-      - name: Build
+      # Coverage is measured on the Windows TFM (this runner) so Windows-only code
+      # counts toward the denominator; coverlet.msbuild instruments at build time, so
+      # this step builds (no --no-build). Exclusions (generated + live-OS Win32 glue)
+      # live in the test .csproj. The scope/baseline is documented in TEST-REPORT.md.
+      - name: Test + coverage (Windows TFM)
         shell: pwsh
-        run: dotnet build Claude.Core.Tests/Claude.Core.Tests.csproj -c Release --no-restore
-      - name: Test
+        run: >
+          dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj
+          -f net10.0-windows10.0.26100.0 -c Release -v normal
+          /p:CollectCoverage=true /p:CoverletOutput=coverage.cobertura.xml
+      # The net10.0 TFM carries the Linux-only tests (ProcFileSystem, the Linux
+      # process locator) that the Windows TFM #if-excludes; run it for correctness.
+      - name: Test (Linux TFM)
         shell: pwsh
-        run: dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -c Release --no-build -v normal
+        run: dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -f net10.0 -c Release -v normal
+      # Parse Cobertura natively in PowerShell (the Windows runner has no python) and
+      # POST the pr-crew/coverage commit status the gate reads. Merges line hits across
+      # any matched reports (covered if any report hits the line). state=error (still
+      # exit 0 under if:always) when no report is found, so the gate sees "unreadable".
+      - name: Post coverage status
+        if: always()
+        shell: pwsh
+        run: |
+          $state = "error"; $desc = "coverage measurement failed"
+          try {
+            $files = Get-ChildItem -Path . -Recurse -Filter coverage.cobertura*.xml |
+              Where-Object { $_.FullName -notmatch '[\\/](bin|obj)[\\/]' }
+            if (-not $files) { throw "no Cobertura XML matched" }
+            $lines = @{}
+            foreach ($file in $files) {
+              [xml]$report = Get-Content -LiteralPath $file.FullName
+              foreach ($class in $report.SelectNodes('//class')) {
+                $filename = $class.filename
+                foreach ($line in $class.SelectNodes('.//line')) {
+                  $key = "${filename}:$($line.number)"
+                  $hit = ([int]$line.hits) -gt 0
+                  if ($lines.ContainsKey($key)) { $lines[$key] = $lines[$key] -or $hit }
+                  else { $lines[$key] = $hit }
+                }
+              }
+            }
+            $total = $lines.Count
+            if ($total -eq 0) { throw "no source lines in Cobertura XML" }
+            $covered = ($lines.Values | Where-Object { $_ }).Count
+            $invariant = [System.Globalization.CultureInfo]::InvariantCulture
+            $pct = ([math]::Round(100.0 * $covered / $total, 2)).ToString($invariant)
+            $state = "success"; $desc = "$pct% line coverage"
+          } catch {
+            Write-Host "coverage parse failed: $_"
+          }
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $body = @{ context = "pr-crew/coverage"; state = $state; description = $desc; target_url = $runUrl } | ConvertTo-Json -Compress
+          Write-Host "posting status: $body"
+          curl.exe -sk -X POST `
+            -H "Authorization: token $env:GITHUB_TOKEN" `
+            -H "Content-Type: application/json" `
+            -d $body `
+            "$env:GITHUB_SERVER_URL/api/v1/repos/$env:GITHUB_REPOSITORY/statuses/$env:GITHUB_SHA"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
   lint:
     name: Lint C# (format + analyzers)
@@ -157,4 +211,4 @@ jobs:
         run: dotnet tool install -g roslynator.dotnet.cli
       - name: aislop CI gate (whole-repo score >= failBelow)
         shell: pwsh
-        run: npx --yes "@schoen/aislop@0.10.1" ci .
+        run: npx --yes "@schoen/aislop@0.12.0" ci .

@@ -64,4 +64,13 @@ public class SessionStateClassifierTests
         var missingPath = Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.jsonl");
         Assert.AreEqual(SessionState.Unknown, SessionStateClassifier.Classify(stateEntry: null, missingPath));
     }
+
+    [TestMethod]
+    public void Classify_StateStoreHitWithUnrecognizedReason_ReturnsUnknown()
+    {
+        // Defensive default of the reason switch: an out-of-range WaitingReason
+        // (e.g. a future value read from an older/newer state file) maps to Unknown.
+        var entry = new SessionEntry { Reason = (WaitingReason)99, TranscriptPath = _tempFile };
+        Assert.AreEqual(SessionState.Unknown, SessionStateClassifier.Classify(entry, _tempFile));
+    }
 }

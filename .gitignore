@@ -22,3 +22,7 @@ scratch/
 
 # aislop runtime logs (keep .aislop/config.yml tracked)
 .aislop/*.jsonl
+
+# Coverage artifacts (coverlet.msbuild output + `dotnet test --collect` results)
+[Tt]est[Rr]esults/
+coverage.cobertura*.xml

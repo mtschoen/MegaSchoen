@@ -1,65 +1,58 @@
-MegaSchoen test report - 2026-05-31
+MegaSchoen test report - 2026-06-18
+===========================================
 
 Status:   PASS
-Mode:     close-the-gap (linter rollout) / best-effort (aislop)
-Tests:    156 total (117 Claude.Core.Tests + 39 DisplayManager.Core.Tests)
-Git:      fix/linter-analyzers-not-enabled, off main ea35948 (post-#14)
-Coverage: not instrumented (no line-coverage tool wired yet; tracked follow-up)
+Mode:     close-the-gap (wire up + clear the pr-crew/coverage 80% gate, issue #8)
+Tests:    162 total on the coverage TFM (Claude.Core.Tests, net10.0-windows10.0.26100.0)
+          The net10.0 (cross-platform) TFM also runs in CI for correctness; it
+          carries the Linux-only tests (ProcFileSystem, LinuxClaudeProcessLocator)
+          that the Windows TFM #if-excludes.
+Git:      feat/coverage-gate-pr-crew (base main bab4bda)
 
-Lint (enforced gates - all GREEN, analyzers now ACTUALLY enabled):
-  dotnet format whitespace : 0 changes (--verify-no-changes clean, whole solution)
-  Roslyn analyzers         : 0 findings (EnableNETAnalyzers, AnalysisLevel=latest-Recommended)
-  Roslynator.Analyzers     : 0 findings (4.15.0, C# projects)
-  MSTest analyzers         : 0 findings (MSTEST0001/0037/0052 etc.)
-  cppcheck (--enable=all)  : 0 findings (DisplayManagerNative.cpp; json.hpp excluded)
-  Build                    : full MSBuild solution rebuild -> 0 warnings, 0 errors (8 projects);
-                             3 CI projects rebuild clean with -warnaserror
+Coverage: 828/900 line statements = 92.0% line coverage
+          Scope:  Claude.Core production assembly, measured on the
+                  net10.0-windows10.0.26100.0 TFM (the CI Windows runner) so
+                  Windows-only code counts toward the denominator.
+          Tool:   coverlet.msbuild -> Cobertura; CI posts the percent as the
+                  `pr-crew/coverage` commit status the gate reads (see
+                  schoen/pr-crew docs/coverage-gate.md). Gate threshold: 80%.
+          Exclusions (in Claude.Core.Tests.csproj <ExcludeByFile>, per case):
+            - **/*.g.cs              source-generated P/Invoke marshalling stubs
+            - **/Interop/*.cs        hand-written Win32 P/Invoke declaration layers
+            - **/Windows/*.cs        Win32 orchestration needing a live desktop
+            - **/ProcessResolver.cs  live process/window enumeration + PEB reads
+            - **/Remote/SshStreamProcess.cs  thin live-`ssh` subprocess wrapper
+          These are genuinely-untestable platform glue requiring a live desktop
+          session; the *pure* logic they feed was already extracted into
+          separately-tested classes (AncestorWindowResolver, SshConnectionParser,
+          BackgroundSessionParser, SshSessionWindowResolver - all covered).
+          0 source-level [ExcludeFromCodeCoverage] / pragma annotations.
 
-  Gate mechanism: dotnet build -warnaserror in CI for the dotnet-buildable managed
-  projects (Claude.Core.Tests, ClaudeSessionsCLI, ClaudeHookBridge); full-solution
-  MSBuild -warnaserror locally for the native-referencing / MAUI projects.
+          Out of automated measurement (documented baseline, not regressed by this
+          change): DisplayManager.Core (native-C++-coupled; its 39 managed tests
+          still run locally), the CLI entry points (DisplayManagerCLI /
+          ClaudeSessionsCLI / ClaudeHookBridge Program.cs), and the MAUI UI.
 
-  IMPORTANT (why this report changed): PR #14 merged with the analyzer ENABLEMENT
-  missing - the Directory.Build.props Roslynator block and the .editorconfig CA-rule
-  config were lost in a branch reset, so EnableNETAnalyzers/Roslynator never ran and
-  the green "-warnaserror" gate was hollow (no analyzers => no warnings to fail on).
-  This change restores both config pieces and drives the ~104 findings they surface
-  to zero across the whole solution. The CA1707 test-method exemption was widened to
-  include DisplayManager.Core.Tests (added by #13, absent from the original config).
-  Always rebuild (-t:Rebuild) to validate the analyzer gate - an incremental no-op
-  build reports a deceptive "0 warnings".
+          Remaining in-scope gaps (all defensive last-resort catch blocks that the
+          code itself never lets throw, e.g. Logger / HookCapture / StateStore
+          best-effort I/O guards): ~72 lines. They sit below the public surface and
+          are not reachable without faulting the OS underneath them.
 
-  Representative fixes (recipe mirrors the original 589ee51 cleanup):
-    - Interop User32/Kernel32 made internal (CA1401 P/Invoke visibility + CA1707 constants)
-    - culture-aware string ops: ToLowerInvariant, StartsWith(char)/StringComparison.Ordinal,
-      int.ToString(CultureInfo.InvariantCulture) (CA1304/1305/1310/1311/1866)
-    - cached JsonSerializerOptions (CA1869); concrete return/param types (CA1859)
-    - StartupService -> static class; private/instance helpers -> static (CA1822); sealed
-      converters (CA1852); redundant initializers removed (CA1805)
-    - IntPtr->int explicit checked (CA2020); P/Invoke marshaling BestFitMapping=false (CA2101);
-      screenshot-test P/Invoke -> char[] + discards (CA1838/CA1806)
-    - ProfileCollection -> ProfileConfiguration (CA1711, config root not an ICollection)
-    - SessionsPageViewModel: drop unused INotifyPropertyChanged/PropertyChanged (CS0067)
-    - [assembly: DoNotParallelize] for DisplayManager.Core.Tests + MegaSchoen.UITests (MSTEST0001)
-    - obsolete DisplayAlert -> DisplayAlertAsync (CS0618)
+Lint (gates that apply to the touched managed code - all GREEN):
+  dotnet format whitespace : 0 changes (Claude.Core.Tests, --verify-no-changes)
+  Roslyn + Roslynator      : 0 findings (Claude.Core.Tests built -warnaserror, both TFMs)
+  MSTest analyzers         : 0 findings (MSTEST0037 Assert.HasCount/IsEmpty applied)
+  cppcheck (C++)           : unchanged - no native code touched this change
+  aislop (local 0.12.0)    : new/changed files 0 findings. The best-effort empty
+                             catches previously noted in the test cleanup were
+                             removed (HookCaptureTests) to follow the let-it-throw
+                             convention in Fakes/ClaudeProjectsFixture.cs:40 (Dispose
+                             guards with Directory.Exists and lets delete failures
+                             throw, no catch), per PR review. No empty-catch finding
+                             remains. CI gate now pinned to @schoen/aislop@0.12.0
+                             (was 0.10.1).
 
-aislop (AI-slop gate - CLEARED, still NOT enforced in CI):
-  Engine: local mtschoen/aislop fork, v0.10.1 (C#-capable). Score 100/100 ("Healthy"),
-  0 findings (was 22/100, 34 findings). CI aislop job stays gated regardless: the
-  C#-capable engine is not on npm (upstream npm aislop has no C# support), so the job
-  cannot run in CI yet - un-gate only once the fork is published/vendorable.
-
-  Burned down (all 34 findings cleared):
-     4  swallowed-exception (err) - AUDITED intentional best-effort; documented in place
-        with /* */ block comments (zero compiler warnings) per escalate-over-shortcut.
-    13  csharp-console-leftover  - Debug/Trace removed; the existing fallback return/throw
-        is the real handling (Debug.WriteLine is [Conditional("DEBUG")], dead in Release).
-    11  csharp-null-forgiving    - fixed per-site (guards, is-not-null/pattern, ?? , a
-        nullable ExtractIconEx P/Invoke, sessionId threaded through HookDispatcher).
-     5  file-too-large / function-too-long - split via partial classes + method extraction
-        (Win32Interop, DisplayManagerPageViewModel, LayoutEditorViewModel; Enumerate;
-        InitializeWindowsServices). No behavior change; public API unchanged.
-     1  redundant-doc-comment   - reworded DriftReport.UnexpectedActiveMonitor summary.
-
-  Verified: aislop scan . = 100/100; aislop ci . exit 0; clean -t:Rebuild = 0 analyzer
-  warnings; 155 logic tests green (Claude.Core 116 + DisplayManager.Core 39).
+Notes:
+  - This change is test-only + CI/build wiring: it adds tests and the coverage
+    measurement/posting, and does not alter any feature behavior.
+  - Local re-measurement: pwsh .claude/scripts/measure-coverage.ps1

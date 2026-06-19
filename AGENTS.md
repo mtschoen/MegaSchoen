@@ -231,6 +231,26 @@ int ApplyConfiguration(const char* configJson);
 - C++ project requires Visual Studio 2022+ with Windows 10 SDK
 - Solution-level platform selection (`Any CPU` / `x64` / `x86`) is honored by the `.sln`: MegaSchoen always → x64, libraries always → AnyCPU, native always → x64
 
+## Coverage gate (pr-crew)
+
+CI measures line coverage and posts it as the `pr-crew/coverage` Gitea commit
+status that pr-crew's gate reads (threshold 80%; see schoen/pr-crew
+`docs/coverage-gate.md`). Coverage is measured on **Claude.Core** via
+`Claude.Core.Tests` on the **net10.0-windows10.0.26100.0** TFM (the CI Windows
+runner) with `coverlet.msbuild`, so Windows-only code counts. Generated
+marshalling stubs and live-OS Win32 glue are excluded in
+`Claude.Core.Tests.csproj` `<ExcludeByFile>` (justified there + in
+`TEST-REPORT.md`). DisplayManager.Core (native-coupled), the CLI entry points,
+and the MAUI UI are out of the automated measurement.
+
+Re-measure locally (Windows TFM, same scope CI uses):
+
+```pwsh
+pwsh .claude/scripts/measure-coverage.ps1
+```
+
+The current numbers and per-scope detail live in `TEST-REPORT.md` at the repo root.
+
 ## Quality gate: aislop
 
 This project uses **aislop** as a deterministic quality gate for AI-written code

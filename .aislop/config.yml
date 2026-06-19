@@ -6,13 +6,15 @@
 # + Roslynator + `dotnet format` gate (see Directory.Build.props / .editorconfig). aislop
 # covers the C# only; the C++ in DisplayManagerNative/ stays on clang-tidy/cppcheck.
 #
-# How CI runs it: `npx --yes "github:mtschoen/aislop#<commit>" ci .` - pinned to a fork
-# COMMIT, never npm and never @latest. Upstream npm aislop reuses version 0.10.1 with NO
-# C# engine, so a version pin would false-green; only the github-commit ref gets C#.
+# How CI runs it: `npx --yes "@schoen/aislop@<version>" ci .` (see .gitea/workflows/ci.yml,
+# currently 0.12.0) - the C#-capable fork build published as @schoen/aislop to the
+# self-hosted Gitea npm registry (prebuilt tarball; .npmrc maps the @schoen scope). Pin a
+# VERSION, never @latest; bump it deliberately + re-validate, since a newer ruleset can
+# surface new findings. NOTE: public-npm `aislop` (any version, including 0.12.0) has NO C#
+# engine and would false-green - the @schoen scope is what gets C#.
 #
-# NOT enabled: the on-save hook (`aislop hook install --claude --project`). It would pin
-# the hook to an npm version (no C# = useless here) and cannot easily target the fork
-# commit, so until the fork's C# support lands on npm, run `aislop scan .` manually
+# NOT enabled: the on-save hook (`aislop hook install --claude --project`). It would pin the
+# hook to a public-npm version (no C# = useless here), so run `aislop scan .` manually
 # (the globally-installed fork build has the C# rules) and rely on the CI gate.
 
 ci:

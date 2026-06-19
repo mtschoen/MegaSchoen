@@ -6,6 +6,25 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+
+  <!-- Coverage (coverlet.msbuild) for the pr-crew/coverage gate. Off unless the
+       run opts in with /p:CollectCoverage=true (so a normal `dotnet test` pays no
+       instrumentation cost). Measured on the Windows TFM in CI; see TEST-REPORT.md.
+       ExcludeByFile drops, per case:
+         - **/*.g.cs              source-generated P/Invoke marshalling stubs
+         - **/Interop/*.cs        hand-written Win32 P/Invoke declaration layers
+         - **/Windows/*.cs        Win32 orchestration needing a live desktop session
+         - **/ProcessResolver.cs  live process/window enumeration + PEB memory reads
+         - **/Remote/SshStreamProcess.cs  thin live-`ssh` subprocess wrapper (the
+                                  IStreamProcess orchestration it feeds is covered
+                                  via RemoteSessionStreamClient with a fake stream)
+       The pure logic these glue layers feed was deliberately extracted into
+       separately-tested classes (AncestorWindowResolver, SshConnectionParser,
+       BackgroundSessionParser, SshSessionWindowResolver). -->
+  <PropertyGroup>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <ExcludeByFile>**/*.g.cs,**/Interop/*.cs,**/Windows/*.cs,**/ProcessResolver.cs,**/Remote/SshStreamProcess.cs</ExcludeByFile>
+  </PropertyGroup>
   <!-- Windows-exe-coupled tests: excluded from the net10.0 (Linux) target.
        CliSmokeTests launches ClaudeSessionsCLI.exe; HookModeIntegrationTests launches ClaudeHookBridge.exe. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
@@ -22,6 +41,8 @@
 
   <ItemGroup>
     <PackageReference Include="MSTest" Version="4.0.2" />
+    <PackageReference Include="coverlet.msbuild" Version="6.0.2" PrivateAssets="all" />
+    <PackageReference Include="coverlet.collector" Version="6.0.2" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />

@@ -37,7 +37,7 @@ internal sealed class ClaudeProjectsFixture : IDisposable
     {
         if (Directory.Exists(Root))
         {
-            try { Directory.Delete(Root, recursive: true); } catch { }
+            Directory.Delete(Root, recursive: true);
         }
     }
 }
