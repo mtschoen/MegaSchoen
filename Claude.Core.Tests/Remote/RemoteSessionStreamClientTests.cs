@@ -28,14 +28,23 @@ public class RemoteSessionStreamClientTests
     {
         var fake = new FakeStreamProcess();
         var received = new List<IReadOnlyList<SessionSnapshot>>();
+        // Signal on receipt instead of sleeping a fixed delay: RunAsync reads the
+        // emitted line on a thread-pool continuation, which a loaded CI runner does
+        // not reliably finish inside a fixed window (the source of the flake).
+        var firstSnapshot = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var client = new RemoteSessionStreamClient("llamabox", () => fake);
-        client.SnapshotReceived += snaps => received.Add(snaps);
+        client.SnapshotReceived += snaps =>
+        {
+            received.Add(snaps);
+            firstSnapshot.TrySetResult();
+        };
 
         var cts = new CancellationTokenSource();
         var run = client.RunAsync(cts.Token);
         fake.Emit("""[{"SessionId":"abc","Cwd":"/home/schoen/pr-crew","TranscriptPath":"/x","LastActivityUtc":"2026-05-24T03:00:00+00:00","State":"PendingPermission","RollupState":"PendingPermission","PendingMessage":null,"WindowTitle":"t","Subagents":[]}]""");
-        await Task.Delay(50, TestContext.CancellationToken);
+        await firstSnapshot.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
 
+        Assert.IsTrue(fake.Started);   // the client starts the process before reading
         Assert.HasCount(1, received);
         Assert.AreEqual("abc", received[0][0].SessionId);
         Assert.AreEqual("llamabox", received[0][0].Host);   // tagged by the client
@@ -62,5 +71,5 @@ public class RemoteSessionStreamClientTests
         Assert.AreEqual("llamabox", snaps[0].Host);
     }
 
-    public TestContext TestContext { get; set; }
+    public TestContext TestContext { get; set; } = null!;
 }
