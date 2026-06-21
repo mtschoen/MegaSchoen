@@ -165,7 +165,7 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 
 - **DisplayManagerCLI** (.NET 10 Console App) - Display CLI. Commands: list, apply, save, load, profiles, delete, config, raw.
 
-- **Claude.Core** (.NET 10 Library) - Cycler + active-sessions primitives. Owns `StateStore` (`needy-sessions.json`), `SessionLivenessVerifier`, `SlugEncoder`, `SessionStateClassifier`, `ActiveSessionEnumerator`, the `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces, and Windows impls (`WindowsClaudeProcessLocator`, `WindowsClaudeWindowFocuser`). Win32 interop in `Claude.Core/Interop/`. Was originally `ClaudeCycler.Core`; renamed when scope grew beyond cycling.
+- **Claude.Core** (.NET 10 Library) - Cycler + active-sessions primitives. Owns `StateStore` (`needy-sessions.json`), `SessionLivenessVerifier`, `SlugEncoder`, `SessionStateClassifier`, `ActiveSessionEnumerator`, `SessionRefreshLoop`, the `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces, and Windows impls (`WindowsClaudeProcessLocator`, `WindowsClaudeWindowFocuser`). Win32 interop in `Claude.Core/Interop/`. Was originally `ClaudeCycler.Core`; renamed when scope grew beyond cycling.
 
 - **ClaudeSessionsCLI** (.NET 10 Console App, Windows TFM) - Active-Claude-sessions CLI. `list` (default human / `--json` / `--json-stream`) + `focus <prefix>`. Uses `Spectre.Console` for live table.
 
@@ -183,6 +183,7 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 - `Claude.Core/ActiveSessionEnumerator.cs` - Source-of-truth-first enumeration: (transcripts ∪ StateStore) keyed by real `session_id`, gated by process-presence liveness per cwd; best-effort window attach for Focus (identity never depends on it)
 - `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping: stored `WaitingReason` → `SessionState` (Permission/AwaitingInput/Working), with transcript tail-read only as the no-state-file fallback
 - `Claude.Core/HookDispatcher.cs` - Maps each Claude Code hook event to a state upsert/delete; churn-guarded so the per-tool `PostToolUse`/`PreToolUse` floods don't rewrite unchanged state
+- `Claude.Core/SessionRefreshLoop.cs` - Consumes refresh signals from the bounded `Channel<byte>` and runs a supplied refresh action per tick (debounce + drain). Each iteration is individually guarded so a faulting tick logs and is skipped while the loop keeps consuming; only `OperationCanceledException` stops it. Extracted from `SessionsPageViewModel` so the resilience contract is unit-testable in the domain layer (issue #28)
 - `Claude.Core/SlugEncoder.cs` - cwd → `~/.claude/projects/<slug>` directory naming
 - `Claude.Core/AncestorWindowResolver.cs` - pure process-ancestor → first-windowed-ancestor walk (shared by embedded-IDE and ssh Focus; see "Exotic-context session Focus" below)
 - `Claude.Core/SshSessionWindowResolver.cs` - ssh client port → owning `ssh.exe` pid → hosting terminal window (pure orchestration, Win32 injected)
@@ -192,7 +193,7 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 - `ClaudeSessionsCLI/Commands/FocusCommand.cs` - Unique-prefix focus
 - `MegaSchoen/AppShell.xaml` - Two-entry flyout (Display Manager + Claude Sessions)
 - `MegaSchoen/SessionsPage.xaml(.cs)` - Sessions UI; `OnAppearing` calls `_viewModel.Start()`, `OnDisappearing` calls `Dispose`
-- `MegaSchoen/ViewModels/SessionsPageViewModel.cs` - FileSystemWatcher → bounded `Channel<byte>` → 250ms debounce → re-enumerate; idempotent `Start()`
+- `MegaSchoen/ViewModels/SessionsPageViewModel.cs` - FileSystemWatcher → bounded `Channel<byte>` → `SessionRefreshLoop` (250ms debounce → re-enumerate, per-tick guarded); idempotent `Start()`. `RefreshNow()` (initial load + Refresh button) is independently try/guarded
 - `MegaSchoen/ViewModels/DisplayManagerPageViewModel.cs` - Display Manager UI logic
 
 ### Exotic-context session Focus

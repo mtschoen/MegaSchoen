@@ -87,7 +87,8 @@ public sealed class SessionsPageViewModel : IDisposable
             _transcriptsWatcher.Created += OnAnyEvent;
         }
 
-        _consumerTask = Task.Run(() => ConsumeAsync(_cts.Token));
+        var loop = new SessionRefreshLoop(_refreshSignal.Reader, RefreshDispatchedAsync);
+        _consumerTask = Task.Run(() => loop.RunAsync(_cts.Token));
         RefreshNow(); // initial load
 
         foreach (var host in RemoteHostConfig.Load())
@@ -109,33 +110,33 @@ public sealed class SessionsPageViewModel : IDisposable
 
     void OnAnyEvent(object? sender, FileSystemEventArgs eventArguments) => _refreshSignal.Writer.TryWrite(0);
 
-    async Task ConsumeAsync(CancellationToken cancellationToken)
+    // The per-tick refresh body driven by SessionRefreshLoop. Enumeration runs on
+    // the loop's background thread; the view mutation is marshalled to the UI
+    // thread. SessionRefreshLoop guards this against per-iteration faults.
+    Task RefreshDispatchedAsync(CancellationToken cancellationToken)
     {
-        try
+        var snapshots = _enumerator.Enumerate();
+        return _dispatcher.DispatchAsync(() =>
         {
-            await foreach (var _ in _refreshSignal.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
-            {
-                await Task.Delay(250, cancellationToken).ConfigureAwait(false);
-                while (_refreshSignal.Reader.TryRead(out var __)) { }
-                var snapshots = _enumerator.Enumerate();
-                await _dispatcher.DispatchAsync(() =>
-                {
-                    _localSnapshots = snapshots;
-                    RebuildMergedView();
-                }).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException) { /* normal shutdown */ }
-        catch (Exception exception)
-        {
-            Logger.Log($"SessionsPageViewModel.ConsumeAsync threw: {exception}");
-        }
+            _localSnapshots = snapshots;
+            RebuildMergedView();
+        });
     }
 
     public void RefreshNow()
     {
-        _localSnapshots = _enumerator.Enumerate();
-        RebuildMergedView();
+        // Initial load + Refresh button path. Guarded for the same reason the
+        // loop is (issue #28): a transient enumeration fault must not bubble out
+        // and crash the page or leave the button dead.
+        try
+        {
+            _localSnapshots = _enumerator.Enumerate();
+            RebuildMergedView();
+        }
+        catch (Exception exception)
+        {
+            Logger.Log($"SessionsPageViewModel.RefreshNow failed: {exception}");
+        }
     }
 
     void MergeRemote(string host, IReadOnlyList<SessionSnapshot> snapshots)
