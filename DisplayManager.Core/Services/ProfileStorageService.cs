@@ -48,8 +48,10 @@ public class ProfileStorageService
             var collection = await JsonSerializer.DeserializeAsync<ProfileConfiguration>(stream, _jsonOptions);
             return collection ?? new ProfileConfiguration();
         }
-        catch (Exception)
+        catch (Exception exception) when (exception is JsonException or IOException)
         {
+            // Corrupt config or a file-access race: fall back to an empty
+            // collection. Other failures propagate so they stay diagnosable.
             return new ProfileConfiguration();
         }
     }

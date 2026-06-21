@@ -57,8 +57,11 @@ public class LayoutDraftStore
             using var stream = File.OpenRead(path);
             return await JsonSerializer.DeserializeAsync<LayoutDraft>(stream, _jsonOptions);
         }
-        catch (Exception)
+        catch (Exception exception) when (exception is JsonException or IOException)
         {
+            // Corrupt draft or a file-access race (deleted/locked between the
+            // Exists check and the open): treat as no draft. Other failures
+            // propagate so they stay diagnosable.
             return null;
         }
     }
