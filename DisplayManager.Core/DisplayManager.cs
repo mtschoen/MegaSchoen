@@ -40,15 +40,19 @@ public static class DisplayManager
             var result = GetAllDisplaysJson(buffer, bufferSize);
             if (result < 0)
             {
-                throw new InvalidOperationException($"Native call failed. Error code: {result}");
+                // Native enumeration failed; degrade to an empty list.
+                return [];
             }
 
             var jsonString = System.Text.Encoding.UTF8.GetString(buffer, 0, result);
             var displays = JsonSerializer.Deserialize<DisplayInfo[]>(jsonString, JsonOptions);
             return displays?.ToList() ?? [];
         }
-        catch (Exception)
+        catch (JsonException exception)
         {
+            // Malformed JSON from the native layer: degrade gracefully. Any
+            // other (unexpected) failure propagates so it stays diagnosable.
+            DiagnosticLog.Log($"DisplayManager.GetAllDisplays: malformed native display JSON: {exception.Message}");
             return [];
         }
     }
@@ -95,8 +99,11 @@ public static class DisplayManager
             var modes = JsonSerializer.Deserialize<DisplayMode[]>(jsonString, JsonOptions);
             return modes?.ToList() ?? [];
         }
-        catch (Exception)
+        catch (JsonException exception)
         {
+            // Malformed JSON from the native layer: degrade gracefully. Any
+            // other (unexpected) failure propagates so it stays diagnosable.
+            DiagnosticLog.Log($"DisplayManager.GetSupportedModes(edid {edidManufactureId}/{edidProductCodeId}): malformed native JSON: {exception.Message}");
             return [];
         }
     }
