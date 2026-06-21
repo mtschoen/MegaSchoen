@@ -62,6 +62,7 @@ public class LayoutDraftStore
             // Corrupt draft or a file-access race (deleted/locked between the
             // Exists check and the open): treat as no draft. Other failures
             // propagate so they stay diagnosable.
+            DiagnosticLog.Log($"LayoutDraftStore.LoadAsync({presetId}): {exception.Message}");
             return null;
         }
     }

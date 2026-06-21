@@ -52,6 +52,7 @@ public class ProfileStorageService
         {
             // Corrupt config or a file-access race: fall back to an empty
             // collection. Other failures propagate so they stay diagnosable.
+            DiagnosticLog.Log($"ProfileStorageService.LoadAsync({_configFilePath}): {exception.Message}");
             return new ProfileConfiguration();
         }
     }

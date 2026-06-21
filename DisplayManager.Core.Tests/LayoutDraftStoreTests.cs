@@ -57,4 +57,28 @@ public class LayoutDraftStoreTests
         await _store.DeleteAsync(id);
         Assert.IsNull(await _store.LoadAsync(id));
     }
+
+    [TestMethod]
+    public async Task Load_CorruptDraft_ReturnsNullAndLogs()
+    {
+        var id = Guid.NewGuid();
+        // Create the draft so it lands at the store's path, then corrupt it.
+        await _store.SaveAsync(new LayoutDraft { PresetId = id });
+        var file = Directory.EnumerateFiles(_directory).Single();
+        await File.WriteAllTextAsync(file, "{ not valid json");
+
+        var logged = new List<string>();
+        var previousSink = DiagnosticLog.Sink;
+        DiagnosticLog.Sink = logged.Add;
+        try
+        {
+            Assert.IsNull(await _store.LoadAsync(id));
+            Assert.HasCount(1, logged);
+            StringAssert.Contains(logged[0], id.ToString());
+        }
+        finally
+        {
+            DiagnosticLog.Sink = previousSink;
+        }
+    }
 }

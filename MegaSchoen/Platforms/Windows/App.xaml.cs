@@ -44,6 +44,11 @@ public partial class App : MauiWinUIApplication
 
     static void InitializeWindowsServices()
     {
+        // Route DisplayManager.Core's diagnostic sink into the app log so its
+        // swallowed-but-logged display/profile failures stay diagnosable. Wired
+        // before the startup profile load below, which goes through it.
+        DisplayManager.Core.DiagnosticLog.Sink = Claude.Core.Logger.Log;
+
         var services = MauiWinUIApplication.Current.Services;
 
         MigrateAndSweepSessionState(services);

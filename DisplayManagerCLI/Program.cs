@@ -1,5 +1,9 @@
 using DisplayManager.Core.Services;
 
+// Surface DisplayManager.Core's swallowed-but-logged failures on stderr so they
+// stay visible without polluting the command's stdout (JSON/table) output.
+DisplayManager.Core.DiagnosticLog.Sink = Console.Error.WriteLine;
+
 var profileService = new DisplayProfileService();
 
 if (args.Length == 0)

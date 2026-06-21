@@ -48,10 +48,11 @@ public static class DisplayManager
             var displays = JsonSerializer.Deserialize<DisplayInfo[]>(jsonString, JsonOptions);
             return displays?.ToList() ?? [];
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
             // Malformed JSON from the native layer: degrade gracefully. Any
             // other (unexpected) failure propagates so it stays diagnosable.
+            DiagnosticLog.Log($"DisplayManager.GetAllDisplays: malformed native display JSON: {exception.Message}");
             return [];
         }
     }
@@ -98,10 +99,11 @@ public static class DisplayManager
             var modes = JsonSerializer.Deserialize<DisplayMode[]>(jsonString, JsonOptions);
             return modes?.ToList() ?? [];
         }
-        catch (JsonException)
+        catch (JsonException exception)
         {
             // Malformed JSON from the native layer: degrade gracefully. Any
             // other (unexpected) failure propagates so it stays diagnosable.
+            DiagnosticLog.Log($"DisplayManager.GetSupportedModes(edid {edidManufactureId}/{edidProductCodeId}): malformed native JSON: {exception.Message}");
             return [];
         }
     }
