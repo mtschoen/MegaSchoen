@@ -95,8 +95,7 @@ public sealed class ActiveSessionEnumerator
             candidates[id] = new Candidate(id, path, creation, lastWrite);
         }
 
-        var result = new List<SessionSnapshot>();
-        if (candidates.Count == 0) return result;
+        if (candidates.Count == 0) return new List<SessionSnapshot>();
 
         // Shared-cwd cap: at most procs.Count sessions are alive here. Keep
         // the freshest by last write (relative rank — NOT a time cutoff).
@@ -105,31 +104,16 @@ public sealed class ActiveSessionEnumerator
             .Take(procs.Count)
             .ToList();
 
-        var usedProcesses = new HashSet<uint>();
-        foreach (var candidate in kept)
+        var slots = AssignProcesses(kept, procs);
+
+        var result = new List<SessionSnapshot>(slots.Count);
+        foreach (var slot in slots)
         {
+            var candidate = slot.Candidate;
             var entry = stateBySessionId.TryGetValue(candidate.Id, out var e) ? e : null;
             var state = SessionStateClassifier.Classify(entry, candidate.TranscriptPath);
-            var (window, title, sshClientPort) = AttachWindow(procs, candidate.CreationUtc, usedProcesses);
-            // Neither the window nor the SSH client port may depend solely on
-            // AttachWindow's start-time match: when the cwd has a single live
-            // process the session-to-process association is unambiguous, so its
-            // facts attach directly. The match misses in two rig-verified ways:
-            //  - Linux remote: .NET's file creation time tracks mtime, so an
-            //    active session's transcript drifts past the 30s tolerance and
-            //    the piggybacked port is dropped (Linux has no window anyway).
-            //  - Windows (Rider find, 2026-06-10): a freshly started claude has
-            //    no transcript until the first prompt, so the cwd's freshest OLD
-            //    transcript surfaces as the session; its creation time is days
-            //    from the process start and Focus grays out without this attach.
-            // Multi-session-per-cwd stays best-effort (no guessing).
-            if (window.IsZero && procs.Count == 1 && !usedProcesses.Contains(procs[0].ProcessId))
-            {
-                usedProcesses.Add(procs[0].ProcessId);
-                window = procs[0].Window;
-                title = procs[0].Title;
-            }
-            sshClientPort ??= procs.Count == 1 ? procs[0].SshClientPort : null;
+            var process = slot.Process;
+            var title = process?.Title ?? "";
             var subagents = EnumerateSubagents(slugDir, candidate.Id);
 
             result.Add(new SessionSnapshot(
@@ -139,12 +123,116 @@ public sealed class ActiveSessionEnumerator
                 LastActivityUtc: new DateTimeOffset(candidate.LastWriteUtc, TimeSpan.Zero),
                 State: state,
                 PendingMessage: entry?.Message,
-                Window: window,
+                Window: process?.Window ?? WindowToken.Null,
                 WindowTitle: string.IsNullOrEmpty(title) ? null : title,
                 Subagents: subagents,
-                SshClientPort: sshClientPort));
+                SshClientPort: process?.SshClientPort));
         }
         return result;
+    }
+
+    // One kept candidate plus the live process attributed to it (null until a
+    // pass attaches one). Mutated in place across the three assignment passes.
+    sealed class Slot(Candidate candidate)
+    {
+        public Candidate Candidate { get; } = candidate;
+        public ClaudeWindow? Process { get; set; }
+    }
+
+    // Attributes a live process to each kept candidate (leaving its Slot.Process
+    // null when none can be attached) in three passes, each attaching only when
+    // the session-to-process association is unambiguous (focusing the wrong
+    // terminal is worse than a disabled Focus button):
+    //   1. Confident start-time match: a live process whose StartTime is within
+    //      tolerance of the transcript's creation time (MatchProcessByStartTime).
+    //   2. Causal forced-move: a process can only have written a transcript that
+    //      was created at or after the process started, so a candidate's owner
+    //      must be a free process with StartTime <= the transcript's creation
+    //      time. When a candidate has exactly one such free process it is
+    //      unambiguously the owner — attach it even though the start-time gap
+    //      exceeded Pass 1's tolerance. This is the common shared-cwd case
+    //      (several sessions in one repo, each with a slow first prompt, so
+    //      every transcript is created well after its process started). The pass
+    //      iterates because attaching one candidate can make a peer's choice
+    //      unique in turn; it refuses while two or more free processes remain
+    //      causally plausible for the same candidate.
+    //   3. Last-one-standing elimination: when exactly one candidate and exactly
+    //      one live process remain unattributed, their pairing is unambiguous by
+    //      elimination — attach it regardless of causality. This covers a
+    //      resumed session, whose old transcript predates its (re)started
+    //      process so Pass 2 cannot apply, in its cwd's only terminal.
+    // The start-time match (Pass 1) misses for rig-verified reasons:
+    //  - Linux remote: .NET's file creation time tracks mtime, so an active
+    //    session's transcript drifts past the 30s tolerance (Linux has no window
+    //    anyway, but the piggybacked SSH client port must still thread through).
+    //  - Windows: a freshly started claude writes no transcript until the first
+    //    prompt, so either the freshest OLD transcript surfaces (resume) or the
+    //    new transcript is created well after the process started (slow first
+    //    prompt) — either way its creation time lands past the tolerance.
+    static List<Slot> AssignProcesses(List<Candidate> kept, List<ClaudeWindow> procs)
+    {
+        var slots = kept.Select(c => new Slot(c)).ToList();
+        var usedProcesses = new HashSet<uint>();
+
+        // Pass 1: confident start-time match.
+        foreach (var slot in slots)
+        {
+            if (MatchProcessByStartTime(procs, slot.Candidate.CreationUtc, usedProcesses) is { } process)
+            {
+                Attach(slot, usedProcesses, process);
+            }
+        }
+
+        // Pass 2: causal forced-move (iterate until no candidate is newly forced).
+        bool progress;
+        do
+        {
+            progress = false;
+            foreach (var slot in slots)
+            {
+                if (slot.Process is not null) continue;
+                if (SoleCausalProcess(procs, slot.Candidate.CreationUtc, usedProcesses) is { } owner)
+                {
+                    Attach(slot, usedProcesses, owner);
+                    progress = true;
+                }
+            }
+        } while (progress);
+
+        // Pass 3: last-one-standing elimination.
+        var unmatched = slots.Where(s => s.Process is null).ToList();
+        if (unmatched.Count == 1)
+        {
+            var freeProcesses = procs.Where(p => !usedProcesses.Contains(p.ProcessId)).ToList();
+            if (freeProcesses.Count == 1)
+            {
+                Attach(unmatched[0], usedProcesses, freeProcesses[0]);
+            }
+        }
+        return slots;
+    }
+
+    static void Attach(Slot slot, HashSet<uint> usedProcesses, ClaudeWindow process)
+    {
+        slot.Process = process;
+        usedProcesses.Add(process.ProcessId);
+    }
+
+    // The single free process that could causally own a transcript created at
+    // creationUtc (StartTime <= creationUtc), or null when none qualifies or two
+    // or more do (ambiguous — refuse to guess).
+    static ClaudeWindow? SoleCausalProcess(
+        List<ClaudeWindow> procs, DateTime creationUtc, HashSet<uint> usedProcesses)
+    {
+        ClaudeWindow? sole = null;
+        foreach (var p in procs)
+        {
+            if (usedProcesses.Contains(p.ProcessId)) continue;
+            if (p.StartTimeUtc.UtcDateTime > creationUtc) continue;
+            if (sole is not null) return null; // ambiguous
+            sole = p;
+        }
+        return sole;
     }
 
     // Authoritative-id pass (design rule: authoritative identity wins). A
@@ -198,11 +286,13 @@ public sealed class ActiveSessionEnumerator
 
     sealed record Candidate(string Id, string TranscriptPath, DateTime CreationUtc, DateTime LastWriteUtc);
 
-    // Best-effort: pick an unused live process whose StartTime is within
-    // tolerance of the transcript's creation time, and surface its window.
-    // Returns (Null, "") when no confident match or the matched process is
-    // windowless.
-    static (WindowToken Window, string Title, int? SshClientPort) AttachWindow(
+    // Best-effort confident match: the unused live process whose StartTime is
+    // closest to the transcript's creation time, within tolerance. Returns null
+    // when no process is within tolerance (the caller leaves the candidate
+    // unmatched for the elimination pass). Does not mutate usedProcesses — the
+    // caller records the match so a windowless-but-matched process is still
+    // excluded from the elimination pass.
+    static ClaudeWindow? MatchProcessByStartTime(
         List<ClaudeWindow> procs, DateTime creationUtc, HashSet<uint> usedProcesses)
     {
         ClaudeWindow? best = null;
@@ -217,12 +307,7 @@ public sealed class ActiveSessionEnumerator
                 best = p;
             }
         }
-        if (best is { } match && bestDelta <= StartTimeMatchTolerance)
-        {
-            usedProcesses.Add(match.ProcessId);
-            return (match.Window, match.Title, match.SshClientPort);
-        }
-        return (WindowToken.Null, string.Empty, null);
+        return best is { } match && bestDelta <= StartTimeMatchTolerance ? match : null;
     }
 
     static string NormalizeCwd(string? cwd) => (cwd ?? "").TrimEnd('\\', '/');

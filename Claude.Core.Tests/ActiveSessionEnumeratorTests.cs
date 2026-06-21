@@ -378,6 +378,77 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
+    public void Enumerate_SharedCwd_OneMatches_OtherAttachedByElimination()
+    {
+        // Real-world (2026-06-20, schoen-lab): two sessions share a cwd. One
+        // process's start time lands within tolerance of its transcript
+        // creation (a confident match); the other transcript was created >30s
+        // after its process started - the user took a while to type the first
+        // prompt - so its start-time match fails. After the confident match
+        // consumes its process, exactly one candidate and one process remain
+        // unmatched: an unambiguous association by elimination, so its window
+        // must attach (Focus must not gray out).
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\shared-elim";
+        var slug = SlugEncoder.Encode(cwd);
+        var now = DateTime.UtcNow;
+        // Confident match: transcript created right as its process started.
+        fixture.AddSession(slug, "matched", """{"type":"assistant","message":{}}""",
+            mtimeUtc: now, creationTimeUtc: now.AddSeconds(-5));
+        // Drifted: transcript created 55s after its process started (slow first prompt).
+        fixture.AddSession(slug, "drifted", """{"type":"assistant","message":{}}""",
+            mtimeUtc: now.AddSeconds(-2), creationTimeUtc: now.AddSeconds(-55));
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(0xAAA), "matched-term", now.AddSeconds(-5)));
+        locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0xBBB), "drifted-term", now.AddMinutes(-2)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(2, result);
+        Assert.IsTrue(result.All(s => !s.Window.IsZero),
+            "confident match plus last-one-standing elimination focuses both sessions");
+    }
+
+    [TestMethod]
+    public void Enumerate_SharedCwd_BothDrift_AttachedByCausalOrder()
+    {
+        // Real-world (2026-06-20, schoen-lab monorepo): two sessions in one cwd,
+        // each started with a slow first prompt, so BOTH transcripts were
+        // created >30s after their process started and neither matches by
+        // start-time. The pairing is still unambiguous by causality: each
+        // transcript was created after exactly one process's start, so each
+        // session's window must attach (Focus must not gray out for either).
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\monorepo";
+        var slug = SlugEncoder.Encode(cwd);
+        var now = DateTime.UtcNow;
+        // Session A: process started ~31 min ago, transcript created ~30 min ago.
+        var procAStart = now.AddMinutes(-31);
+        fixture.AddSession(slug, "sess-a", """{"type":"assistant","message":{}}""",
+            mtimeUtc: now.AddMinutes(-1), creationTimeUtc: now.AddMinutes(-30));
+        // Session B: process started ~4 min ago, transcript created ~1 min ago.
+        var procBStart = now.AddMinutes(-4);
+        fixture.AddSession(slug, "sess-b", """{"type":"assistant","message":{}}""",
+            mtimeUtc: now, creationTimeUtc: now.AddMinutes(-1));
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(0xA1), "term-a", procAStart));
+        locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0xB1), "term-b", procBStart));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(2, result);
+        Assert.IsTrue(result.All(s => !s.Window.IsZero),
+            "both sessions attach unambiguously by causal start-order even when both drift past tolerance");
+        var byId = result.ToDictionary(s => s.SessionId);
+        Assert.AreEqual("term-a", byId["sess-a"].WindowTitle, "older transcript pairs with the older process");
+        Assert.AreEqual("term-b", byId["sess-b"].WindowTitle, "newer transcript pairs with the newer process");
+    }
+
+    [TestMethod]
     public void Enumerate_MultipleProcessesInCwd_DoesNotGuessWindow()
     {
         // The single-process rule must not extend to ambiguous cwds: with two
