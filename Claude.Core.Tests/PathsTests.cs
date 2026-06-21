@@ -6,7 +6,10 @@ public class PathsTests
     [TestMethod]
     public void AppDataDirectory_IsUnderLocalAppData()
     {
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        // Mirror Paths' own resolution (env var first, OS known-folder fallback)
+        // so the assertion holds under the test sandbox's LOCALAPPDATA override.
+        var localAppData = Environment.GetEnvironmentVariable("LOCALAPPDATA")
+            ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         Assert.AreEqual(Path.Combine(localAppData, "MegaSchoen"), Paths.AppDataDirectory);
     }
 
