@@ -7,7 +7,7 @@
 # covers the C# only; the C++ in DisplayManagerNative/ stays on clang-tidy/cppcheck.
 #
 # How CI runs it: `npx --yes "@schoen/aislop@<version>" ci .` (see .gitea/workflows/ci.yml,
-# currently 0.12.0) - the C#-capable fork build published as @schoen/aislop to the
+# currently 0.12.3) - the C#-capable fork build published as @schoen/aislop to the
 # self-hosted Gitea npm registry (prebuilt tarball; .npmrc maps the @schoen scope). Pin a
 # VERSION, never @latest; bump it deliberately + re-validate, since a newer ruleset can
 # surface new findings. NOTE: public-npm `aislop` (any version, including 0.12.0) has NO C#
