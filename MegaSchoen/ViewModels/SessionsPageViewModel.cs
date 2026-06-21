@@ -176,20 +176,40 @@ public sealed class SessionsPageViewModel : IDisposable
         for (var i = 0; i < merged.Count; i++)
         {
             var key = Key(merged[i]);
-            var existing = Sessions.FirstOrDefault(c => Key(c.Snapshot) == key);
-            if (existing is null)
+
+            // Search from i onward only: items at [0, i) are already finalized,
+            // so the match (if any) is at an index >= i. Searching from 0 could
+            // return a stale duplicate at an index < i, making the Move below
+            // remove-then-insert past the shortened list's end and throw.
+            var existingIndex = -1;
+            for (var j = i; j < Sessions.Count; j++)
+            {
+                if (Key(Sessions[j].Snapshot) == key)
+                {
+                    existingIndex = j;
+                    break;
+                }
+            }
+
+            if (existingIndex < 0)
             {
                 Sessions.Insert(i, new SessionCardViewModel(merged[i]));
             }
             else
             {
-                existing.Snapshot = merged[i];
-                var currentIndex = Sessions.IndexOf(existing);
-                if (currentIndex != i)
+                Sessions[existingIndex].Snapshot = merged[i];
+                if (existingIndex != i)
                 {
-                    Sessions.Move(currentIndex, i);
+                    Sessions.Move(existingIndex, i);
                 }
             }
+        }
+
+        // Drop any leftover cards past the merged set (including duplicates a
+        // prior crashed rebuild may have left in the collection).
+        while (Sessions.Count > merged.Count)
+        {
+            Sessions.RemoveAt(Sessions.Count - 1);
         }
     }
 
