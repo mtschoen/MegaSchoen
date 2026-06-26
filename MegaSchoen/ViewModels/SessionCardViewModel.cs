@@ -25,6 +25,7 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(Snapshot));
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(HasTitle));
+            OnPropertyChanged(nameof(HasTranscriptPath));
             OnPropertyChanged(nameof(StateEmoji));
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(StateColor));
@@ -53,6 +54,8 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
     public string Title => _snapshot.Title ?? "";
 
     public bool HasTitle => !string.IsNullOrEmpty(_snapshot.Title);
+
+    public bool HasTranscriptPath => !string.IsNullOrEmpty(_snapshot.TranscriptPath);
 
     public string StateEmoji => SessionStateEmoji.For(_snapshot.RollupState);
 

@@ -197,6 +197,9 @@ sealed record SnapshotDto(
     string Emoji,
     string? PendingMessage,
     string? WindowTitle,
+    // Claude Code's generated session title (the transcript "ai-title"), null
+    // when the session has none yet.
+    string? Title,
     SubagentDto[] Subagents,
     int? SshClientPort)
 {
@@ -210,6 +213,7 @@ sealed record SnapshotDto(
         SessionStateEmoji.For(snapshot.RollupState),
         snapshot.PendingMessage,
         snapshot.WindowTitle,
+        snapshot.Title,
         snapshot.Subagents.Select(s => new SubagentDto(s.AgentId, s.LastActivityUtc, s.State.ToString())).ToArray(),
         snapshot.SshClientPort);
 }

@@ -72,15 +72,21 @@
                                            TextColor="{StaticResource Gray500}"
                                            FontSize="11"
                                            VerticalOptions="Center"/>
-                                    <Button Grid.Column="3"
-                                            Text="Focus"
-                                            IsVisible="{Binding FocusButtonVisible}"
-                                            IsEnabled="{Binding CanFocus}"
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=FocusCommand}"
-                                            CommandParameter="{Binding .}"
-                                            HeightRequest="36"
-                                            WidthRequest="80"
-                                            VerticalOptions="Center"/>
+                                    <HorizontalStackLayout Grid.Column="3" Spacing="6" VerticalOptions="Center">
+                                        <Button Text="Copy path"
+                                                IsVisible="{Binding HasTranscriptPath}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=CopyTranscriptPathCommand}"
+                                                CommandParameter="{Binding .}"
+                                                HeightRequest="36"
+                                                WidthRequest="90"/>
+                                        <Button Text="Focus"
+                                                IsVisible="{Binding FocusButtonVisible}"
+                                                IsEnabled="{Binding CanFocus}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:SessionsPageViewModel}}, Path=FocusCommand}"
+                                                CommandParameter="{Binding .}"
+                                                HeightRequest="36"
+                                                WidthRequest="80"/>
+                                    </HorizontalStackLayout>
                                 </Grid>
                                 <HorizontalStackLayout Spacing="8">
                                     <Label Text="{Binding SessionIdStem}"

@@ -34,6 +34,7 @@ public sealed class SessionsPageViewModel : IDisposable
     public ObservableCollection<SessionCardViewModel> Sessions { get; } = new();
     public ObservableCollection<HostStatusViewModel> HostStatuses { get; } = new();
     public ICommand FocusCommand { get; }
+    public ICommand CopyTranscriptPathCommand { get; }
     public ICommand ToggleExpandCommand { get; }
     public ICommand RefreshCommand { get; }
 
@@ -52,6 +53,19 @@ public sealed class SessionsPageViewModel : IDisposable
         {
             if (card.Snapshot.Window.IsZero) return;
             _focuser.BringToFront(card.Snapshot.Window);
+        });
+        CopyTranscriptPathCommand = new Command<SessionCardViewModel>(async card =>
+        {
+            var path = card.Snapshot.TranscriptPath;
+            if (string.IsNullOrEmpty(path)) return;
+            try
+            {
+                await Clipboard.Default.SetTextAsync(path);
+            }
+            catch (Exception exception)
+            {
+                Logger.Log($"SessionsPageViewModel.CopyTranscriptPath failed: {exception}");
+            }
         });
         ToggleExpandCommand = new Command<SessionCardViewModel>(card =>
             card.IsExpanded = !card.IsExpanded);
