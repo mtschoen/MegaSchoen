@@ -163,14 +163,19 @@ static class ListCommand
         }
     }
 
-    static string FormatState(SessionState state) => state switch
+    static string FormatState(SessionState state)
     {
-        SessionState.PendingPermission => "[red]PERM[/]",
-        SessionState.AwaitingInput => "[yellow]INPUT[/]",
-        SessionState.Working => "[green]WORK[/]",
-        SessionState.Idle => "[grey]idle[/]",
-        _ => "[red]?[/]"
-    };
+        var emoji = SessionStateEmoji.For(state);
+        var label = state switch
+        {
+            SessionState.PendingPermission => "[red]PERM[/]",
+            SessionState.AwaitingInput => "[yellow]INPUT[/]",
+            SessionState.Working => "[green]WORK[/]",
+            SessionState.Idle => "[grey]idle[/]",
+            _ => "[red]?[/]"
+        };
+        return $"{emoji} {label}";
+    }
 
     static string TruncateMiddle(string s, int maximum)
     {
@@ -187,6 +192,9 @@ sealed record SnapshotDto(
     DateTimeOffset LastActivityUtc,
     string State,
     string RollupState,
+    // Glyph for the effective (rollup) status, so JSON consumers get the same
+    // at-a-glance icon shown in the human table.
+    string Emoji,
     string? PendingMessage,
     string? WindowTitle,
     SubagentDto[] Subagents,
@@ -199,6 +207,7 @@ sealed record SnapshotDto(
         snapshot.LastActivityUtc,
         snapshot.State.ToString(),
         snapshot.RollupState.ToString(),
+        SessionStateEmoji.For(snapshot.RollupState),
         snapshot.PendingMessage,
         snapshot.WindowTitle,
         snapshot.Subagents.Select(s => new SubagentDto(s.AgentId, s.LastActivityUtc, s.State.ToString())).ToArray(),
