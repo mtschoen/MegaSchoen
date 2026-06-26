@@ -47,12 +47,22 @@
                     <DataTemplate x:DataType="vm:SessionCardViewModel">
                         <Frame Margin="0,4" Padding="12" BorderColor="{StaticResource Gray300}">
                             <VerticalStackLayout Spacing="6">
-                                <Grid ColumnDefinitions="80,*,Auto,Auto" ColumnSpacing="10">
-                                    <Label Grid.Column="0"
-                                           Text="{Binding StateText}"
-                                           TextColor="{Binding StateColor}"
-                                           FontAttributes="Bold"
-                                           VerticalOptions="Center"/>
+                                <Label Text="{Binding Title}"
+                                       IsVisible="{Binding HasTitle}"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       MaxLines="1"/>
+                                <Grid ColumnDefinitions="120,*,Auto,Auto" ColumnSpacing="10">
+                                    <HorizontalStackLayout Grid.Column="0" Spacing="5" VerticalOptions="Center">
+                                        <Label Text="{Binding StateEmoji}"
+                                               FontSize="14"
+                                               VerticalOptions="Center"/>
+                                        <Label Text="{Binding StateText}"
+                                               TextColor="{Binding StateColor}"
+                                               FontAttributes="Bold"
+                                               VerticalOptions="Center"/>
+                                    </HorizontalStackLayout>
                                     <Label Grid.Column="1"
                                            Text="{Binding CwdShort}"
                                            VerticalOptions="Center"

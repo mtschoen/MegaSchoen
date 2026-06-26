@@ -126,7 +126,8 @@ public sealed class ActiveSessionEnumerator
                 Window: process?.Window ?? WindowToken.Null,
                 WindowTitle: string.IsNullOrEmpty(title) ? null : title,
                 Subagents: subagents,
-                SshClientPort: process?.SshClientPort));
+                SshClientPort: process?.SshClientPort,
+                Title: TranscriptTitleReader.ReadTitle(candidate.TranscriptPath)));
         }
         return result;
     }
@@ -280,7 +281,8 @@ public sealed class ActiveSessionEnumerator
                 Subagents: existingTranscript is not null && slugDir.Length > 0
                     ? EnumerateSubagents(slugDir, id)
                     : Array.Empty<SubagentSnapshot>(),
-                SshClientPort: process.SshClientPort));
+                SshClientPort: process.SshClientPort,
+                Title: existingTranscript is not null ? TranscriptTitleReader.ReadTitle(existingTranscript) : null));
         }
     }
 

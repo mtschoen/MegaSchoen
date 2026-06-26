@@ -48,6 +48,46 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
+    public void Enumerate_PopulatesTitleFromTranscript()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\titled";
+        var lines = new[]
+        {
+            """{"type":"ai-title","aiTitle":"Wire up the title","sessionId":"titled-1"}""",
+            """{"type":"assistant","message":{}}""",
+        };
+        fixture.AddSession(SlugEncoder.Encode(cwd), "titled-1", lines, DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual("Wire up the title", result[0].Title);
+    }
+
+    [TestMethod]
+    public void Enumerate_NoTitleInTranscript_LeavesTitleNull()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\untitled";
+        fixture.AddSession(SlugEncoder.Encode(cwd), "untitled-1",
+            """{"type":"assistant","message":{}}""", DateTime.UtcNow);
+
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.IsNull(result[0].Title);
+    }
+
+    [TestMethod]
     public void Enumerate_StoreEntryNoLiveProc_IsPruned()
     {
         using var fixture = new ClaudeProjectsFixture();

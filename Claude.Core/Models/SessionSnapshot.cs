@@ -11,7 +11,8 @@ public sealed record SessionSnapshot(
     string? WindowTitle,
     IReadOnlyList<SubagentSnapshot> Subagents,
     string? Host = null,
-    int? SshClientPort = null)
+    int? SshClientPort = null,
+    string? Title = null)
 {
     public SessionState RollupState
     {

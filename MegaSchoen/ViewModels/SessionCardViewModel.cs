@@ -1,6 +1,7 @@
 #if WINDOWS
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using Claude.Core;
 using Claude.Core.Models;
 
 namespace MegaSchoen.ViewModels;
@@ -22,6 +23,9 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
         {
             _snapshot = value;
             OnPropertyChanged(nameof(Snapshot));
+            OnPropertyChanged(nameof(Title));
+            OnPropertyChanged(nameof(HasTitle));
+            OnPropertyChanged(nameof(StateEmoji));
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(StateColor));
             OnPropertyChanged(nameof(CwdShort));
@@ -45,6 +49,12 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(IsExpanded));
         }
     }
+
+    public string Title => _snapshot.Title ?? "";
+
+    public bool HasTitle => !string.IsNullOrEmpty(_snapshot.Title);
+
+    public string StateEmoji => SessionStateEmoji.For(_snapshot.RollupState);
 
     public string StateText => _snapshot.RollupState.ToString();
 
