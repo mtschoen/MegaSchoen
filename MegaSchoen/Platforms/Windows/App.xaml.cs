@@ -336,18 +336,58 @@ public partial class App : MauiWinUIApplication
         }
 
         Claude.Core.Logger.Log($"STALE BRIDGE: app={appVersion} bridge={bridgeVersion}");
-        MainThread.BeginInvokeOnMainThread(async () =>
+        ShowAlertWhenPageReady(
+            "Hook bridge is stale",
+            $"App is {appVersion} but the embedded ClaudeHookBridge is {bridgeVersion}. " +
+            "Rebuild the solution (VS18 MSBuild) so session status detection is correct.");
+    }
+
+    // Shows a modal alert, but only once the first window's page is loaded. A
+    // ContentDialog (what DisplayAlert maps to on Windows) requires a XamlRoot,
+    // which does not exist yet while OnLaunched is still running - showing one
+    // there throws ArgumentException (HRESULT 0x80070057) and fail-fasts the
+    // whole process through combase. Deferring to Page.Loaded guarantees the
+    // XamlRoot exists, and the show is guarded so a *diagnostic* warning can
+    // never itself be fatal (the Logger.Log at each call site is the fallback).
+    static void ShowAlertWhenPageReady(string title, string message)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
         {
-            var page = Microsoft.Maui.Controls.Application.Current?.Windows is { Count: > 0 } windows ? windows[0].Page : null;
-            if (page is not null)
+            var page = Microsoft.Maui.Controls.Application.Current?.Windows is { Count: > 0 } windows
+                ? windows[0].Page
+                : null;
+            if (page is null)
             {
-                await page.DisplayAlertAsync(
-                    "Hook bridge is stale",
-                    $"App is {appVersion} but the embedded ClaudeHookBridge is {bridgeVersion}. " +
-                    "Rebuild the solution (VS18 MSBuild) so session status detection is correct.",
-                    "OK");
+                return;
             }
+
+            if (page.IsLoaded)
+            {
+                // Fire-and-forget: ShowAlertSafely swallows its own exceptions, so
+                // the discarded Task can never fault unobserved.
+                _ = ShowAlertSafely(page, title, message);
+                return;
+            }
+
+            void OnLoaded(object? sender, EventArgs e)
+            {
+                page.Loaded -= OnLoaded;
+                _ = ShowAlertSafely(page, title, message);
+            }
+            page.Loaded += OnLoaded;
         });
+    }
+
+    static async Task ShowAlertSafely(Microsoft.Maui.Controls.Page page, string title, string message)
+    {
+        try
+        {
+            await page.DisplayAlertAsync(title, message, "OK");
+        }
+        catch (Exception exception)
+        {
+            Claude.Core.Logger.Log($"Could not show alert '{title}': {exception.Message}");
+        }
     }
 
     static void ShowMainWindow()
