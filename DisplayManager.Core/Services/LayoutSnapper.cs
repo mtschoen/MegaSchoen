@@ -6,7 +6,7 @@ namespace DisplayManager.Core.Services;
 /// the position it should snap to. Each axis snaps independently to the closest neighbor edge
 /// within <c>threshold</c> — considering both flush adjacency (place beside a neighbor) and
 /// edge alignment (share a left/right or top/bottom edge). The caller excludes the dragged
-/// rect from <paramref name="others"/> and supplies a threshold scaled to the current canvas
+/// rect from <c>others</c> and supplies a threshold scaled to the current canvas
 /// zoom, so the assist feels consistent regardless of fit-to-view scale.
 ///
 /// This is distinct from <see cref="LayoutNormalizer"/>: the normalizer shrinkwraps the WHOLE

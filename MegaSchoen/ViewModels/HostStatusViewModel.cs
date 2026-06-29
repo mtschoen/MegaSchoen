@@ -5,7 +5,7 @@ using Claude.Core.Remote;
 
 namespace MegaSchoen.ViewModels;
 
-public sealed class HostStatusViewModel : INotifyPropertyChanged
+public sealed partial class HostStatusViewModel : INotifyPropertyChanged
 {
     RemoteConnectionState _state = RemoteConnectionState.Connecting;
 
@@ -20,7 +20,7 @@ public sealed class HostStatusViewModel : INotifyPropertyChanged
         {
             if (_state == value) return;
             _state = value;
-            OnPropertyChanged(nameof(State));
+            OnPropertyChanged();
             OnPropertyChanged(nameof(StatusText));
             OnPropertyChanged(nameof(StatusColor));
         }

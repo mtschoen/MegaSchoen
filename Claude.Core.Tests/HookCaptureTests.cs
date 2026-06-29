@@ -1,5 +1,3 @@
-using Claude.Core;
-
 namespace Claude.Core.Tests;
 
 [TestClass]

@@ -29,7 +29,7 @@ public sealed class ScreenshotTests
     const int PW_RENDERFULLCONTENT = 0x00000002;
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    static extern int GetWindowText(IntPtr hWnd, [System.Runtime.InteropServices.Out] char[] text, int count);
+    static extern int GetWindowText(IntPtr hWnd, [Out] char[] text, int count);
 
     [DllImport("user32.dll")]
     static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);

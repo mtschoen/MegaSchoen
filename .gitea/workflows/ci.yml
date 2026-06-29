@@ -182,15 +182,16 @@ jobs:
   # The fork is published as @schoen/aislop to the self-hosted Gitea npm registry
   # (see .npmrc): a prebuilt, integrity-pinned tarball, so the runner does not
   # rebuild from source (the previous github-commit git dep rebuilt on the runner
-  # and hit the POSIX-only build script). roslynator (installed below) is aislop's
-  # C# analysis backend; without it the C# pass is heuristic-only. Threshold and
-  # excludes live in .aislop/config.yml (failBelow gates the whole-repo score).
+  # and hit the POSIX-only build script). aislop's C# LINT engine shells out to BOTH
+  # roslynator AND jb (ReSharper CLT) - installing only roslynator made the lint pass
+  # run roslynator-only and never surface the jb/* findings, a FALSE GREEN. Both are
+  # installed below. Threshold + excludes + jbProjects scope live in .aislop/config.yml.
   # Bump the pinned version deliberately + re-validate (a newer ruleset can
   # surface new findings).
   aislop:
     name: Lint AI-slop (aislop)
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 45     # full-solution build (native C++ + MAUI) + jb inspectcode is slow
     env:
       # Trust Gitea's self-signed (mkcert) cert so npx can pull @schoen/aislop
       # from the Gitea registry. Appends to Node's CA bundle (public deps still
@@ -206,9 +207,49 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.x'
-      - name: Install roslynator (aislop's C# analysis backend)
+      - name: Install C# lint engines (roslynator + jb / ReSharper CLT)
         shell: pwsh
-        run: dotnet tool install -g roslynator.dotnet.cli
+        run: |
+          dotnet tool install -g roslynator.dotnet.cli
+          dotnet tool install -g JetBrains.ReSharper.GlobalTools
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:USERPROFILE ".dotnet\tools")
+      # jb inspectcode loads + builds the whole solution graph (native C++ + MAUI), so it
+      # needs the VS 2026 (v18) toolchain, not the dotnet CLI: the C++ "VCTools" workload
+      # supplies the v145 platform toolset that DisplayManagerNative.vcxproj pins, and the
+      # "NetCoreBuildTools" workload supplies the .NET SDK resolver so MSBuild.exe can build
+      # the managed + MAUI projects against the standalone .NET 10 SDK (without it the build
+      # fails MSB4236 "SDK Microsoft.NET.Sdk could not be found"). The runner has VS 2026
+      # Build Tools at C:\BuildTools2026; vswhere -latest -products * ranks it (18.x) above
+      # the also-present 2022 Build Tools (17.x) by real product version, and jb autodetects
+      # the highest toolset and reuses this build.
+      #
+      # Use the 64-bit MSBuild (Bin\amd64\MSBuild.exe), NOT the default 32-bit Bin\MSBuild.exe.
+      # The act runner service runs as LocalSystem, so the checkout lands under
+      # C:\Windows\System32\config\systemprofile\.cache\act\...\hostexecutor. A 32-bit MSBuild
+      # hits WOW64 file-system redirection (System32 -> SysWOW64) and cannot see the checkout,
+      # failing MSB1009 "project file does not exist" even though the .sln is right there (64-bit
+      # tools like dotnet + pwsh are not redirected, which is why the other jobs pass).
+      # .aislop/config.yml's jbProjects scope limits ANALYSIS to managed projects;
+      # DisplayManagerNative stays on cppcheck.
+      - name: Build full solution (VS 2026 MSBuild)
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -prerelease -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\amd64\MSBuild.exe" | Select-Object -First 1
+          if (-not $msbuild) { throw "64-bit MSBuild.exe not found via vswhere." }
+          Write-Host "Using MSBuild: $msbuild"
+          & $msbuild MegaSchoen.sln -p:Configuration=Debug -restore -nologo -v:minimal -m
+          if ($LASTEXITCODE -ne 0) { throw "Solution build failed ($LASTEXITCODE)" }
       - name: aislop CI gate (whole-repo score >= failBelow)
         shell: pwsh
-        run: npx --yes "@schoen/aislop@0.12.3" ci .
+        # Sanity-fail if the C# engine did not actually analyze the tree (avoid a silent
+        # roslynator-only / Python-only pass): require a healthy supported-file count
+        # alongside the score gate. Mirrors git-wizard's aislop.yml guard.
+        run: |
+          npx --yes "@schoen/aislop@0.12.3" ci . --json > "$env:RUNNER_TEMP\aislop.json"
+          $gate = $LASTEXITCODE
+          $report = Get-Content "$env:RUNNER_TEMP\aislop.json" -Raw | ConvertFrom-Json
+          $files = $report.summary.files
+          Write-Host "aislop score $($report.score) over $files files"
+          if ($files -lt 50) { Write-Host "::error::aislop scanned only $files files - the C# engine did not run"; exit 1 }
+          if ($gate -ne 0) { Write-Host "::error::aislop score $($report.score) below failBelow"; exit 1 }

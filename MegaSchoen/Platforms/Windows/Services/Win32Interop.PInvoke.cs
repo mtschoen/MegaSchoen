@@ -4,6 +4,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 
 /// <summary>
 /// P/Invoke declarations for Win32 APIs used by tray icon, hotkeys, and message window.
+/// </summary>
 static partial class Win32Interop
 {
     // Shell32
@@ -157,7 +158,7 @@ static partial class Win32Interop
         // Letters
         if (key.Length == 1 && char.IsLetter(key[0]))
         {
-            return (uint)char.ToUpperInvariant(key[0]);
+            return char.ToUpperInvariant(key[0]);
         }
 
         // Function keys

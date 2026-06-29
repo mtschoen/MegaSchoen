@@ -1,7 +1,3 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
 using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
 
@@ -119,7 +115,10 @@ public partial class LayoutEditorViewModel
     public void Zoom(double factor, double anchorCanvasX, double anchorCanvasY)
     {
         var target = Math.Clamp(_mouseScale * factor, MinRenderScale, MaxRenderScale);
-        if (target == _mouseScale)
+        // Deliberate exact-equality no-op check: when Clamp returns the identical
+        // value the zoom is already at a band limit, so there is nothing to do.
+        // .Equals (not the == operator) keeps the exact-bit comparison jb flags.
+        if (target.Equals(_mouseScale))
         {
             return; // already at a clamp limit
         }

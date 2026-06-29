@@ -71,12 +71,11 @@ public sealed class SessionLivenessVerifier
             return LastEntryClass.SessionPending;
         }
 
+        // An assistant turn as the last entry means the session is mid-response;
+        // every other entry type (user / tool_result / system) is a resolved state.
         return type switch
         {
             "assistant" => LastEntryClass.SessionPending,
-            "user" => LastEntryClass.Resolved,
-            "tool_result" => LastEntryClass.Resolved,
-            "system" => LastEntryClass.Resolved,
             _ => LastEntryClass.Resolved
         };
     }

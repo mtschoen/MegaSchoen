@@ -284,6 +284,7 @@ async Task VerifyProfile(string[] args)
         foreach (var monitor in report.Monitors)
         {
             Console.WriteLine($"  [{monitor.Kind}] {monitor.MonitorName}");
+            Console.WriteLine($"      EDID: manufacturer={monitor.EdidManufactureId} product={monitor.EdidProductCodeId} serial={monitor.EdidSerialNumber}");
             foreach (var mismatch in monitor.Mismatches)
             {
                 Console.WriteLine($"      - {mismatch}");

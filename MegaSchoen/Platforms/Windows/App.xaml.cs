@@ -9,7 +9,7 @@ namespace MegaSchoen.WinUI;
 /// <summary>
 /// Provides application-specific behavior to supplement the default Application class.
 /// </summary>
-public partial class App : MauiWinUIApplication
+public partial class App
 {
     // Process-global single-instance guard: the mutex must live for the whole process,
     // so it is held in a static field (not an instance field that would make App own a
@@ -76,7 +76,7 @@ public partial class App : MauiWinUIApplication
         List<SavedDisplayProfile> profiles)
     {
         // Wire up tray icon events
-        tray.ProfileSelected += (s, profileId) =>
+        tray.ProfileSelected += (_, profileId) =>
         {
             var profile = profiles.FirstOrDefault(p => p.Id == profileId);
             if (profile != null)
@@ -93,12 +93,12 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        tray.ShowRequested += (s, e) =>
+        tray.ShowRequested += (_, _) =>
         {
             ShowMainWindow();
         };
 
-        tray.ExitRequested += (s, e) =>
+        tray.ExitRequested += (_, _) =>
         {
             // Dispose services and exit
             tray.Dispose();
@@ -108,7 +108,7 @@ public partial class App : MauiWinUIApplication
             Environment.Exit(0);
         };
 
-        tray.InstallClaudeHooksRequested += (s, e) =>
+        tray.InstallClaudeHooksRequested += (_, _) =>
         {
             try
             {
@@ -123,7 +123,7 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        tray.CyclePermissionsRequested += (s, e) =>
+        tray.CyclePermissionsRequested += (_, _) =>
         {
             try
             {
@@ -136,7 +136,7 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        tray.CycleAnyWaitingRequested += (s, e) =>
+        tray.CycleAnyWaitingRequested += (_, _) =>
         {
             try
             {
@@ -149,7 +149,7 @@ public partial class App : MauiWinUIApplication
             }
         };
 
-        tray.ClearNeedyClaudeRequested += (s, e) =>
+        tray.ClearNeedyClaudeRequested += (_, _) =>
         {
             try
             {
@@ -171,7 +171,7 @@ public partial class App : MauiWinUIApplication
         List<SavedDisplayProfile> profiles)
     {
         // Wire up hotkey events
-        hotkeys.HotkeyTriggered += (s, profileId) =>
+        hotkeys.HotkeyTriggered += (_, profileId) =>
         {
             var profile = profiles.FirstOrDefault(p => p.Id == profileId);
             if (profile != null)
@@ -197,12 +197,11 @@ public partial class App : MauiWinUIApplication
             Claude.Core.Logger.Log("Failed to register Ctrl+Alt+0 (claude-cycle-any) — likely already bound system-wide");
         }
 
-        hotkeys.NamedHotkeyTriggered += (s, name) =>
+        hotkeys.NamedHotkeyTriggered += (_, name) =>
         {
             WaitingReason? filter = name switch
             {
                 "claude-cycle-perms" => WaitingReason.Permission,
-                "claude-cycle-any" => null,
                 _ => null
             };
 
@@ -226,7 +225,7 @@ public partial class App : MauiWinUIApplication
     static void WireWindowLifecycle(MessageWindow messageWindow, TrayIconService tray)
     {
         // Wire up activation message for single instance
-        messageWindow.CustomMessageReceived += (s, msg) =>
+        messageWindow.CustomMessageReceived += (_, _) =>
         {
             ShowMainWindow();
         };
@@ -250,7 +249,7 @@ public partial class App : MauiWinUIApplication
                         var appWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(windowId);
 
                         // Intercept close to minimize to tray instead
-                        appWindow.Closing += (s, e) =>
+                        appWindow.Closing += (_, e) =>
                         {
                             e.Cancel = true;
                             HideWindow(hwnd);
@@ -378,7 +377,7 @@ public partial class App : MauiWinUIApplication
         });
     }
 
-    static async Task ShowAlertSafely(Microsoft.Maui.Controls.Page page, string title, string message)
+    static async Task ShowAlertSafely(Page page, string title, string message)
     {
         try
         {
@@ -409,12 +408,10 @@ public partial class App : MauiWinUIApplication
     }
 
     [System.Runtime.InteropServices.LibraryImport("user32.dll", EntryPoint = "ShowWindow")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool ShowWindowNative(IntPtr hWnd, int nCmdShow);
+    private static partial void ShowWindowNative(IntPtr hWnd, int nCmdShow);
 
     [System.Runtime.InteropServices.LibraryImport("user32.dll", EntryPoint = "SetForegroundWindow")]
-    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
-    private static partial bool SetForegroundWindow(IntPtr hWnd);
+    private static partial void SetForegroundWindow(IntPtr hWnd);
 
     static void ShowWindow(IntPtr hwnd) => ShowWindowNative(hwnd, 9); // SW_RESTORE = 9
     static void HideWindow(IntPtr hwnd) => ShowWindowNative(hwnd, 0); // SW_HIDE = 0

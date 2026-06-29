@@ -1,4 +1,3 @@
-using Claude.Core;
 using Claude.Core.Models;
 using Claude.Core.Tests.Fakes;
 using Claude.Core.Tests.Fixtures;

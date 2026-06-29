@@ -8,7 +8,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// Captures keyboard input for hotkey configuration using a low-level keyboard hook.
 /// The hook is only active during capture mode.
 /// </summary>
-sealed class KeyCaptureService : IDisposable
+sealed partial class KeyCaptureService : IDisposable
 {
     IntPtr _hookHandle;
     LowLevelKeyboardProc? _hookProc;
@@ -125,7 +125,7 @@ sealed class KeyCaptureService : IDisposable
                 }
 
                 // Block this key from reaching other applications during capture
-                return (IntPtr)1;
+                return 1;
             }
         }
 

@@ -14,7 +14,7 @@ namespace Claude.Core.Tests;
 // Paths member is touched. Module initializers run at assembly load, strictly
 // earlier than any test hook, removing the static-init ordering risk.
 [TestClass]
-public class TestEnvironmentSandbox
+public static class TestEnvironmentSandbox
 {
     static string? _tempLocalAppData;
 

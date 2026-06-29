@@ -1,6 +1,6 @@
 namespace MegaSchoen
 {
-    public partial class DisplayManagerPage : ContentPage
+    public partial class DisplayManagerPage
     {
         public DisplayManagerPage()
         {

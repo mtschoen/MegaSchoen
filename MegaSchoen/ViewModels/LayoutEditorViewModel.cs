@@ -63,9 +63,9 @@ public partial class LayoutEditorViewModel : INotifyPropertyChanged
         Title = $"Edit Layout — {preset.Name}";
 
         NormalizeCommand = new Command(Normalize, () => !IsBusy);
-        TestCommand = new Command(async () => await TestAsync(), () => !IsBusy && Monitors.Count > 0);
-        StashCommand = new Command(async () => await StashAsync(), () => !IsBusy);
-        CommitCommand = new Command(async () => await CommitAsync(), () => !IsBusy && CanCommit);
+        TestCommand = new Command(() => RunCommand(TestAsync), () => !IsBusy && Monitors.Count > 0);
+        StashCommand = new Command(() => RunCommand(StashAsync), () => !IsBusy);
+        CommitCommand = new Command(() => RunCommand(CommitAsync), () => !IsBusy && CanCommit);
         SetPrimaryCommand = new Command<MonitorRectViewModel>(SetPrimary, CanSetPrimary);
         RotateCommand = new Command<string>(RotateSelected);
         RemoveSelectedCommand = new Command(RemoveSelected, () => HasSelection && Monitors.Count > 1);
@@ -376,4 +376,22 @@ public partial class LayoutEditorViewModel : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    // Fire-and-forget bridge for ICommand: MAUI's Command takes a void-returning
+    // Action, so an `async () => ...` body would be an async void lambda whose
+    // exceptions are lost. Route async command bodies through here so a failure
+    // surfaces in the log instead of being swallowed by the dispatcher.
+    static void RunCommand(Func<Task> operation) => _ = RunAndLogAsync(operation);
+
+    static async Task RunAndLogAsync(Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            DisplayManager.Core.DiagnosticLog.Log($"LayoutEditorViewModel command failed: {exception}");
+        }
+    }
 }

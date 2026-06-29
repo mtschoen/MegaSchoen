@@ -3,7 +3,7 @@ using MegaSchoen.ViewModels;
 
 namespace MegaSchoen;
 
-public partial class LayoutEditorPage : ContentPage
+public partial class LayoutEditorPage
 {
     readonly LayoutEditorViewModel _viewModel;
 

@@ -2,14 +2,15 @@
 
 #define DISPLAYMANAGER_API __declspec(dllexport)
 
-extern "C" {
+extern "C"
+{
     // Get all display information as JSON array
     // Returns: JSON length on success, negative error code on failure
     //   -1: Invalid parameters
     //   -2: Failed to get buffer sizes
     //   -3: Failed to query display config
     //   -(n): Buffer too small, need n bytes
-    DISPLAYMANAGER_API int GetAllDisplaysJson(char* buffer, int bufferSize);
+    DISPLAYMANAGER_API int GetAllDisplaysJson(char *buffer, int bufferSize);
 
     // Apply a full display configuration (enable/disable multiple displays at once)
     // Parameters:
@@ -23,12 +24,12 @@ extern "C" {
     //   -100 - x: GetDisplayConfigBufferSizes failed with error x
     //   -200 - x: QueryDisplayConfig failed with error x
     //   -300 - x: SetDisplayConfig failed with error x
-    DISPLAYMANAGER_API int ApplyConfiguration(const char* activeDevicesJson);
+    DISPLAYMANAGER_API int ApplyConfiguration(const char *activeDevicesJson);
 
     // Enumerate supported display modes for a monitor identified by EDID
     // (manufacturerId + productCodeId). Writes a JSON array of
     // {width, height, refreshRate} into buffer. Returns bytes written, or a
     // negative error code.
-    DISPLAYMANAGER_API int GetSupportedModesJson(int edidManufactureId, int edidProductCodeId,
-                                                 char* buffer, int bufferSize);
+    DISPLAYMANAGER_API int GetSupportedModesJson(int edidManufactureId, int edidProductCodeId, char *buffer,
+                                                 int bufferSize);
 }

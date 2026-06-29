@@ -1,5 +1,3 @@
-using Claude.Core;
-
 namespace Claude.Core.Tests;
 
 [TestClass]
@@ -38,7 +36,7 @@ public class SshSessionWindowResolverTests
     {
         // Port matched a non-ssh process (e.g. our own MegaSchoen streaming probe
         // would be ssh, but any stale match that is not ssh.exe is rejected).
-        var sut = Build(_ => 900u, pid => "chrome", _ => new AncestorWindowResolver.WindowHit(new IntPtr(1), "x"));
+        var sut = Build(_ => 900u, _ => "chrome", _ => new AncestorWindowResolver.WindowHit(new IntPtr(1), "x"));
         Assert.IsNull(sut.Resolve(51000));
     }
 

@@ -6,7 +6,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// <summary>
 /// Hidden message-only window for receiving Win32 messages (hotkeys, tray icon clicks).
 /// </summary>
-sealed class MessageWindow : IDisposable
+sealed partial class MessageWindow : IDisposable
 {
     const string WindowClassName = "MegaSchoen_MessageWindow";
 

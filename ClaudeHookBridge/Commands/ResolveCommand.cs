@@ -1,4 +1,6 @@
+#if WINDOWS
 using Claude.Core;
+#endif
 
 namespace ClaudeHookBridge.Commands;
 

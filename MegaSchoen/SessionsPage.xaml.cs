@@ -1,11 +1,11 @@
 namespace MegaSchoen;
 
-public partial class SessionsPage : ContentPage
+public partial class SessionsPage
 {
 #if WINDOWS
-    readonly MegaSchoen.ViewModels.SessionsPageViewModel _viewModel;
+    readonly ViewModels.SessionsPageViewModel _viewModel;
 
-    public SessionsPage(MegaSchoen.ViewModels.SessionsPageViewModel viewModel)
+    public SessionsPage(ViewModels.SessionsPageViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -34,7 +34,7 @@ public partial class SessionsPage : ContentPage
     {
         try
         {
-            var services = Microsoft.UI.Xaml.Application.Current is MegaSchoen.WinUI.App
+            var services = Microsoft.UI.Xaml.Application.Current is WinUI.App
                 ? MauiWinUIApplication.Current.Services
                 : null;
             if (services is null)

@@ -68,30 +68,38 @@ static class ListCommand
     static async Task<int> EmitJsonStream(ActiveSessionEnumerator enumerator, CliOptions options)
     {
         using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-        var json = new JsonSerializerOptions { WriteIndented = false };
-        var ct = cts.Token;
-
-        while (!ct.IsCancellationRequested)
+        // ReSharper disable once AccessToDisposedClosure -- handler is removed in finally before cts is disposed
+        void OnCancel(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cts.Cancel(); }
+        Console.CancelKeyPress += OnCancel;
+        try
         {
-            var snapshots = enumerator.Enumerate();
-            var serialized = JsonSerializer.Serialize(
-                snapshots.Select(SnapshotDto.From).ToArray(),
-                json);
-            await Console.Out.WriteLineAsync(serialized.AsMemory(), ct).ConfigureAwait(false);
-            await Console.Out.FlushAsync(ct).ConfigureAwait(false);
+            var json = new JsonSerializerOptions { WriteIndented = false };
+            var ct = cts.Token;
 
-            try
+            while (!ct.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+                var snapshots = enumerator.Enumerate();
+                var serialized = JsonSerializer.Serialize(
+                    snapshots.Select(SnapshotDto.From).ToArray(),
+                    json);
+                await Console.Out.WriteLineAsync(serialized.AsMemory(), ct).ConfigureAwait(false);
+                await Console.Out.FlushAsync(ct).ConfigureAwait(false);
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
+            return 0;
         }
-        return 0;
+        finally
+        {
+            Console.CancelKeyPress -= OnCancel;
+        }
     }
 
     static async Task<int> RunHumanMode(ActiveSessionEnumerator enumerator, CliOptions options)
@@ -109,43 +117,52 @@ static class ListCommand
         }
 
         using var cts = new CancellationTokenSource();
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-        var ct = cts.Token;
+        // ReSharper disable once AccessToDisposedClosure -- handler is removed in finally before cts is disposed
+        void OnCancel(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cts.Cancel(); }
+        Console.CancelKeyPress += OnCancel;
+        try
+        {
+            var ct = cts.Token;
 
-        var table = BuildTable(Array.Empty<SessionSnapshot>());
+            var table = BuildTable(Array.Empty<SessionSnapshot>());
 
-        await Spectre.Console.AnsiConsole.Live(table)
-            .StartAsync(async live =>
-            {
-                while (!ct.IsCancellationRequested)
+            await AnsiConsole.Live(table)
+                .StartAsync(async live =>
                 {
-                    var snapshots = enumerator.Enumerate();
-                    Repopulate(table, snapshots);
-                    live.Refresh();
-                    try
+                    while (!ct.IsCancellationRequested)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+                        var snapshots = enumerator.Enumerate();
+                        Repopulate(table, snapshots);
+                        live.Refresh();
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(options.IntervalSeconds), ct).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
                     }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                }
-            }).ConfigureAwait(false);
+                }).ConfigureAwait(false);
 
-        Spectre.Console.AnsiConsole.WriteLine("Stopped.");
-        return 0;
+            AnsiConsole.WriteLine("Stopped.");
+            return 0;
+        }
+        finally
+        {
+            Console.CancelKeyPress -= OnCancel;
+        }
     }
 
-    static Spectre.Console.Table BuildTable(IReadOnlyList<SessionSnapshot> snapshots)
+    static Table BuildTable(IReadOnlyList<SessionSnapshot> snapshots)
     {
-        var table = new Spectre.Console.Table();
+        var table = new Table();
         table.AddColumns("State", "Cwd", "Session", "Last activity");
         Repopulate(table, snapshots);
         return table;
     }
 
-    static void Repopulate(Spectre.Console.Table table, IReadOnlyList<SessionSnapshot> snapshots)
+    static void Repopulate(Table table, IReadOnlyList<SessionSnapshot> snapshots)
     {
         table.Rows.Clear();
         if (snapshots.Count == 0)
@@ -157,7 +174,7 @@ static class ListCommand
         {
             table.AddRow(
                 FormatState(s.RollupState),
-                Spectre.Console.Markup.Escape(TruncateMiddle(s.Cwd, 50)),
+                Markup.Escape(TruncateMiddle(s.Cwd, 50)),
                 s.SessionId.Length >= 8 ? s.SessionId[..8] : s.SessionId,
                 $"{s.LastActivityUtc.ToLocalTime():HH:mm:ss}");
         }

@@ -2,7 +2,7 @@ using Claude.Core;
 
 namespace MegaSchoen.Controls;
 
-public partial class VersionStampView : ContentView
+public partial class VersionStampView
 {
     public VersionStampView()
     {

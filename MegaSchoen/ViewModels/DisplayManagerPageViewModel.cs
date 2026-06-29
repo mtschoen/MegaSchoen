@@ -106,18 +106,18 @@ public partial class DisplayManagerPageViewModel : INotifyPropertyChanged
     {
         _profileService = new DisplayProfileService();
 
-        LoadDisplaysCommand = new Command(async () => await LoadDisplaysAsync());
+        LoadDisplaysCommand = new Command(() => RunCommand(LoadDisplaysAsync));
         SaveCurrentArrangementCommand = new Command(
-            async () => await SaveCurrentArrangementAsync(),
+            () => RunCommand(SaveCurrentArrangementAsync),
             () => !string.IsNullOrWhiteSpace(NewProfileName)
         );
-        DeleteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await DeleteProfileAsync(profile));
-        ApplyProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await ApplyProfileAsync(profile));
-        OverwriteProfileCommand = new Command<SavedDisplayProfile>(async (profile) => await OverwriteProfileAsync(profile));
+        DeleteProfileCommand = new Command<SavedDisplayProfile>(profile => RunCommand(() => DeleteProfileAsync(profile)));
+        ApplyProfileCommand = new Command<SavedDisplayProfile>(profile => RunCommand(() => ApplyProfileAsync(profile)));
+        OverwriteProfileCommand = new Command<SavedDisplayProfile>(profile => RunCommand(() => OverwriteProfileAsync(profile)));
         EditLayoutCommand = new Command<SavedDisplayProfile>(OpenLayoutEditor);
         SetHotkeyCommand = new Command<SavedDisplayProfile>(StartHotkeyCapture);
-        ClearHotkeyCommand = new Command<SavedDisplayProfile>(async (profile) => await ClearHotkeyAsync(profile));
-        RefreshCommand = new Command(async () => await RefreshAllAsync());
+        ClearHotkeyCommand = new Command<SavedDisplayProfile>(profile => RunCommand(() => ClearHotkeyAsync(profile)));
+        RefreshCommand = new Command(() => RunCommand(RefreshAllAsync));
 
 #if WINDOWS
         InitializeWindowsServices();
@@ -155,7 +155,7 @@ public partial class DisplayManagerPageViewModel : INotifyPropertyChanged
             return;
         }
 
-        MainThread.BeginInvokeOnMainThread(async () =>
+        MainThread.BeginInvokeOnMainThread(() => RunCommand(async () =>
         {
             _hotkeyCapturingProfile.Hotkey = hotkey;
             await _profileService.SaveProfileAsync(_hotkeyCapturingProfile);
@@ -172,7 +172,7 @@ public partial class DisplayManagerPageViewModel : INotifyPropertyChanged
             RefreshGlobalHotkeys();
 
             await ShowSuccessAsync($"Hotkey set for '{capturedProfile.Name}'");
-        });
+        }));
     }
 
     void OnCaptureCancelled(object? sender, EventArgs e)
@@ -206,7 +206,7 @@ public partial class DisplayManagerPageViewModel : INotifyPropertyChanged
         }
 
         var viewModel = new LayoutEditorViewModel(profile);
-        var page = new MegaSchoen.LayoutEditorPage(viewModel);
+        var page = new LayoutEditorPage(viewModel);
         var window = new Window(page)
         {
             Title = $"Edit Layout — {profile.Name}",
@@ -288,5 +288,23 @@ public partial class DisplayManagerPageViewModel : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    // Fire-and-forget bridge for ICommand: MAUI's Command takes a void-returning
+    // Action, so an `async () => ...` body would be an async void lambda whose
+    // exceptions are lost. Route async command bodies through here so a failure
+    // surfaces in the log instead of being swallowed by the dispatcher.
+    static void RunCommand(Func<Task> operation) => _ = RunAndLogAsync(operation);
+
+    static async Task RunAndLogAsync(Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            DisplayManager.Core.DiagnosticLog.Log($"DisplayManagerPageViewModel command failed: {exception}");
+        }
     }
 }

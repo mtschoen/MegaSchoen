@@ -1,11 +1,5 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
 using DisplayManager.Core.Models;
-using DisplayManager.Core.Services;
 #if WINDOWS
-using MegaSchoen.Platforms.Windows.Services;
 #endif
 
 namespace MegaSchoen.ViewModels;

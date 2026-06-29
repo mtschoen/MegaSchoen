@@ -1,4 +1,3 @@
-using DisplayManager.Core;
 using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
 
@@ -23,13 +22,13 @@ public class LayoutCommitServiceTests
     static SavedDisplayProfile Preset() => new()
     {
         Name = "P",
-        Displays = [Monitor("A", 0, primary: true)]
+        Displays = [Monitor("A", primary: true)]
     };
 
     [TestMethod]
     public async Task Test_NoDrift_SetsVerifiedHash()
     {
-        var draft = new LayoutDraft { Displays = [Monitor("A", 0, primary: true)] };
+        var draft = new LayoutDraft { Displays = [Monitor("A", primary: true)] };
         var service = new LayoutCommitService(
             apply: _ => new ApplyResult { Success = true },
             compare: _ => new DriftReport { Monitors = [new MonitorDrift { Kind = DriftKind.Match }] });
@@ -44,7 +43,7 @@ public class LayoutCommitServiceTests
     [TestMethod]
     public async Task Test_WithDrift_DoesNotSetHash_BlocksCommit()
     {
-        var draft = new LayoutDraft { Displays = [Monitor("A", 0, primary: true)] };
+        var draft = new LayoutDraft { Displays = [Monitor("A", primary: true)] };
         var service = new LayoutCommitService(
             apply: _ => new ApplyResult { Success = true },
             compare: _ => new DriftReport { Monitors = [new MonitorDrift { Kind = DriftKind.FieldMismatch }] });
@@ -59,7 +58,7 @@ public class LayoutCommitServiceTests
     [TestMethod]
     public void EditingAfterVerify_InvalidatesStamp()
     {
-        var draft = new LayoutDraft { Displays = [Monitor("A", 0, primary: true)] };
+        var draft = new LayoutDraft { Displays = [Monitor("A", primary: true)] };
         draft.VerifiedHash = LayoutHasher.Hash(draft.Displays);
         var service = new LayoutCommitService(_ => new ApplyResult { Success = true }, _ => new DriftReport());
 
@@ -71,7 +70,7 @@ public class LayoutCommitServiceTests
     [TestMethod]
     public async Task Commit_WhenNotVerified_Throws()
     {
-        var draft = new LayoutDraft { PresetId = Guid.NewGuid(), Displays = [Monitor("A", 0, primary: true)] };
+        var draft = new LayoutDraft { PresetId = Guid.NewGuid(), Displays = [Monitor("A", primary: true)] };
         var service = new LayoutCommitService(_ => new ApplyResult { Success = true }, _ => new DriftReport());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CommitAsync(draft, Preset()));
@@ -80,9 +79,9 @@ public class LayoutCommitServiceTests
     [TestMethod]
     public async Task Commit_WhenPresetDeleted_Throws()
     {
-        var preset = new SavedDisplayProfile { Name = "Gone", Displays = [Monitor("A", 0, primary: true)] };
+        var preset = new SavedDisplayProfile { Name = "Gone", Displays = [Monitor("A", primary: true)] };
         // Preset is NOT saved anywhere; presetExists returns false.
-        var draft = new LayoutDraft { PresetId = preset.Id, Displays = [Monitor("A", 0, primary: true)] };
+        var draft = new LayoutDraft { PresetId = preset.Id, Displays = [Monitor("A", primary: true)] };
         draft.VerifiedHash = LayoutHasher.Hash(draft.Displays);
 
         var service = new LayoutCommitService(

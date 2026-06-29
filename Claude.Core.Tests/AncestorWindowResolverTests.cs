@@ -1,5 +1,3 @@
-using Claude.Core;
-
 namespace Claude.Core.Tests;
 
 [TestClass]
@@ -9,7 +7,7 @@ public class AncestorWindowResolverTests
     static Func<uint, uint?> Chain(params (uint pid, uint parent)[] edges)
     {
         var map = edges.ToDictionary(e => e.pid, e => e.parent);
-        return pid => map.TryGetValue(pid, out var p) ? p : (uint?)null;
+        return pid => map.TryGetValue(pid, out var p) ? p : null;
     }
 
     [TestMethod]

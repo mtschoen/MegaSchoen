@@ -1,4 +1,3 @@
-using DisplayManager.Core;
 using DisplayManager.Core.Models;
 using DisplayManager.Core.Services;
 
@@ -108,7 +107,7 @@ public class DisplayDriftServiceTests
     [TestMethod]
     public void Compare_ProfileMonitorMissing_ReportsNotConnected()
     {
-        var live = new List<DisplayInfo>(); // nothing active
+        var live = Array.Empty<DisplayInfo>(); // nothing active
         var report = new DisplayDriftService().Compare(live, Profile(Cfg(1, 2, "A", 0, 0, primary: true)));
 
         Assert.IsFalse(report.Matches);

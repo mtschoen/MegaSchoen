@@ -22,7 +22,7 @@ sealed class ClaudeWindowService
         var entries = _store.Read();
         if (entries.Count == 0)
         {
-            _tray.ShowNotification("MegaSchoen", "No Claude windows waiting", NotificationIcon.Info);
+            _tray.ShowNotification("MegaSchoen", "No Claude windows waiting");
             return;
         }
 
@@ -64,7 +64,7 @@ sealed class ClaudeWindowService
 
         if (candidates.Count == 0)
         {
-            _tray.ShowNotification("MegaSchoen", "No live Claude windows waiting", NotificationIcon.Info);
+            _tray.ShowNotification("MegaSchoen", "No live Claude windows waiting");
             return;
         }
 

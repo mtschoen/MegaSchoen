@@ -1,4 +1,3 @@
-using Claude.Core;
 using Claude.Core.Models;
 using Claude.Core.Tests.Fakes;
 
@@ -287,7 +286,7 @@ public class ActiveSessionEnumeratorTests
 
         var session = result.SingleOrDefault(s => s.SessionId == "bg-375e9c68");
         Assert.IsNotNull(session, "a live background worker surfaces by its authoritative id with no transcript/state yet");
-        Assert.IsTrue(session!.Window.IsZero, "background worker is windowless");
+        Assert.IsTrue(session.Window.IsZero, "background worker is windowless");
     }
 
     [TestMethod]
@@ -311,7 +310,7 @@ public class ActiveSessionEnumeratorTests
 
         var session = result.SingleOrDefault(s => s.SessionId == "bg-674a8820");
         Assert.IsNotNull(session, "authoritative id surfaces even when cwd-keying would mis-bucket the home dir");
-        Assert.AreEqual(SessionState.AwaitingInput, session!.State);
+        Assert.AreEqual(SessionState.AwaitingInput, session.State);
         Assert.AreEqual(@"C:\actual\task", session.Cwd, "prefer the hook-recorded cwd over the worker's home-dir PEB cwd");
     }
 

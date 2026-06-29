@@ -32,7 +32,7 @@ public sealed class EnvironmentProcessLocator : IClaudeProcessLocator
         uint pid = 1;
         foreach (var spec in specs)
         {
-            for (var i = 0; i < spec.Count; i++)
+            foreach (var _ in Enumerable.Range(0, spec.Count))
             {
                 result.Add(new ClaudeWindow(
                     pid++, WindowToken.Null, "", spec.Cwd, DateTimeOffset.UtcNow));
@@ -44,6 +44,7 @@ public sealed class EnvironmentProcessLocator : IClaudeProcessLocator
     sealed class FakeProcSpec
     {
         [JsonPropertyName("cwd")] public string Cwd { get; set; } = "";
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local -- set by System.Text.Json deserialization
         [JsonPropertyName("count")] public int Count { get; set; }
     }
 }

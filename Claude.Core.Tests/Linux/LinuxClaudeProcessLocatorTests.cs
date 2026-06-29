@@ -1,5 +1,4 @@
 using Claude.Core.Linux;
-using Claude.Core.Models;
 
 namespace Claude.Core.Tests.Linux;
 

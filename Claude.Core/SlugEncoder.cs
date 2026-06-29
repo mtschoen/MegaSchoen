@@ -9,12 +9,7 @@ public static class SlugEncoder
     public static string Encode(string cwd)
     {
         var trimmed = cwd.TrimEnd('\\', '/');
-        var chars = new char[trimmed.Length];
-        for (var i = 0; i < trimmed.Length; i++)
-        {
-            var c = trimmed[i];
-            chars[i] = c is ':' or '\\' or '/' ? '-' : c;
-        }
+        var chars = trimmed.Select(c => c is ':' or '\\' or '/' ? '-' : c).ToArray();
         return new string(chars);
     }
 }

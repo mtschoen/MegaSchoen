@@ -6,7 +6,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// <summary>
 /// Manages global hotkey registration using the Win32 RegisterHotKey API.
 /// </summary>
-sealed class GlobalHotkeyService : IDisposable
+sealed partial class GlobalHotkeyService : IDisposable
 {
     readonly MessageWindow _messageWindow;
     readonly Dictionary<int, Guid> _hotkeyToProfile = new();

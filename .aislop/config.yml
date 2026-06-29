@@ -18,7 +18,36 @@
 # (the globally-installed fork build has the C# rules) and rely on the CI gate.
 
 ci:
-  failBelow: 80          # fleet baseline (matches git-wizard)
+  failBelow: 100         # 0-findings bar (matches git-wizard); a single new finding red-lights the gate
+
+# The C# lint engine shells out to `jb inspectcode` / `roslynator`. jb inspects whole
+# PROJECTS, so the top-level `exclude:` globs below (which filter aislop's own globbed
+# .cs file set) cannot suppress jb's C++ output: .cpp files are never in that set, so the
+# native ReSharper C++ findings (jb/Cpp*) bypass the path filter entirely. The correct
+# lever is jb's own `--project=` inclusion filter, exposed here as lint.csharp.jbProjects.
+# This wildcard set names every MANAGED project and omits DisplayManagerNative, so jb
+# never analyzes the C++ (cppcheck owns it, see .gitea/workflows/ci.yml lint-cpp job).
+lint:
+  csharp:
+    jbProjects: "Claude*;DisplayManager.Core*;DisplayManagerCLI;MegaSchoen*"
+    # jb (ReSharper) cannot follow .NET MAUI's RelativeSource / BindableLayout XAML
+    # bindings, nor members that are only ever touched by XAML binding or
+    # System.Text.Json (de)serialization - it reports them as unresolved bindings or
+    # unused PUBLIC members, which are false positives in an MVVM + serialization app.
+    # These inspection IDs are excluded repo-wide. NOTE the deliberate scope: only the
+    # binding inspection and the *.Global* (non-private) unused-member family are
+    # dropped - the private-scope *.Local* variants stay ACTIVE, because private members
+    # are fully analyzable by jb and a .Local hit is a real dead-code signal. The
+    # serialization DTOs (SnapshotDto, DisplayMode, ScenarioStep, ...) are covered by the
+    # .Global excludes; the one private DTO setter (FakeProcSpec.Count) keeps a per-case
+    # suppression in source. InconsistentNaming is aislop's default (naming is owned by
+    # .editorconfig + MegaSchoen.sln.DotSettings) and is preserved here.
+    jbExcludeTypes:
+      - InconsistentNaming
+      - Xaml.BindingWithContextNotResolved
+      - UnusedAutoPropertyAccessor.Global
+      - NotAccessedPositionalProperty.Global
+      - CollectionNeverQueried.Global
 
 exclude:
   - "**/obj/**"

@@ -1,4 +1,3 @@
-using Claude.Core;
 using Claude.Core.Remote;
 
 namespace Claude.Core.Tests;

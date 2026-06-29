@@ -6,7 +6,7 @@ using Claude.Core.Models;
 
 namespace MegaSchoen.ViewModels;
 
-public sealed class SessionCardViewModel : INotifyPropertyChanged
+public sealed partial class SessionCardViewModel : INotifyPropertyChanged
 {
     SessionSnapshot _snapshot;
     bool _isExpanded;
@@ -22,7 +22,7 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
         set
         {
             _snapshot = value;
-            OnPropertyChanged(nameof(Snapshot));
+            OnPropertyChanged();
             OnPropertyChanged(nameof(Title));
             OnPropertyChanged(nameof(HasTitle));
             OnPropertyChanged(nameof(HasTranscriptPath));
@@ -47,7 +47,7 @@ public sealed class SessionCardViewModel : INotifyPropertyChanged
         {
             if (_isExpanded == value) return;
             _isExpanded = value;
-            OnPropertyChanged(nameof(IsExpanded));
+            OnPropertyChanged();
         }
     }
 

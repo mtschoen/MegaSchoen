@@ -4,7 +4,7 @@ using MegaSchoen.ViewModels;
 
 namespace MegaSchoen
 {
-    public partial class App : Application
+    public partial class App
     {
         // Pass this on the command line to boot straight into the Layout Editor as the sole
         // window — the screenshot pipeline (screenshot-editor.ps1) relies on it so the capture

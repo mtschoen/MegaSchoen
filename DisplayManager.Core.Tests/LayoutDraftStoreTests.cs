@@ -39,7 +39,7 @@ public class LayoutDraftStoreTests
 
         var loaded = await _store.LoadAsync(id);
         Assert.IsNotNull(loaded);
-        Assert.AreEqual("DEADBEEF", loaded!.VerifiedHash);
+        Assert.AreEqual("DEADBEEF", loaded.VerifiedHash);
         Assert.HasCount(1, loaded.Displays);
     }
 

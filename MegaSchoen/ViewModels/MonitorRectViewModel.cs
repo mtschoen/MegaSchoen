@@ -9,7 +9,7 @@ namespace MegaSchoen.ViewModels;
 /// scaled canvas geometry (CanvasX/Y/Width/Height) derived from the real position/
 /// footprint and the canvas scale factor. Footprint respects rotation.
 /// </summary>
-public class MonitorRectViewModel : INotifyPropertyChanged
+public partial class MonitorRectViewModel : INotifyPropertyChanged
 {
     double _canvasX, _canvasY, _canvasWidth, _canvasHeight;
     bool _isSelected;

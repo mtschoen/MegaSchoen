@@ -1,4 +1,3 @@
-using Claude.Core;
 using Claude.Core.Models;
 
 namespace Claude.Core.Tests.Fakes;

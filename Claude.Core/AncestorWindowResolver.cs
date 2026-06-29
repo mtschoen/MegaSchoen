@@ -1,11 +1,13 @@
 namespace Claude.Core;
 
-// Pure, platform-neutral: walk a process-ancestor chain and return the first
-// ancestor PID that owns a visible top-level window. Win32 is injected as
-// delegates (getParent) + a prebuilt window map, so this is fully unit-testable.
-// Used by BOTH exotic-context features:
-//   - embedded IDE terminals: start at the windowless shell PID -> IDE window
-//   - remote ssh: start at the local ssh.exe PID -> hosting cmd window
+/// <summary>
+/// Pure, platform-neutral: walk a process-ancestor chain and return the first
+/// ancestor PID that owns a visible top-level window. Win32 is injected as
+/// delegates (getParent) + a prebuilt window map, so this is fully unit-testable.
+/// Used by both exotic-context features: embedded IDE terminals (start at the
+/// windowless shell PID, climb to the IDE window) and remote ssh (start at the
+/// local ssh.exe PID, climb to the hosting cmd window).
+/// </summary>
 public static class AncestorWindowResolver
 {
     public readonly record struct WindowHit(IntPtr Hwnd, string Title);

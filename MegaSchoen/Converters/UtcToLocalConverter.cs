@@ -17,7 +17,7 @@ public class UtcToLocalConverter : IValueConverter
         return value;
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         // One-way converter: bindings using UtcToLocalConverter are OneWay, so ConvertBack
         // is never invoked. NotSupported is the correct contract, not unfinished work.

@@ -7,7 +7,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// <summary>
 /// Manages the system tray icon with context menu for profile selection.
 /// </summary>
-sealed class TrayIconService : IDisposable
+sealed partial class TrayIconService : IDisposable
 {
     const int TrayIconId = 1;
     const int MenuIdOpen = 1000;
@@ -238,42 +238,38 @@ sealed class TrayIconService : IDisposable
 
     void HandleMenuCommand(int cmd)
     {
-        if (cmd == 0)
+        switch (cmd)
         {
-            return;
-        }
-
-        if (cmd == MenuIdOpen)
-        {
-            ShowRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd == MenuIdExit)
-        {
-            ExitRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd == MenuIdCycleClaude)
-        {
-            CyclePermissionsRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd == MenuIdCycleAnyWaiting)
-        {
-            CycleAnyWaitingRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd == MenuIdInstallClaudeHooks)
-        {
-            InstallClaudeHooksRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd == MenuIdClearNeedyClaude)
-        {
-            ClearNeedyClaudeRequested?.Invoke(this, EventArgs.Empty);
-        }
-        else if (cmd >= MenuIdProfileBase)
-        {
-            var index = cmd - MenuIdProfileBase;
-            if (index >= 0 && index < _profiles.Count)
-            {
-                ProfileSelected?.Invoke(this, _profiles[index].Id);
-            }
+            case 0:
+                return;
+            case MenuIdOpen:
+                ShowRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            case MenuIdExit:
+                ExitRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            case MenuIdCycleClaude:
+                CyclePermissionsRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            case MenuIdCycleAnyWaiting:
+                CycleAnyWaitingRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            case MenuIdInstallClaudeHooks:
+                InstallClaudeHooksRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            case MenuIdClearNeedyClaude:
+                ClearNeedyClaudeRequested?.Invoke(this, EventArgs.Empty);
+                break;
+            default:
+                if (cmd >= MenuIdProfileBase)
+                {
+                    var index = cmd - MenuIdProfileBase;
+                    if (index < _profiles.Count)
+                    {
+                        ProfileSelected?.Invoke(this, _profiles[index].Id);
+                    }
+                }
+                break;
         }
     }
 

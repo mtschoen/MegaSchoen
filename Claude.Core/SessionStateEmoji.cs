@@ -14,7 +14,6 @@ public static class SessionStateEmoji
         SessionState.AwaitingInput => "⌨️",
         SessionState.Working => "🔄",
         SessionState.Idle => "😴",
-        SessionState.Unknown => "❓",
         _ => "❓"
     };
 }

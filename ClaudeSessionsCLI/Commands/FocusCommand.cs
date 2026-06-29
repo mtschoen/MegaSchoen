@@ -1,5 +1,5 @@
-using Claude.Core;
 #if WINDOWS
+using Claude.Core;
 using Claude.Core.Windows;
 #endif
 

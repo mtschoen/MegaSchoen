@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Threading;
 using Claude.Core.Models;
 
 namespace Claude.Core;

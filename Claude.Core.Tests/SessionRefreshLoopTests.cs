@@ -1,5 +1,4 @@
 using System.Threading.Channels;
-using Claude.Core;
 
 namespace Claude.Core.Tests;
 
@@ -78,8 +77,9 @@ public class SessionRefreshLoopTests
     public async Task RefreshThrowingCancellation_StopsLoop()
     {
         var channel = Channel.CreateUnbounded<byte>();
-        using var cts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
 
+        // ReSharper disable once AccessToDisposedClosure -- cts outlives the closure within the test scope
         Task Refresh(CancellationToken token)
         {
             cts.Cancel();
@@ -96,5 +96,6 @@ public class SessionRefreshLoopTests
         // shutdown, not a per-iteration fault, so the loop stops cleanly.
         await run.WaitAsync(TimeSpan.FromSeconds(5));
         Assert.IsTrue(run.IsCompletedSuccessfully);
+        cts.Dispose();
     }
 }

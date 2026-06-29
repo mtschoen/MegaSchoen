@@ -8,7 +8,7 @@ namespace MegaSchoen.Converters;
 /// </summary>
 sealed class HotkeyDisplayConverter : IValueConverter
 {
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not HotkeyDefinition hotkey || !hotkey.Enabled || string.IsNullOrEmpty(hotkey.Key))
         {
@@ -28,7 +28,7 @@ sealed class HotkeyDisplayConverter : IValueConverter
         return string.Join("+", parts);
     }
 
-    public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         throw new NotSupportedException();
     }

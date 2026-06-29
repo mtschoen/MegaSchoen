@@ -1,8 +1,9 @@
 using DisplayManager.Core.Services;
+#if DEBUG
 using Microsoft.Extensions.Logging;
+#endif
 #if WINDOWS
 using Claude.Core;
-using Claude.Core.Models;
 using Claude.Core.Windows;
 using MegaSchoen.Platforms.Windows.Services;
 #endif
@@ -32,12 +33,12 @@ public static class MauiProgram
         builder.Services.AddSingleton<GlobalHotkeyService>();
         builder.Services.AddSingleton<KeyCaptureService>();
         builder.Services.AddSingleton<IClaudeWindowFocuser, WindowsClaudeWindowFocuser>();
-        builder.Services.AddSingleton<ISshSessionWindowResolver, Claude.Core.Windows.WindowsSshSessionWindowResolver>();
+        builder.Services.AddSingleton<ISshSessionWindowResolver, WindowsSshSessionWindowResolver>();
         builder.Services.AddSingleton<ClaudeWindowService>();
-        builder.Services.AddSingleton<IClaudeProcessLocator, Claude.Core.Windows.WindowsClaudeProcessLocator>();
+        builder.Services.AddSingleton<IClaudeProcessLocator, WindowsClaudeProcessLocator>();
         builder.Services.AddSingleton<StateStore>();
         builder.Services.AddSingleton<ActiveSessionEnumerator>();
-        builder.Services.AddTransient<MegaSchoen.ViewModels.SessionsPageViewModel>();
+        builder.Services.AddTransient<ViewModels.SessionsPageViewModel>();
         builder.Services.AddTransient<SessionsPage>();
         builder.Services.AddTransient<DisplayManagerPage>();
 #endif

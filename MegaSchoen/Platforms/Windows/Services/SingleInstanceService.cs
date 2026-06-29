@@ -4,7 +4,7 @@ namespace MegaSchoen.Platforms.Windows.Services;
 /// Ensures only a single instance of the application runs at a time.
 /// Uses a named mutex for cross-process synchronization.
 /// </summary>
-sealed class SingleInstanceService : IDisposable
+sealed partial class SingleInstanceService : IDisposable
 {
     const string MutexName = "Global\\MegaSchoen_SingleInstance";
 
@@ -18,7 +18,7 @@ sealed class SingleInstanceService : IDisposable
     /// <returns>True if this is the first instance, false if another instance is running.</returns>
     public bool TryAcquire()
     {
-        _mutex = new Mutex(false, MutexName, out var createdNew);
+        _mutex = new Mutex(false, MutexName, out _);
 
         try
         {

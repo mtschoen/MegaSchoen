@@ -13,14 +13,13 @@ return args[0].ToLowerInvariant() switch
     _ => PrintUnknown(args[0])
 };
 
-static int PrintUsage()
+static void PrintUsage()
 {
     Console.WriteLine("Usage: ClaudeSessionsCLI <command> [arguments]");
     Console.WriteLine();
     Console.WriteLine("Commands:");
     Console.WriteLine("  list  [--json] [--json-stream] [--interval 1.5]   List active Claude sessions");
     Console.WriteLine("  focus <session-id-prefix>                          Bring matching window to foreground");
-    return 0;
 }
 
 static int PrintUnknown(string verb)

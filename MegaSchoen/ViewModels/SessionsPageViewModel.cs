@@ -1,6 +1,5 @@
 #if WINDOWS
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Threading.Channels;
 using System.Windows.Input;
 using Claude.Core;
@@ -9,10 +8,9 @@ using Claude.Core.Remote;
 
 namespace MegaSchoen.ViewModels;
 
-public sealed class SessionsPageViewModel : IDisposable
+public sealed partial class SessionsPageViewModel : IDisposable
 {
     readonly ActiveSessionEnumerator _enumerator;
-    readonly IClaudeWindowFocuser _focuser;
     readonly ISshSessionWindowResolver _sshWindowResolver;
     readonly IDispatcher _dispatcher;
 
@@ -28,7 +26,6 @@ public sealed class SessionsPageViewModel : IDisposable
     Task? _consumerTask;
 
     readonly Dictionary<string, IReadOnlyList<SessionSnapshot>> _remoteByHost = new();
-    readonly List<RemoteSessionStreamClient> _remoteClients = new();
     IReadOnlyList<SessionSnapshot> _localSnapshots = Array.Empty<SessionSnapshot>();
 
     public ObservableCollection<SessionCardViewModel> Sessions { get; } = new();
@@ -45,16 +42,15 @@ public sealed class SessionsPageViewModel : IDisposable
         IDispatcher dispatcher)
     {
         _enumerator = enumerator;
-        _focuser = focuser;
         _sshWindowResolver = sshWindowResolver;
         _dispatcher = dispatcher;
 
         FocusCommand = new Command<SessionCardViewModel>(card =>
         {
             if (card.Snapshot.Window.IsZero) return;
-            _focuser.BringToFront(card.Snapshot.Window);
+            focuser.BringToFront(card.Snapshot.Window);
         });
-        CopyTranscriptPathCommand = new Command<SessionCardViewModel>(async card =>
+        CopyTranscriptPathCommand = new Command<SessionCardViewModel>(card => RunCommand(async () =>
         {
             var path = card.Snapshot.TranscriptPath;
             if (string.IsNullOrEmpty(path)) return;
@@ -66,7 +62,7 @@ public sealed class SessionsPageViewModel : IDisposable
             {
                 Logger.Log($"SessionsPageViewModel.CopyTranscriptPath failed: {exception}");
             }
-        });
+        }));
         ToggleExpandCommand = new Command<SessionCardViewModel>(card =>
             card.IsExpanded = !card.IsExpanded);
         RefreshCommand = new Command(RefreshNow);
@@ -85,7 +81,7 @@ public sealed class SessionsPageViewModel : IDisposable
         _stateWatcher.Changed += OnAnyEvent;
         _stateWatcher.Created += OnAnyEvent;
         _stateWatcher.Deleted += OnAnyEvent;
-        _stateWatcher.Renamed += (s, e) => _refreshSignal.Writer.TryWrite(0);
+        _stateWatcher.Renamed += (_, _) => _refreshSignal.Writer.TryWrite(0);
 
         var projectsRoot = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".claude", "projects");
@@ -117,7 +113,6 @@ public sealed class SessionsPageViewModel : IDisposable
                 _dispatcher.Dispatch(() => MergeRemote(capturedHost.Name, snapshots));
             client.ConnectionStateChanged += state =>
                 _dispatcher.Dispatch(() => status.State = state);
-            _remoteClients.Add(client);
             _ = client.RunAsync(_cts.Token);
         }
     }
@@ -235,8 +230,25 @@ public sealed class SessionsPageViewModel : IDisposable
         _transcriptsWatcher?.Dispose();
         _consumerTask?.Wait(TimeSpan.FromSeconds(2));
         _cts.Dispose();
-        _remoteClients.Clear();
         HostStatuses.Clear();
+    }
+
+    // Fire-and-forget bridge for ICommand: MAUI's Command takes a void-returning
+    // Action, so an `async () => ...` body would be an async void lambda whose
+    // exceptions are lost. Route async command bodies through here so a failure
+    // surfaces in the log instead of being swallowed by the dispatcher.
+    static void RunCommand(Func<Task> operation) => _ = RunAndLogAsync(operation);
+
+    static async Task RunAndLogAsync(Func<Task> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            Logger.Log($"SessionsPageViewModel command failed: {exception}");
+        }
     }
 }
 #endif
