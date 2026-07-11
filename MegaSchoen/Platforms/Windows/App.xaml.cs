@@ -75,7 +75,14 @@ public partial class App
         ClaudeWindowService claudeWindowService, DisplayProfileService profileService,
         List<SavedDisplayProfile> profiles)
     {
-        // Wire up tray icon events
+        WireProfileSelection(tray, profiles, profileService);
+        WireShowAndExit(tray, hotkeys, messageWindow);
+        WireClaudeHookInstall(tray);
+        WireClaudeCycling(tray, claudeWindowService);
+    }
+
+    static void WireProfileSelection(TrayIconService tray, List<SavedDisplayProfile> profiles, DisplayProfileService profileService)
+    {
         tray.ProfileSelected += (_, profileId) =>
         {
             var profile = profiles.FirstOrDefault(p => p.Id == profileId);
@@ -92,7 +99,10 @@ public partial class App
                 }
             }
         };
+    }
 
+    static void WireShowAndExit(TrayIconService tray, GlobalHotkeyService hotkeys, MessageWindow messageWindow)
+    {
         tray.ShowRequested += (_, _) =>
         {
             ShowMainWindow();
@@ -107,7 +117,10 @@ public partial class App
             _singleInstance?.Dispose();
             Environment.Exit(0);
         };
+    }
 
+    static void WireClaudeHookInstall(TrayIconService tray)
+    {
         tray.InstallClaudeHooksRequested += (_, _) =>
         {
             try
@@ -122,7 +135,10 @@ public partial class App
                 tray.ShowNotification("MegaSchoen", $"Install failed: {exception.Message}", NotificationIcon.Error);
             }
         };
+    }
 
+    static void WireClaudeCycling(TrayIconService tray, ClaudeWindowService claudeWindowService)
+    {
         tray.CyclePermissionsRequested += (_, _) =>
         {
             try

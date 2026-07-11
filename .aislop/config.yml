@@ -4,7 +4,9 @@
 # and this repo scans clean at 100/100, so the CI gate (the `aislop` job in
 # .gitea/workflows/ci.yml) is now live. It complements - does not replace - the Roslyn
 # + Roslynator + `dotnet format` gate (see Directory.Build.props / .editorconfig). aislop
-# covers the C# only; the C++ in DisplayManagerNative/ stays on clang-tidy/cppcheck.
+# covers C# and, as of the 0.13.x fork build, the C++ in DisplayManagerNative/ too
+# (still backstopped by clang-tidy/cppcheck in the lint-cpp CI job); only the vendored
+# nlohmann json.hpp header is excluded below.
 #
 # How CI runs it: `npx --yes "@schoen/aislop@<version>" ci .` (see .gitea/workflows/ci.yml,
 # currently 0.12.3) - the C#-capable fork build published as @schoen/aislop to the
@@ -54,4 +56,4 @@ exclude:
   - "**/bin/**"
   - "**/*.g.cs"          # generated (XAML, source generators)
   - "**/*.Designer.cs"   # generated designer code
-  - "DisplayManagerNative/**"   # C++ — aislop does not support C++ (json.hpp is vendored)
+  - "DisplayManagerNative/json.hpp"   # vendored nlohmann header - C++ is scanned as of the 0.13.x fork build; only this vendored header is excluded
