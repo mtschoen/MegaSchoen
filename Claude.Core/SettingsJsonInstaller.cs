@@ -197,7 +197,18 @@ public sealed class SettingsJsonInstaller
         return (InstallState.InstalledElsewhere, firstCommandPath);
     }
 
+    // Paths here are hook command lines, which Install() writes with forward
+    // slashes (see the normalization note in Install), so backslash is treated
+    // as a separator on BOTH platforms: Windows Path.GetFullPath canonicalizes
+    // either separator, but on Linux a backslash is a literal filename
+    // character, so without pre-normalizing, "C:\bridge.exe" would compare
+    // unequal to its own installed form "C:/bridge.exe" and a correct install
+    // would report InstalledElsewhere (issue #37). Case-insensitive to match
+    // the installer's Windows-first on-disk paths.
     static bool PathsEqual(string? a, string? b) =>
         a is not null && b is not null
-        && string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase);
+        && string.Equals(
+            Path.GetFullPath(a.Replace('\\', '/')),
+            Path.GetFullPath(b.Replace('\\', '/')),
+            StringComparison.OrdinalIgnoreCase);
 }

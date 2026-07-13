@@ -49,7 +49,7 @@ public class SessionStatusReplayTests
                 TranscriptPath = transcriptPath
             });
 
-            var snapshot = new ActiveSessionEnumerator(locator, store, fixture.Root)
+            var snapshot = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc)
                 .Enumerate()
                 .Single(s => s.SessionId == scenario.SessionId);
 

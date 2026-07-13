@@ -13,12 +13,23 @@ public sealed class ActiveSessionEnumerator
     readonly IClaudeProcessLocator _locator;
     readonly StateStore _store;
     readonly string _projectsRoot;
+    readonly Func<string, DateTime> _creationTimeUtcSource;
 
-    public ActiveSessionEnumerator(IClaudeProcessLocator locator, StateStore store, string projectsRoot)
+    // creationTimeUtcSource is the injectable "when was this transcript
+    // created?" answer, defaulting to TranscriptCreationTime.GetUtc (the
+    // platform-correct source: real creation time on Windows, statx birth
+    // time on Linux). Tests inject a recorded-value source because no API can
+    // set the filesystem birth time on Linux.
+    public ActiveSessionEnumerator(
+        IClaudeProcessLocator locator,
+        StateStore store,
+        string projectsRoot,
+        Func<string, DateTime>? creationTimeUtcSource = null)
     {
         _locator = locator;
         _store = store;
         _projectsRoot = projectsRoot;
+        _creationTimeUtcSource = creationTimeUtcSource ?? TranscriptCreationTime.GetUtc;
     }
 
     public ActiveSessionEnumerator(IClaudeProcessLocator locator, StateStore store)
@@ -76,7 +87,7 @@ public sealed class ActiveSessionEnumerator
                 if (!CwdMatches(ReadTranscriptCwd(path), cwd)) continue;
                 var id = Path.GetFileNameWithoutExtension(path);
                 candidates[id] = new Candidate(
-                    id, path, File.GetCreationTimeUtc(path), File.GetLastWriteTimeUtc(path));
+                    id, path, _creationTimeUtcSource(path), File.GetLastWriteTimeUtc(path));
             }
         }
 
@@ -90,7 +101,7 @@ public sealed class ActiveSessionEnumerator
             // timestamps, so they rank in the freshest-N cap on a different
             // clock than transcript-backed peers (file mtime). Edge-only: a
             // live store entry almost always carries a transcript path.
-            var creation = hasFile ? File.GetCreationTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
+            var creation = hasFile ? _creationTimeUtcSource(path) : entry.NotifiedAt.UtcDateTime;
             var lastWrite = hasFile ? File.GetLastWriteTimeUtc(path) : entry.NotifiedAt.UtcDateTime;
             candidates[id] = new Candidate(id, path, creation, lastWrite);
         }
@@ -163,9 +174,11 @@ public sealed class ActiveSessionEnumerator
     //      resumed session, whose old transcript predates its (re)started
     //      process so Pass 2 cannot apply, in its cwd's only terminal.
     // The start-time match (Pass 1) misses for rig-verified reasons:
-    //  - Linux remote: .NET's file creation time tracks mtime, so an active
+    //  - Linux remote: .NET's File.GetCreationTimeUtc tracks mtime, so an active
     //    session's transcript drifts past the 30s tolerance (Linux has no window
     //    anyway, but the piggybacked SSH client port must still thread through).
+    //    Mitigated since issue #37 by TranscriptCreationTime reading the statx
+    //    birth time; the drift remains only on filesystems without btime.
     //  - Windows: a freshly started claude writes no transcript until the first
     //    prompt, so either the freshest OLD transcript surfaces (resume) or the
     //    new transcript is created well after the process started (slow first

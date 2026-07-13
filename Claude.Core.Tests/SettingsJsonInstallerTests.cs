@@ -122,6 +122,33 @@ public class SettingsJsonInstallerTests
     }
 
     [TestMethod]
+    public void GetStatus_MixedSeparators_ReportsInstalledHere()
+    {
+        // Install writes the command with forward slashes, so a status query
+        // made with the backslash form must still compare equal - on Linux
+        // too, where backslash is otherwise a literal filename character
+        // (issue #37).
+        var installer = new SettingsJsonInstaller(_tempSettings);
+        installer.Install("C:\\Tools\\bridge.exe");
+
+        var status = installer.GetStatus("C:/Tools/bridge.exe");
+        Assert.AreEqual(InstallState.InstalledHere, status.Notification);
+        Assert.AreEqual(InstallState.InstalledHere, status.SessionEnd);
+    }
+
+    [TestMethod]
+    public void GetStatus_PlatformNativePath_ReportsInstalledHere()
+    {
+        var bridgePath = Path.Combine(Path.GetTempPath(), "bridge.exe");
+        var installer = new SettingsJsonInstaller(_tempSettings);
+        installer.Install(bridgePath);
+
+        var status = installer.GetStatus(bridgePath);
+        Assert.AreEqual(InstallState.InstalledHere, status.Notification);
+        Assert.AreEqual(InstallState.InstalledHere, status.SessionEnd);
+    }
+
+    [TestMethod]
     public void GetStatus_MissingFile_ReportsNotInstalled()
     {
         var installer = new SettingsJsonInstaller(_tempSettings);

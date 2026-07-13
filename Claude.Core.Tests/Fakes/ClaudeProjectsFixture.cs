@@ -4,6 +4,13 @@ internal sealed class ClaudeProjectsFixture : IDisposable
 {
     public string Root { get; } = Path.Combine(Path.GetTempPath(), $"claude-projects-{Guid.NewGuid():N}");
 
+    // Creation times cannot be faked on the real filesystem everywhere
+    // (File.SetCreationTimeUtc cannot set the Linux birth time), so the
+    // fixture records each session's intended creation time and hands it back
+    // through GetCreationTimeUtc, which tests inject into
+    // ActiveSessionEnumerator as its creationTimeUtcSource.
+    readonly Dictionary<string, DateTime> _creationTimesUtc = new(StringComparer.OrdinalIgnoreCase);
+
     public ClaudeProjectsFixture()
     {
         Directory.CreateDirectory(Root);
@@ -18,13 +25,17 @@ internal sealed class ClaudeProjectsFixture : IDisposable
         Directory.CreateDirectory(dir);
         var path = Path.Combine(dir, $"{sessionId}.jsonl");
         File.WriteAllText(path, string.Join("\n", lines) + "\n");
-        if (creationTimeUtc is { } createdAt)
-        {
-            File.SetCreationTimeUtc(path, createdAt);
-        }
+        // Default matches Windows semantics: a freshly written file's creation
+        // time is "now" even when the test backdates its mtime.
+        _creationTimesUtc[path] = creationTimeUtc ?? DateTime.UtcNow;
         File.SetLastWriteTimeUtc(path, mtimeUtc);
         return path;
     }
+
+    public DateTime GetCreationTimeUtc(string path) =>
+        _creationTimesUtc.TryGetValue(path, out var recorded)
+            ? recorded
+            : TranscriptCreationTime.GetUtc(path);
 
     public string AddSubagent(string slug, string sessionId, string agentId, string lastLineJson, DateTime mtimeUtc)
     {

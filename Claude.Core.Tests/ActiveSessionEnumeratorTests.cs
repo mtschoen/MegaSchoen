@@ -21,7 +21,7 @@ public class ActiveSessionEnumeratorTests
         var locator = new FakeProcessLocator(); // no live procs
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
         Assert.IsEmpty(result, "no live process in any cwd => nothing surfaced (zombie pruned)");
     }
 
@@ -37,7 +37,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual("abc-123", result[0].SessionId);
@@ -62,7 +62,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual("Wire up the title", result[0].Title);
@@ -80,7 +80,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.IsNull(result[0].Title);
@@ -103,7 +103,7 @@ public class ActiveSessionEnumeratorTests
         });
 
         var locator = new FakeProcessLocator(); // terminal killed => no live proc
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.IsEmpty(result, "Working session whose process is gone is a zombie => pruned");
     }
@@ -128,7 +128,7 @@ public class ActiveSessionEnumeratorTests
 
         var locator = new FakeProcessLocator();
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1), startUtc: stale)); // process still alive (blocked)
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result, "waiting sessions never time-expire while their process lives");
         Assert.AreEqual(SessionState.AwaitingInput, result[0].State);
@@ -145,7 +145,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state")); // empty store
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual("fresh-1", result[0].SessionId);
@@ -167,7 +167,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(2)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         var ids = result.Select(s => s.SessionId).ToHashSet();
         Assert.HasCount(2, result, "cap to live-process count (2)");
@@ -190,7 +190,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1), startUtc: DateTime.UtcNow));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual("resumed-1", result[0].SessionId, "identity is the filename, not a start-time guess");
@@ -211,7 +211,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, IntPtr.Zero)); // windowless headless -p
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual("headless-1", result[0].SessionId);
@@ -238,7 +238,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwdA, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result, "only the transcript recorded with the live cwd surfaces");
         Assert.AreEqual("in-bar", result[0].SessionId);
@@ -258,7 +258,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual(SessionState.Idle, result[0].State);
@@ -282,7 +282,7 @@ public class ActiveSessionEnumeratorTests
         var locator = new FakeProcessLocator();
         locator.Sessions.Add(BackgroundProc(5000, "bg-375e9c68", @"C:\work\proj"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         var session = result.SingleOrDefault(s => s.SessionId == "bg-375e9c68");
         Assert.IsNotNull(session, "a live background worker surfaces by its authoritative id with no transcript/state yet");
@@ -306,7 +306,7 @@ public class ActiveSessionEnumeratorTests
         var locator = new FakeProcessLocator();
         locator.Sessions.Add(BackgroundProc(5001, "bg-674a8820", @"C:\Users\mtsch"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         var session = result.SingleOrDefault(s => s.SessionId == "bg-674a8820");
         Assert.IsNotNull(session, "authoritative id surfaces even when cwd-keying would mis-bucket the home dir");
@@ -338,7 +338,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwdA, new IntPtr(1)));
         locator.Sessions.Add(LiveProc(101, cwdB, new IntPtr(2)));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(2, result);
         Assert.AreEqual("session-b", result[0].SessionId);
@@ -359,7 +359,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProcWithPort(100, cwd, 51000, created));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual(51000, result[0].SshClientPort);
@@ -384,7 +384,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProcWithPort(100, cwd, 54861, DateTime.UtcNow.AddMinutes(-5)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.AreEqual(54861, result[0].SshClientPort, "port must thread even without a window match");
@@ -409,7 +409,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(0x1234), "liminal - Rider", DateTime.UtcNow.AddMinutes(-5)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(1, result);
         Assert.IsFalse(result[0].Window.IsZero, "single live process in cwd must attach its window");
@@ -443,7 +443,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0xBBB), "drifted-term", now.AddMinutes(-2)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(2, result);
         Assert.IsTrue(result.All(s => !s.Window.IsZero),
@@ -477,7 +477,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0xB1), "term-b", procBStart));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(2, result);
         Assert.IsTrue(result.All(s => !s.Window.IsZero),
@@ -505,7 +505,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProc(101, cwd, new IntPtr(0x2222), "term-b", DateTime.UtcNow.AddMinutes(-5)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(2, result);
         Assert.IsTrue(result[0].Window.IsZero, "ambiguous multi-process cwd must not guess a window");
@@ -532,7 +532,7 @@ public class ActiveSessionEnumeratorTests
         locator.Sessions.Add(LiveProcWithPort(101, cwd, 52000, DateTime.UtcNow.AddMinutes(-5)));
         var store = new StateStore(Path.Combine(fixture.Root, "state"));
 
-        var result = new ActiveSessionEnumerator(locator, store, fixture.Root).Enumerate();
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
 
         Assert.HasCount(2, result);
         Assert.IsNull(result[0].SshClientPort, "ambiguous multi-process cwd must not guess a port");
