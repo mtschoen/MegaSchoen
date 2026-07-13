@@ -272,4 +272,8 @@ support:
   threshold in `.aislop/config.yml`. Treat a failing gate like a failing test.
 
 To refresh the pinned binary after new commits land on the fork branch:
-`pnpm add -g --allow-build=aislop "github:mtschoen/aislop#feat/csharp-support"`
+`pnpm add -g --allow-build=aislop "github:mtschoen/aislop#schoen/main"`
+
+CI runs the same fork at `schoen/main` (cloned + built in the aislop job; the
+Gitea-registry @schoen/aislop package route is retired), so the gate and the
+local binary track the same branch.

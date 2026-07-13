@@ -178,25 +178,25 @@ jobs:
           DisplayManagerNative/DisplayManagerNative.cpp
 
   # ── AI-slop gate (aislop) ────────────────────────────────────────────────────
-  # aislop's C# engine ships in the mtschoen/aislop fork (upstream npm has no C#).
-  # The fork is published as @schoen/aislop to the self-hosted Gitea npm registry
-  # (see .npmrc): a prebuilt, integrity-pinned tarball, so the runner does not
-  # rebuild from source (the previous github-commit git dep rebuilt on the runner
-  # and hit the POSIX-only build script). aislop's C# LINT engine shells out to BOTH
-  # roslynator AND jb (ReSharper CLT) - installing only roslynator made the lint pass
-  # run roslynator-only and never surface the jb/* findings, a FALSE GREEN. Both are
-  # installed below. Threshold + excludes + jbProjects scope live in .aislop/config.yml.
-  # Bump the pinned version deliberately + re-validate (a newer ruleset can
-  # surface new findings).
+  # aislop's C#/C++ engines ship in the mtschoen/aislop fork (upstream npm has
+  # neither). The gate tracks the fork's schoen/main branch: clone + npm install
+  # (prepare runs the tsdown build) + run the built CLI, mirroring git-wizard's
+  # aislop.yml. The Gitea-registry @schoen/aislop tarball route is RETIRED
+  # (owner decision 2026-07-11, see agent-memory aislop-publish-route-retired),
+  # and tracking the branch instead of a pinned commit is a deliberate owner
+  # call (2026-07-13): fork engine work lands here without a per-repo bump, at
+  # the cost that new rules can redden CI without a repo change - when this job
+  # fails on an untouched tree, diff the fork, not this repo. The old
+  # POSIX-only-build-script objection to git installs is obsolete (fixed in the
+  # fork; runner-side install proven green on git-wizard PR #74, 2026-07-11).
+  # aislop's C# LINT engine shells out to BOTH roslynator AND jb (ReSharper
+  # CLT) - installing only roslynator made the lint pass run roslynator-only
+  # and never surface the jb/* findings, a FALSE GREEN. Both are installed
+  # below. Threshold + excludes + jbProjects scope live in .aislop/config.yml.
   aislop:
     name: Lint AI-slop (aislop)
     runs-on: windows-latest
     timeout-minutes: 45     # full-solution build (native C++ + MAUI) + jb inspectcode is slow
-    env:
-      # Trust Gitea's self-signed (mkcert) cert so npx can pull @schoen/aislop
-      # from the Gitea registry. Appends to Node's CA bundle (public deps still
-      # verify), unlike the blanket NODE_TLS_REJECT_UNAUTHORIZED=0 elsewhere.
-      NODE_EXTRA_CA_CERTS: ${{ github.workspace }}/.gitea-ca.pem
     steps:
       - uses: actions/checkout@v4
       # No actions/setup-node here: this is a host-mode Windows runner with
@@ -240,16 +240,56 @@ jobs:
           Write-Host "Using MSBuild: $msbuild"
           & $msbuild MegaSchoen.sln -p:Configuration=Debug -restore -nologo -v:minimal -m
           if ($LASTEXITCODE -ne 0) { throw "Solution build failed ($LASTEXITCODE)" }
+      - name: Build C#/C++-capable aislop (fork schoen/main)
+        shell: pwsh
+        # Cloned outside the workspace so aislop does not scan the fork's own source.
+        run: |
+          git clone --depth 1 --branch schoen/main https://github.com/mtschoen/aislop.git "$env:RUNNER_TEMP\aislop"
+          if ($LASTEXITCODE -ne 0) { throw "aislop fork clone failed ($LASTEXITCODE)" }
+          git -C "$env:RUNNER_TEMP\aislop" log -1 --format="aislop fork @ %h %s"
+          Push-Location "$env:RUNNER_TEMP\aislop"
+          npm install --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { Pop-Location; throw "aislop fork install/build failed ($LASTEXITCODE)" }
+          Pop-Location
       - name: aislop CI gate (whole-repo score >= failBelow)
         shell: pwsh
         # Sanity-fail if the C# engine did not actually analyze the tree (avoid a silent
         # roslynator-only / Python-only pass): require a healthy supported-file count
         # alongside the score gate. Mirrors git-wizard's aislop.yml guard.
         run: |
-          npx --yes "@schoen/aislop@0.12.3" ci . --json > "$env:RUNNER_TEMP\aislop.json"
+          node "$env:RUNNER_TEMP\aislop\dist\cli.js" ci . --json > "$env:RUNNER_TEMP\aislop.json"
           $gate = $LASTEXITCODE
           $report = Get-Content "$env:RUNNER_TEMP\aislop.json" -Raw | ConvertFrom-Json
           $files = $report.summary.files
           Write-Host "aislop score $($report.score) over $files files"
           if ($files -lt 50) { Write-Host "::error::aislop scanned only $files files - the C# engine did not run"; exit 1 }
           if ($gate -ne 0) { Write-Host "::error::aislop score $($report.score) below failBelow"; exit 1 }
+          "GATE_STATE=success" | Add-Content $env:GITHUB_ENV
+      # Surfaces the score in the PR's checks list (context aislop/score, e.g.
+      # "score 100/100 over 124 files"), the way pr-crew/coverage shows its
+      # percentage - the schoen-lab standard (ci/post-aislop-status.py there)
+      # ported to pwsh + curl.exe because the Windows runner has no python.
+      # GATE_STATE is unset when the gate step died before the score check ran
+      # (build failure, file-count sanity exit) - default to failure so the
+      # status can never show green without a gate run; an unreadable report
+      # posts state=error rather than silently missing.
+      - name: Post aislop score status
+        if: always()
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $state = if ($env:GATE_STATE) { $env:GATE_STATE } else { "failure" }
+          $desc = "aislop report unreadable"
+          try {
+            $report = Get-Content "$env:RUNNER_TEMP\aislop.json" -Raw | ConvertFrom-Json
+            $desc = "score $($report.score)/100 over $($report.summary.files) files"
+          } catch { $state = "error" }
+          $runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+          $body = @{ context = "aislop/score"; state = $state; description = $desc; target_url = $runUrl } | ConvertTo-Json -Compress
+          Write-Host "posting status: $body"
+          curl.exe -sk -X POST `
+            -H "Authorization: token $env:GITHUB_TOKEN" `
+            -H "Content-Type: application/json" `
+            -d $body `
+            "$env:GITHUB_SERVER_URL/api/v1/repos/$env:GITHUB_REPOSITORY/statuses/$env:GITHUB_SHA"

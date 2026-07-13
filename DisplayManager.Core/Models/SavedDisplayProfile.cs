@@ -5,7 +5,7 @@ namespace DisplayManager.Core.Models;
 /// </summary>
 public class SavedDisplayConfig
 {
-    // --- Hardware identification (stable across GPU swaps / port changes) ---
+    // Hardware identification: stable across GPU swaps and port changes.
 
     /// <summary>Friendly monitor name from EDID (e.g. "XB271HK").</summary>
     public string MonitorName { get; set; } = "";
@@ -25,7 +25,7 @@ public class SavedDisplayConfig
     /// <summary>DisplayID Container ID (128-bit UUID hex).</summary>
     public string EdidContainerId { get; set; } = "";
 
-    // --- Display configuration ---
+    // Display configuration.
 
     public int Width { get; set; }
     public int Height { get; set; }
