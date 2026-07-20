@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Claude.Core;
@@ -28,5 +29,17 @@ public partial class MainWindow : Window
 
         Opened += (_, _) => viewModel.Start();
         Closed += (_, _) => viewModel.Dispose();
+
+        // Hide to tray on close; the watchers keep running so the monitor
+        // stays live in the background. The tray's Exit sets ExitRequested
+        // and shuts down for real (Closed then disposes the viewmodel).
+        Closing += (_, eventArguments) =>
+        {
+            if (Application.Current is App { ExitRequested: false })
+            {
+                eventArguments.Cancel = true;
+                Hide();
+            }
+        };
     }
 }
