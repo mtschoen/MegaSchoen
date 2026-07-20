@@ -40,6 +40,34 @@ internal class MyService
 
 ## Build Commands
 
+### Linux (steamdeck / any Linux host)
+
+The Windows guidance below does not apply on Linux. Everything except the MAUI
+app and the native display projects builds and runs with plain `dotnet` (SDK is
+user-local in `~/.dotnet`; `Directory.Build.props` sets `EnableWindowsTargeting`
+on non-Windows hosts so the multi-TFM projects restore):
+
+```bash
+dotnet build MegaSchoen.Avalonia/MegaSchoen.Avalonia.csproj   # cross-platform sessions GUI
+dotnet build ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -f net10.0
+dotnet build ClaudeHookBridge/ClaudeHookBridge.csproj -c Release -f net10.0
+dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -f net10.0
+
+# Run the GUI: launching the built apphost directly needs DOTNET_ROOT because
+# .NET is user-local (immutable SteamOS rootfs); `dotnet run` does not.
+DOTNET_ROOT=$HOME/.dotnet ./MegaSchoen.Avalonia/bin/Debug/net10.0/MegaSchoen.Avalonia
+```
+
+Event-driven state badges on Linux require the hook bridge registered in
+`~/.claude/settings.json` pointing at `~/.local/bin/claude-hook-bridge` (a
+wrapper that sets `DOTNET_ROOT` and execs the Release ClaudeHookBridge build).
+The aislop formatting engine flags every C# file on a Linux checkout because
+`.editorconfig` mandates CRLF while git stores LF (Windows checkouts get CRLF
+via autocrlf and scan clean); ignore whole-file `csharp-formatting` findings
+here and judge the other engines' output.
+
+### Windows
+
 Use MSBuild (not `dotnet build` — it can't build the native C++ dependency).
 
 ```bash
@@ -152,7 +180,12 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 **Priority 2: Identical Model Disambiguation** (Display Manager)
 - Handle case where user has multiple monitors of the same model (deferred)
 
-**Priority 3: Cross-platform Sessions Dashboard**
+**Priority 3: Cross-platform Sessions Dashboard** - largely done 2026-07-19:
+`MegaSchoen.Avalonia` ships the Sessions dashboard on Linux (verified on the
+steamdeck), including local Focus via KWin DBus scripting on KDE. Remaining:
+Focus for remote (ssh) sessions on Linux, non-KDE compositors, macOS, and
+eventual Avalonia parity for the Display Manager page if the MAUI app is ever
+to be retired.
 - macOS / Linux impls of `IClaudeProcessLocator` / `IClaudeWindowFocuser` (interfaces in place; impls deferred)
 
 ## Architecture Overview
@@ -171,7 +204,11 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 
 - **ClaudeHookBridge** (.NET 10 Console App) - Claude Code hook receiver. Spawned by hooks; writes one file per session under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json` via `Claude.Core.StateStore`.
 
-- **MegaSchoen** (MAUI App) - Cross-platform GUI. AppShell flyout with two pages: **Display Manager** (display profiles, save/apply/hotkeys) and **Claude Sessions** (live cards driven by `FileSystemWatcher` + bounded-channel debounce). Currently Windows-only for the active features.
+- **MegaSchoen** (MAUI App) - Windows GUI. AppShell flyout with two pages: **Display Manager** (display profiles, save/apply/hotkeys) and **Claude Sessions** (live cards driven by `FileSystemWatcher` + bounded-channel debounce). Windows-only (every active feature is `#if WINDOWS`); the daily-driver autostart app.
+
+- **MegaSchoen.Avalonia** (Avalonia App, net10.0) - Cross-platform sessions GUI (added 2026-07-19; runs on the steamdeck). Ports the MAUI Sessions page and its viewmodels onto Avalonia 12: same enumerator/state-store/refresh-loop backend from `Claude.Core` (net10.0 flavor), same event-driven watchers, plus remote-host NDJSON streams. Local Focus works on KDE via `LinuxClaudeWindowFocuser` (see "Linux session Focus" below); ssh window resolution for remote sessions is still `NullSshSessionWindowResolver`. Viewmodels are deliberate ports, not shared code, because the MAUI originals are `#if WINDOWS` and the MAUI project can't compile on Linux; keep the two in sync when touching either.
+
+- **Linux session Focus** (KDE Plasma) - On Linux, `WindowToken` carries the claude PID (stamped by `LinuxClaudeProcessLocator`), not a native handle: Wayland has no cross-client activation protocol, so `Claude.Core/Linux/LinuxClaudeWindowFocuser.cs` climbs the `/proc` ancestor chain (claude -> shell -> terminal emulator) and activates the nearest ancestor's window through KWin's DBus scripting interface (`org.kde.KWin /Scripting` loadScript/run/unloadScript of a generated `workspace.activeWindow` script, via `qdbus6`/`qdbus`). Rig-verified on SteamOS Plasma 6, 2026-07-19; end-to-end path is `ClaudeSessionsCLI focus <prefix>`, which is cross-platform. Limits: activates the terminal *window* (cannot select a Konsole tab), and no-ops silently on non-KDE compositors (returns false).
 
 ### Key Files
 

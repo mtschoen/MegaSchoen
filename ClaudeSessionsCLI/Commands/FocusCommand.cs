@@ -1,6 +1,8 @@
-#if WINDOWS
 using Claude.Core;
+#if WINDOWS
 using Claude.Core.Windows;
+#else
+using Claude.Core.Linux;
 #endif
 
 namespace ClaudeSessionsCLI.Commands;
@@ -9,7 +11,6 @@ static class FocusCommand
 {
     public static Task<int> Run(string[] arguments)
     {
-#if WINDOWS
         if (arguments.Length == 0)
         {
             Console.Error.WriteLine("focus: missing <session-id-prefix>");
@@ -17,7 +18,13 @@ static class FocusCommand
         }
 
         var prefix = arguments[0];
+#if WINDOWS
         var locator = new WindowsClaudeProcessLocator();
+        var focuser = new WindowsClaudeWindowFocuser();
+#else
+        var locator = new LinuxClaudeProcessLocator();
+        var focuser = new LinuxClaudeWindowFocuser();
+#endif
         var store = new StateStore();
         var enumerator = new ActiveSessionEnumerator(locator, store);
         var snapshots = enumerator.Enumerate();
@@ -41,12 +48,7 @@ static class FocusCommand
             return Task.FromResult(2);
         }
 
-        var focuser = new WindowsClaudeWindowFocuser();
         var ok = focuser.BringToFront(matches[0].Window);
         return Task.FromResult(ok ? 0 : 2);
-#else
-        Console.Error.WriteLine("focus: not supported on this platform (Windows only)");
-        return Task.FromResult(1);
-#endif
     }
 }

@@ -30,7 +30,11 @@ public sealed class LinuxClaudeProcessLocator : IClaudeProcessLocator
                 : null;
             result.Add(new ClaudeWindow(
                 ProcessId: (uint)pid,
-                Window: WindowToken.Null,
+                // On Linux the token carries the claude PID rather than a
+                // native handle; LinuxClaudeWindowFocuser resolves it to the
+                // hosting terminal window via KWin at focus time. Non-zero so
+                // Focus renders enabled for attached local sessions.
+                Window: WindowToken.FromHandle(pid),
                 Title: string.Empty,
                 WorkingDirectory: cwd,
                 StartTimeUtc: DateTimeOffset.FromUnixTimeSeconds(startEpoch),

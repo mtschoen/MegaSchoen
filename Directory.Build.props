@@ -7,6 +7,11 @@
   <PropertyGroup>
     <Version>0.1.0</Version>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- Lets Linux/macOS hosts restore and compile the net10.0-windows TFMs
+         (reference-only; the Windows bits still only run on Windows). Without
+         this, any build on the deck fails with NETSDK1100 before compiling
+         even the cross-platform net10.0 target. -->
+    <EnableWindowsTargeting Condition="!$([MSBuild]::IsOSPlatform('Windows'))">true</EnableWindowsTargeting>
   </PropertyGroup>
 
   <Target Name="StampGitVersion" BeforeTargets="GetAssemblyVersion;CoreCompile">

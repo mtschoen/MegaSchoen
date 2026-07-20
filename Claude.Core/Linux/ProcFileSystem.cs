@@ -45,14 +45,25 @@ public sealed class ProcFileSystem : IProcFileSystem
 
     public long? ReadStartTicks(int pid)
     {
+        // Field 22; index (22 - 3) = 19 in the after-comm tail array.
+        var tail = ReadStatTail(pid);
+        return tail is not null && tail.Length > 19 && long.TryParse(tail[19], out var ticks) ? ticks : null;
+    }
+
+    public int? ReadParentPid(int pid)
+    {
+        // Field 4 (ppid); index (4 - 3) = 1 in the after-comm tail array.
+        var tail = ReadStatTail(pid);
+        return tail is not null && tail.Length > 1 && int.TryParse(tail[1], out var parent) ? parent : null;
+    }
+
+    string[]? ReadStatTail(int pid)
+    {
         var stat = SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "stat"));
         if (stat is null) return null;
         // comm (field 2) may contain spaces/parens; it is wrapped in (), so split after the last ')'.
         var close = stat.LastIndexOf(')');
-        if (close < 0) return null;
-        var rest = stat[(close + 1)..].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        // After comm, fields are 3..; field 22 is index (22 - 3) = 19 in this tail array.
-        return rest.Length > 19 && long.TryParse(rest[19], out var ticks) ? ticks : null;
+        return close < 0 ? null : stat[(close + 1)..].Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
     }
 
     static long ParseBtime(string statContents)

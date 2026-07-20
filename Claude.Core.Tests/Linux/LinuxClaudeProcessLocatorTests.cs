@@ -1,4 +1,5 @@
 using Claude.Core.Linux;
+using Claude.Core.Models;
 
 namespace Claude.Core.Tests.Linux;
 
@@ -16,6 +17,8 @@ public class LinuxClaudeProcessLocatorTests
         public string? ReadCwd(int pid) => Procs.TryGetValue(pid, out var p) ? p.cwd : null;
         public long? ReadStartTicks(int pid) => Procs.TryGetValue(pid, out var p) ? p.ticks : null;
         public string? ReadEnviron(int pid) => Environs.TryGetValue(pid, out var e) ? e : null;
+        public Dictionary<int, int?> Parents = new();
+        public int? ReadParentPid(int pid) => Parents.TryGetValue(pid, out var parent) ? parent : null;
     }
 
     [TestMethod]
@@ -34,7 +37,9 @@ public class LinuxClaudeProcessLocatorTests
         Assert.AreEqual("/home/schoen/pr-crew", w.WorkingDirectory);
         Assert.AreEqual((uint)2572000, w.ProcessId);
         Assert.AreEqual(DateTimeOffset.FromUnixTimeSeconds(1_000_002), w.StartTimeUtc);
-        Assert.IsTrue(w.Window.IsZero);   // no window on the remote (scope A)
+        // On Linux the token carries the claude PID for the KWin-based focuser.
+        Assert.IsFalse(w.Window.IsZero);
+        Assert.AreEqual(WindowToken.FromHandle(2572000), w.Window);
     }
 
     [TestMethod]

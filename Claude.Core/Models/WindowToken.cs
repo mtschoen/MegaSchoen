@@ -1,8 +1,9 @@
 namespace Claude.Core.Models;
 
-// Opaque wrapper around a Win32 HWND so SessionSnapshot doesn't leak IntPtr
-// into consumer code. Internal fields are exposed only to platform impls
-// inside Claude.Core.
+// Opaque focus handle so SessionSnapshot doesn't leak IntPtr into consumer
+// code: a Win32 HWND on Windows, the claude PID on Linux (resolved to the
+// hosting terminal window by LinuxClaudeWindowFocuser at focus time).
+// Internal fields are exposed only to platform impls inside Claude.Core.
 public readonly record struct WindowToken
 {
     internal IntPtr Handle { get; init; }
