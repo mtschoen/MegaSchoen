@@ -27,6 +27,20 @@ public partial class MainWindow : Window
             text => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask);
         DataContext = viewModel;
 
+        AutostartToggle.IsChecked = AutostartService.IsEnabled;
+        AutostartToggle.IsCheckedChanged += (_, _) =>
+        {
+            try
+            {
+                AutostartService.SetEnabled(AutostartToggle.IsChecked == true);
+            }
+            catch (Exception exception)
+            {
+                Logger.Log($"MainWindow: autostart toggle failed: {exception}");
+                AutostartToggle.IsChecked = AutostartService.IsEnabled;
+            }
+        };
+
         Opened += (_, _) => viewModel.Start();
         Closed += (_, _) => viewModel.Dispose();
 

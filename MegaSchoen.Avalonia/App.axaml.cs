@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -13,6 +14,8 @@ public partial class App : Application
     // the real shutdown through.
     internal bool ExitRequested;
 
+    MainWindow? _mainWindow;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -22,7 +25,17 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            // Tray-resident monitor: closing the window never terminates the
+            // app; only the tray's Exit calls Shutdown(). Explicit mode also
+            // lets --hidden (the autostart entry) run with no window shown.
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            _mainWindow = new MainWindow();
+            var startHidden = desktop.Args?.Contains("--hidden", StringComparer.OrdinalIgnoreCase) == true;
+            if (!startHidden)
+            {
+                _mainWindow.Show();
+            }
             SetUpTrayIcon(desktop);
         }
 
@@ -35,7 +48,7 @@ public partial class App : Application
     void SetUpTrayIcon(IClassicDesktopStyleApplicationLifetime desktop)
     {
         var showItem = new NativeMenuItem("Show sessions");
-        showItem.Click += (_, _) => ShowMainWindow(desktop);
+        showItem.Click += (_, _) => ShowMainWindow();
 
         var exitItem = new NativeMenuItem("Exit");
         exitItem.Click += (_, _) =>
@@ -50,14 +63,14 @@ public partial class App : Application
             ToolTipText = "MegaSchoen - Claude Sessions",
             Menu = new NativeMenu { Items = { showItem, exitItem } }
         };
-        trayIcon.Clicked += (_, _) => ShowMainWindow(desktop);
+        trayIcon.Clicked += (_, _) => ShowMainWindow();
 
         TrayIcon.SetIcons(this, [trayIcon]);
     }
 
-    static void ShowMainWindow(IClassicDesktopStyleApplicationLifetime desktop)
+    void ShowMainWindow()
     {
-        if (desktop.MainWindow is not { } window) return;
+        if (_mainWindow is not { } window) return;
         window.Show();
         if (window.WindowState == WindowState.Minimized)
         {

@@ -10,6 +10,12 @@
         Icon="/Assets/appicon.png"
         Width="900" Height="600">
 
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Padding="20,8" BorderBrush="#40808080" BorderThickness="0,1,0,0">
+            <CheckBox x:Name="AutostartToggle"
+                      Content="Start on login (hidden in tray)"
+                      FontSize="12"/>
+        </Border>
     <ScrollViewer>
         <StackPanel Margin="20" Spacing="12">
 
@@ -104,4 +110,5 @@
 
         </StackPanel>
     </ScrollViewer>
+    </DockPanel>
 </Window>
