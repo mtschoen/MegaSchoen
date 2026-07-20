@@ -19,6 +19,10 @@ public class LinuxClaudeProcessLocatorTests
         public string? ReadEnviron(int pid) => Environs.TryGetValue(pid, out var e) ? e : null;
         public Dictionary<int, int?> Parents = new();
         public int? ReadParentPid(int pid) => Parents.TryGetValue(pid, out var parent) ? parent : null;
+        public string? ReadNetTcp() => null;
+        public string? ReadNetTcp6() => null;
+        public int? FindPidOwningSocketInode(long inode) => null;
+        public string? ReadCmdlineFirstLine(int pid) => null;
     }
 
     [TestMethod]

@@ -20,7 +20,9 @@ public partial class MainWindow : Window
             OperatingSystem.IsLinux()
                 ? new Claude.Core.Linux.LinuxClaudeWindowFocuser()
                 : new NullClaudeWindowFocuser(),
-            new NullSshSessionWindowResolver(),
+            OperatingSystem.IsLinux()
+                ? new Claude.Core.Linux.LinuxSshSessionWindowResolver()
+                : new NullSshSessionWindowResolver(),
             text => Clipboard?.SetTextAsync(text) ?? Task.CompletedTask);
         DataContext = viewModel;
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 
 namespace Claude.Core.Linux;
 
@@ -42,6 +43,50 @@ public sealed class ProcFileSystem : IProcFileSystem
 
     public string? ReadEnviron(int pid) =>
         SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "environ"));
+
+    public string? ReadNetTcp() => SafeReadAllText(Path.Combine(_root, "net", "tcp"));
+
+    public string? ReadNetTcp6() => SafeReadAllText(Path.Combine(_root, "net", "tcp6"));
+
+    // Scans every process's open file descriptors for one whose symlink target
+    // is "socket:[<inode>]" - the only way to map a socket inode back to its
+    // owning pid on Linux. Best-effort: a pid whose /fd directory disappears or
+    // denies access (permissions, exited between enumerate and read) is skipped.
+    public int? FindPidOwningSocketInode(long inode)
+    {
+        var target = $"socket:[{inode}]";
+        foreach (var pid in EnumeratePids())
+        {
+            string[] fileDescriptorPaths;
+            try
+            {
+                fileDescriptorPaths = Directory.GetFileSystemEntries(
+                    Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "fd"));
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var fileDescriptorPath in fileDescriptorPaths)
+            {
+                string? linkTarget;
+                try { linkTarget = new FileInfo(fileDescriptorPath).LinkTarget; }
+                catch { continue; }
+
+                if (string.Equals(linkTarget, target, StringComparison.Ordinal)) return pid;
+            }
+        }
+        return null;
+    }
+
+    public string? ReadCmdlineFirstLine(int pid)
+    {
+        var raw = SafeReadAllText(Path.Combine(_root, pid.ToString(CultureInfo.InvariantCulture), "cmdline"));
+        return string.IsNullOrEmpty(raw)
+            ? null
+            : raw.Split('\0', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+    }
 
     public long? ReadStartTicks(int pid)
     {

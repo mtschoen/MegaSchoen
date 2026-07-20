@@ -182,10 +182,10 @@ A drag-to-arrange layout editor opens in its own window per preset (**✎ Edit**
 
 **Priority 3: Cross-platform Sessions Dashboard** - largely done 2026-07-19:
 `MegaSchoen.Avalonia` ships the Sessions dashboard on Linux (verified on the
-steamdeck), including local Focus via KWin DBus scripting on KDE. Remaining:
-Focus for remote (ssh) sessions on Linux, non-KDE compositors, macOS, and
-eventual Avalonia parity for the Display Manager page if the MAUI app is ever
-to be retired.
+steamdeck), including local Focus via KWin DBus scripting on KDE and remote
+ssh Focus via `LinuxSshSessionWindowResolver`. Remaining: non-KDE compositors,
+macOS, and eventual Avalonia parity for the Display Manager page if the MAUI
+app is ever to be retired.
 - macOS / Linux impls of `IClaudeProcessLocator` / `IClaudeWindowFocuser` (interfaces in place; impls deferred)
 
 ## Architecture Overview
@@ -206,9 +206,9 @@ to be retired.
 
 - **MegaSchoen** (MAUI App) - Windows GUI. AppShell flyout with two pages: **Display Manager** (display profiles, save/apply/hotkeys) and **Claude Sessions** (live cards driven by `FileSystemWatcher` + bounded-channel debounce). Windows-only (every active feature is `#if WINDOWS`); the daily-driver autostart app.
 
-- **MegaSchoen.Avalonia** (Avalonia App, net10.0) - Cross-platform sessions GUI (added 2026-07-19; runs on the steamdeck). Ports the MAUI Sessions page and its viewmodels onto Avalonia 12: same enumerator/state-store/refresh-loop backend from `Claude.Core` (net10.0 flavor), same event-driven watchers, plus remote-host NDJSON streams. Local Focus works on KDE via `LinuxClaudeWindowFocuser` (see "Linux session Focus" below); ssh window resolution for remote sessions is still `NullSshSessionWindowResolver`. Viewmodels are deliberate ports, not shared code, because the MAUI originals are `#if WINDOWS` and the MAUI project can't compile on Linux; keep the two in sync when touching either.
+- **MegaSchoen.Avalonia** (Avalonia App, net10.0) - Cross-platform sessions GUI (added 2026-07-19; runs on the steamdeck). Ports the MAUI Sessions page and its viewmodels onto Avalonia 12: same enumerator/state-store/refresh-loop backend from `Claude.Core` (net10.0 flavor), same event-driven watchers, plus remote-host NDJSON streams. Local Focus works on KDE via `LinuxClaudeWindowFocuser`, and remote (ssh) sessions resolve their window via `LinuxSshSessionWindowResolver` (see "Linux session Focus" below); non-Linux hosts still fall back to `NullSshSessionWindowResolver`. Viewmodels are deliberate ports, not shared code, because the MAUI originals are `#if WINDOWS` and the MAUI project can't compile on Linux; keep the two in sync when touching either.
 
-- **Linux session Focus** (KDE Plasma) - On Linux, `WindowToken` carries the claude PID (stamped by `LinuxClaudeProcessLocator`), not a native handle: Wayland has no cross-client activation protocol, so `Claude.Core/Linux/LinuxClaudeWindowFocuser.cs` climbs the `/proc` ancestor chain (claude -> shell -> terminal emulator) and activates the nearest ancestor's window through KWin's DBus scripting interface (`org.kde.KWin /Scripting` loadScript/run/unloadScript of a generated `workspace.activeWindow` script, via `qdbus6`/`qdbus`). Rig-verified on SteamOS Plasma 6, 2026-07-19; end-to-end path is `ClaudeSessionsCLI focus <prefix>`, which is cross-platform. Limits: activates the terminal *window* (cannot select a Konsole tab), and no-ops silently on non-KDE compositors (returns false).
+- **Linux session Focus** (KDE Plasma) - On Linux, `WindowToken` carries the claude PID (stamped by `LinuxClaudeProcessLocator`), not a native handle: Wayland has no cross-client activation protocol, so `Claude.Core/Linux/LinuxClaudeWindowFocuser.cs` climbs the `/proc` ancestor chain (claude -> shell -> terminal emulator) and activates the nearest ancestor's window through KWin's DBus scripting interface (`org.kde.KWin /Scripting` loadScript/run/unloadScript of a generated `workspace.activeWindow` script, via `qdbus6`/`qdbus`). Rig-verified on SteamOS Plasma 6, 2026-07-19; end-to-end path is `ClaudeSessionsCLI focus <prefix>`, which is cross-platform. Limits: activates the terminal *window* (cannot select a Konsole tab), and no-ops silently on non-KDE compositors (returns false). Remote ssh Focus is handled by `Claude.Core/Linux/LinuxSshSessionWindowResolver.cs`, mirroring the Windows `SshSessionWindowResolver` design without a native TCP table API: it parses `/proc/net/tcp` and `/proc/net/tcp6` for the ESTABLISHED row whose local port matches the reported ssh client port, takes its socket inode, scans every process's `/proc/<pid>/fd/*` for a symlink to that inode to find the owning pid, rejects anything whose `comm` is not `ssh` (stale port reuse), and returns a PID-carrying `WindowToken` that `LinuxClaudeWindowFocuser` activates unchanged. Wired into `MegaSchoen.Avalonia/MainWindow.axaml.cs` behind `OperatingSystem.IsLinux()`.
 
 ### Key Files
 

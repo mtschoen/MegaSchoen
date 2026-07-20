@@ -17,6 +17,10 @@ public class LinuxClaudeWindowFocuserTests
         public long? ReadStartTicks(int pid) => null;
         public string? ReadEnviron(int pid) => null;
         public int? ReadParentPid(int pid) => Parents.TryGetValue(pid, out var parent) ? parent : null;
+        public string? ReadNetTcp() => null;
+        public string? ReadNetTcp6() => null;
+        public int? FindPidOwningSocketInode(long inode) => null;
+        public string? ReadCmdlineFirstLine(int pid) => null;
     }
 
     [TestMethod]
