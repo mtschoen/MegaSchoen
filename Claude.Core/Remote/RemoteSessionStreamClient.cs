@@ -34,14 +34,30 @@ public sealed class RemoteSessionStreamClient
             using var process = _processFactory();
             try
             {
+                // Connected is reported on the FIRST PARSED LINE, not on
+                // process start: Start() only spawns the local ssh binary,
+                // which then sits in its TCP connect/auth phase - an
+                // unreachable host would otherwise show "connected" for the
+                // whole timeout (observed 2026-07-19 on the steamdeck away
+                // from the fleet's network). Data on stdout is the only proof
+                // the remote CLI is actually streaming.
                 process.Start();
-                ConnectionStateChanged?.Invoke(RemoteConnectionState.Connected);
-                backoff = TimeSpan.FromSeconds(1);
+                var receivedData = false;
                 await foreach (var line in process.ReadLinesAsync(cancellationToken))
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
                     var snapshots = Parse(line);
-                    if (snapshots is not null) SnapshotReceived?.Invoke(snapshots);
+                    if (snapshots is null) continue;
+                    if (!receivedData)
+                    {
+                        receivedData = true;
+                        ConnectionStateChanged?.Invoke(RemoteConnectionState.Connected);
+                        // Reset backoff only once real data has flowed, so a
+                        // host that spawns ssh but never streams keeps backing
+                        // off instead of hammering reconnects.
+                        backoff = TimeSpan.FromSeconds(1);
+                    }
+                    SnapshotReceived?.Invoke(snapshots);
                 }
             }
             catch (OperationCanceledException) { break; }

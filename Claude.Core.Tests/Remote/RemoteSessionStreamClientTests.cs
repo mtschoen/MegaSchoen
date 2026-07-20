@@ -55,6 +55,35 @@ public class RemoteSessionStreamClientTests
     }
 
     [TestMethod]
+    public async Task ConnectedState_ReportedOnFirstParsedLine_NotOnProcessStart()
+    {
+        var fake = new FakeStreamProcess();
+        var states = new List<RemoteConnectionState>();
+        var firstSnapshot = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var client = new RemoteSessionStreamClient("llamabox", () => fake);
+        client.ConnectionStateChanged += state => states.Add(state);
+        client.SnapshotReceived += _ => firstSnapshot.TrySetResult();
+
+        var cts = new CancellationTokenSource();
+        var run = client.RunAsync(cts.Token);
+
+        // ssh spawned but nothing received yet: an unreachable host looks
+        // exactly like this, and must NOT read as Connected.
+        fake.Emit("");                          // blank keepalive noise
+        fake.Emit("not json");                  // malformed line
+        Assert.DoesNotContain(RemoteConnectionState.Connected, states);
+
+        fake.Emit("""[{"SessionId":"abc","Cwd":"/x","TranscriptPath":"/t","LastActivityUtc":"2026-07-19T00:00:00+00:00","State":"Working","RollupState":"Working","PendingMessage":null,"WindowTitle":null,"Subagents":[]}]""");
+        await firstSnapshot.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+
+        Assert.Contains(RemoteConnectionState.Connected, states);
+
+        fake.EndStream();
+        cts.Cancel();
+        await run;
+    }
+
+    [TestMethod]
     public void Parse_DeserializesSshClientPort_AndStampsHost()
     {
         // A wire line as emitted by the remote CLI (SnapshotDto shape).
