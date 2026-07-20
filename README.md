@@ -1,8 +1,11 @@
 # MegaSchoen
 
-Dumping ground for various cross-platform utilities. Currently there's just one function: Display Manager.
+Dumping ground for various cross-platform utilities. Two functions live here today:
 
-## Display Manager
+- **Display Manager** (Windows-only) - save and switch between monitor configurations.
+- **Claude Sessions** (Windows + Linux) - a live dashboard for active Claude Code sessions.
+
+## Display Manager (Windows-only)
 
 A Windows display profile manager that lets you save and quickly switch between different monitor configurations.
 
@@ -34,21 +37,19 @@ Download the latest release or build from source.
 ### Building from Source
 
 **Requirements:**
-- Visual Studio 2022+ with C++ and .NET MAUI workloads
+- Visual Studio 18 (not 2022) with C++ and .NET MAUI workloads - it's the one that ships both the v145 native toolset and the .NET 10 SDK this solution needs
 - Windows 10 SDK
 - .NET 10
 
-**Important:** Always use MSBuild with `-p:Platform=x64` - the native DLL requires 64-bit.
+Build the solution with MSBuild (not `dotnet build` - it can't build the native C++ dependency). See `AGENTS.md` ("Build Commands") for the full details, including why the VS version matters and where each project's output lands.
 
 ```powershell
 # Build the entire solution
-MSBuild.exe MegaSchoen.sln -p:Configuration=Debug -p:Platform=x64
+MSBuild.exe MegaSchoen.sln -p:Configuration=Debug
 
-# Or build just the CLI
-MSBuild.exe DisplayManagerCLI/DisplayManagerCLI.csproj -p:Configuration=Debug -p:Platform=x64
+# Or build just the Display Manager CLI
+MSBuild.exe DisplayManagerCLI/DisplayManagerCLI.csproj -p:Configuration=Debug
 ```
-
-Do NOT use `dotnet build` - it cannot build the native C++ dependency.
 
 ## Usage
 
@@ -79,14 +80,14 @@ DisplayManagerCLI.exe raw               # Show raw JSON display data
 
 Profiles are stored in `%APPDATA%\MegaSchoen\configs.json`.
 
-## Project Structure
+## Display Manager Project Structure
 
 - **DisplayManagerNative** (C++ DLL) - Windows CCD API wrapper for display enumeration and configuration
 - **DisplayManager.Core** (.NET 10) - Managed wrapper with profile management
 - **DisplayManagerCLI** (.NET 10) - Command-line interface
 - **MegaSchoen** (MAUI) - Cross-platform GUI (currently Windows-only for display features)
 
-## How It Works
+## How Display Manager Works
 
 MegaSchoen uses the Windows [CCD (Connecting and Configuring Displays) API](https://learn.microsoft.com/en-us/windows-hardware/drivers/display/ccd-apis) to:
 
@@ -95,6 +96,27 @@ MegaSchoen uses the Windows [CCD (Connecting and Configuring Displays) API](http
 3. Apply configurations via `SetDisplayConfig` with unique source IDs for extend mode
 
 Monitors are identified by their hardware device path, which remains stable across reboots.
+
+## Claude Sessions (Windows + Linux)
+
+A live dashboard for active Claude Code sessions - see at a glance which sessions are working, waiting on a permission prompt, or idle and waiting for input, and jump straight to the terminal window hosting one.
+
+**Features:**
+
+- **State Badges** - each session shows its current state (Working, PendingPermission, AwaitingInput), computed from Claude Code hook events, not a timer
+- **Session Titles** - Claude Code's generated session title, read straight from the transcript
+- **Cwd and Last Activity** - at a glance for every live session
+- **Subagent Rollup** - subagent sessions roll up under their parent
+- **Focus** - brings the terminal window hosting a session to the foreground (Windows: ancestor-window walk, including embedded IDE terminals and remote ssh sessions; Linux/steamdeck: verified with a KWin-based focuser)
+- **Copy Path** - copies a session's transcript path to the clipboard
+
+**Three frontends, one backend:**
+
+- **MegaSchoen Sessions tab** (MAUI, Windows) - live cards driven by a `FileSystemWatcher`
+- **MegaSchoen.Avalonia** - a cross-platform Avalonia app with the same session cards, verified on Linux/steamdeck
+- **ClaudeSessionsCLI** - `list` (Spectre.Console live table, one-shot `--json`, or NDJSON `--json-stream`) and `focus <session-prefix>`, cross-platform
+
+All three read from the same source of truth: `ClaudeHookBridge`, a small console app that Claude Code's hooks invoke on every event, writing one state file per session that the frontends watch and re-render from. See `AGENTS.md` ("Architecture Overview") for the full component breakdown.
 
 ## License
 
