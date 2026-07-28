@@ -1,0 +1,9 @@
+{
+  // CLAUDE.md and GEMINI.md are intentionally thin `@AGENTS.md` import
+  // pointers (AGENTS.md is the single cross-tool source of truth). A bare
+  // `@AGENTS.md` file has no top-level heading, which trips MD041
+  // (first-line-heading). markdownlint has no per-file rule scoping
+  // (see DavidAnson/markdownlint#666), so we skip these two pointer files
+  // from linting entirely rather than weaken MD041 across the whole repo.
+  "ignores": ["CLAUDE.md", "GEMINI.md"]
+}

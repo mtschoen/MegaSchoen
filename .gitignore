@@ -26,3 +26,4 @@ scratch/
 # Coverage artifacts (coverlet.msbuild output + `dotnet test --collect` results)
 [Tt]est[Rr]esults/
 coverage.cobertura*.xml
+.maintenance.json
