@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using DisplayManager.Core.Models;
@@ -29,6 +30,10 @@ public static class DisplayManager
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+    static readonly DisplayApplyGate _applyGate = new(
+        TimeSpan.FromSeconds(1.5),
+        () => Stopwatch.GetElapsedTime(0),
+        DiagnosticLog.Log);
 
     public static List<DisplayInfo> GetAllDisplays()
     {
@@ -111,10 +116,15 @@ public static class DisplayManager
     /// <summary>
     /// Apply a display configuration. All displays in the list will be enabled,
     /// all displays NOT in the list will be disabled.
+    /// Requests are dropped while another apply is running and for 1.5 seconds
+    /// afterward so native topology changes cannot overlap.
     /// </summary>
     /// <param name="displays">Display configurations that should be active</param>
     /// <returns>Result with success status and any errors</returns>
-    public static ApplyResult ApplyConfiguration(IEnumerable<SavedDisplayConfig> displays)
+    public static ApplyResult ApplyConfiguration(IEnumerable<SavedDisplayConfig> displays) =>
+        _applyGate.Apply(() => ApplyConfigurationCore(displays));
+
+    static ApplyResult ApplyConfigurationCore(IEnumerable<SavedDisplayConfig> displays)
     {
         var result = new ApplyResult { Success = true };
         var displayList = displays.ToList();
