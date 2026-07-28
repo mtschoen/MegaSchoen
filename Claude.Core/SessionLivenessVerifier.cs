@@ -12,6 +12,7 @@ public enum LastEntryClass
 public sealed class SessionLivenessVerifier
 {
     static readonly TimeSpan DefaultGrace = TimeSpan.FromSeconds(5);
+    const string SuccessfulWrapSentinel = "That's a /wrap. Go ahead and close the session.";
     const int TailReadChunkSize = 4096;
     const int TailReadMaxBytes = 256 * 1024;
 
@@ -78,6 +79,70 @@ public sealed class SessionLivenessVerifier
             "assistant" => LastEntryClass.SessionPending,
             _ => LastEntryClass.Resolved
         };
+    }
+
+    internal static bool HasSuccessfulWrapCompletion(string transcriptPath)
+    {
+        string? lastLine;
+        try
+        {
+            lastLine = ReadLastNonEmptyLine(transcriptPath);
+            if (string.IsNullOrWhiteSpace(lastLine))
+            {
+                return false;
+            }
+
+            using var doc = JsonDocument.Parse(lastLine);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object
+                || !root.TryGetProperty("type", out var typeElement)
+                || typeElement.GetString() != "assistant"
+                || !root.TryGetProperty("message", out var message)
+                || !message.TryGetProperty("content", out var content))
+            {
+                return false;
+            }
+
+            return LastText(content)?.EndsWith(SuccessfulWrapSentinel, StringComparison.Ordinal) == true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    static string? LastText(JsonElement content)
+    {
+        if (content.ValueKind == JsonValueKind.String)
+        {
+            return content.GetString();
+        }
+
+        if (content.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        string? lastText = null;
+        foreach (var block in content.EnumerateArray())
+        {
+            if (block.ValueKind == JsonValueKind.Object
+                && block.TryGetProperty("type", out var type)
+                && type.GetString() == "text"
+                && block.TryGetProperty("text", out var text))
+            {
+                lastText = text.GetString();
+            }
+        }
+        return lastText;
     }
 
     static string? ReadLastNonEmptyLine(string path)

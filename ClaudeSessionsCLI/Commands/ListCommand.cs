@@ -191,6 +191,7 @@ static class ListCommand
             SessionState.AwaitingInput => "[yellow]INPUT[/]",
             SessionState.Working => "[green]WORK[/]",
             SessionState.Idle => "[grey]idle[/]",
+            SessionState.Wrapped => "[deepskyblue1]WRAP[/]",
             _ => "[red]?[/]"
         };
         return $"{emoji} {label}";

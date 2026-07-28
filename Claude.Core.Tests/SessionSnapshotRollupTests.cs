@@ -45,4 +45,16 @@ public class SessionSnapshotRollupTests
     {
         Assert.AreEqual(SessionState.Idle, Make(SessionState.Idle, SessionState.Idle, SessionState.Unknown).RollupState);
     }
+
+    [TestMethod]
+    public void RollupState_WrappedParentWithWorkingSubagent_ReportsWorking()
+    {
+        Assert.AreEqual(SessionState.Working, Make(SessionState.Wrapped, SessionState.Working).RollupState);
+    }
+
+    [TestMethod]
+    public void RollupState_WrappedParentWithoutSubagents_ReportsWrapped()
+    {
+        Assert.AreEqual(SessionState.Wrapped, Make(SessionState.Wrapped).RollupState);
+    }
 }

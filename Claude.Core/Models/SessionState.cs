@@ -7,5 +7,6 @@ public enum SessionState
     AwaitingInput = 1,
     Working = 2,
     Idle = 3,
-    Unknown = 4
+    Wrapped = 4,
+    Unknown = 5
 }

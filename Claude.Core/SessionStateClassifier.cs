@@ -6,6 +6,13 @@ public static class SessionStateClassifier
 {
     public static SessionState Classify(SessionEntry? stateEntry, string transcriptPath)
     {
+        if (!string.IsNullOrEmpty(transcriptPath)
+            && File.Exists(transcriptPath)
+            && SessionLivenessVerifier.HasSuccessfulWrapCompletion(transcriptPath))
+        {
+            return SessionState.Wrapped;
+        }
+
         if (stateEntry is not null)
         {
             return stateEntry.Reason switch

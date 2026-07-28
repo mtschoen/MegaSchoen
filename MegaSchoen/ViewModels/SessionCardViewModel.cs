@@ -70,6 +70,7 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
         SessionState.AwaitingInput => "#F0AD4E",
         SessionState.Working => "#5CB85C",
         SessionState.Idle => "#777777",
+        SessionState.Wrapped => "#5BC0DE",
         _ => "#999999"
     };
 

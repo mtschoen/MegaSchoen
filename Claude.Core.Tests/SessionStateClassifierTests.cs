@@ -44,6 +44,18 @@ public class SessionStateClassifierTests
     }
 
     [TestMethod]
+    public void Classify_SuccessfulWrapCompletion_OverridesAwaitingInputState()
+    {
+        File.WriteAllText(_tempFile,
+            """
+            {"type":"assistant","message":{"content":[{"type":"text","text":"Nothing else to save.\n\nThat's a /wrap. Go ahead and close the session."}]}}
+            """);
+        var entry = new SessionEntry { Reason = WaitingReason.AwaitingInput, TranscriptPath = _tempFile };
+
+        Assert.AreEqual(SessionState.Wrapped, SessionStateClassifier.Classify(entry, _tempFile));
+    }
+
+    [TestMethod]
     public void Classify_NoStateEntryAndAssistantLast_ReturnsWorking()
     {
         File.WriteAllText(_tempFile, """{"type":"assistant","message":{}}""" + "\n");

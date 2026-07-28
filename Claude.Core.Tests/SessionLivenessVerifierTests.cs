@@ -228,4 +228,118 @@ public class SessionLivenessVerifierTests
 
         Assert.IsTrue(verifier.IsStillWaiting(entry));
     }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_LastTextBlockEndsWithSentinel_ReturnsTrue()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"closing"},{"type":"text","text":"Summary\n\nThat's a /wrap. Go ahead and close the session."}]}}
+            """);
+
+        Assert.IsTrue(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_StringContentEndsWithSentinel_ReturnsTrue()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":"That's a /wrap. Go ahead and close the session."}}
+            """);
+
+        Assert.IsTrue(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_InterruptedSentinel_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":[{"type":"text","text":"That was an interrupted /wrap. The session is NOT in a clean wrap state — some items may still be dirty, uncommitted, or unsaved."}]}}
+            """);
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_SentinelQuotedBeforeMoreText_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":[{"type":"text","text":"The success marker is: That's a /wrap. Go ahead and close the session.\nStill working."}]}}
+            """);
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_LaterUserEntry_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":[{"type":"text","text":"That's a /wrap. Go ahead and close the session."}]}}
+            {"type":"user","message":{"content":"Start another task"}}
+            """);
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_MalformedTail_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript, "{not-json");
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_EmptyTranscript_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript, "");
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_MissingTranscript_ReturnsFalse()
+    {
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_DirectoryPath_ReturnsFalse()
+    {
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(Path.GetTempPath()));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_NonTextContent_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":{"type":"text","text":"That's a /wrap. Go ahead and close the session."}}}
+            """);
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_NonObjectTranscriptEntry_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript, "[]");
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
+
+    [TestMethod]
+    public void HasSuccessfulWrapCompletion_NonObjectContentBlock_ReturnsFalse()
+    {
+        File.WriteAllText(_tempTranscript,
+            """
+            {"type":"assistant","message":{"content":["That's a /wrap. Go ahead and close the session."]}}
+            """);
+
+        Assert.IsFalse(SessionLivenessVerifier.HasSuccessfulWrapCompletion(_tempTranscript));
+    }
 }
