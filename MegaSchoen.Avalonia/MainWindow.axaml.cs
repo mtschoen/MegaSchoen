@@ -45,11 +45,11 @@ public partial class MainWindow : Window
         Closed += (_, _) => viewModel.Dispose();
 
         // Hide to tray on close; the watchers keep running so the monitor
-        // stays live in the background. The tray's Exit sets ExitRequested
-        // and shuts down for real (Closed then disposes the viewmodel).
+        // stays live in the background. Explicit tray exit or a platform
+        // shutdown request lets the close continue and dispose the viewmodel.
         Closing += (_, eventArguments) =>
         {
-            if (Application.Current is App { ExitRequested: false })
+            if (Application.Current is App { Shutdown.ShouldHideWindow: true })
             {
                 eventArguments.Cancel = true;
                 Hide();

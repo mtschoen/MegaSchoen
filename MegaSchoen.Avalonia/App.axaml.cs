@@ -10,11 +10,9 @@ namespace MegaSchoen.Avalonia;
 
 public partial class App : Application
 {
-    // Set by the tray Exit item so MainWindow's hide-on-close intercept lets
-    // the real shutdown through.
-    internal bool ExitRequested;
-
     MainWindow? _mainWindow;
+
+    internal ShutdownCoordinator Shutdown { get; } = new();
 
     public override void Initialize()
     {
@@ -29,6 +27,7 @@ public partial class App : Application
             // app; only the tray's Exit calls Shutdown(). Explicit mode also
             // lets --hidden (the autostart entry) run with no window shown.
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            desktop.ShutdownRequested += (_, _) => Shutdown.RequestShutdown();
 
             _mainWindow = new MainWindow();
             var startHidden = desktop.Args?.Contains("--hidden", StringComparer.OrdinalIgnoreCase) == true;
@@ -53,7 +52,7 @@ public partial class App : Application
         var exitItem = new NativeMenuItem("Exit");
         exitItem.Click += (_, _) =>
         {
-            ExitRequested = true;
+            Shutdown.RequestShutdown();
             desktop.Shutdown();
         };
 
