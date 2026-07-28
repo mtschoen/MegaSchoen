@@ -185,6 +185,28 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void PreToolUse_SameStateInDifferentCwd_UpdatesCwd()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\repo\\start",
+            TranscriptPath = "C:\\transcripts\\s1.jsonl",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.Working
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "PreToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\repo\\current",
+            TranscriptPath = "C:\\transcripts\\s1.jsonl"
+        });
+
+        Assert.AreEqual("C:\\repo\\current", _store.Read()["s1"].Cwd);
+    }
+
+    [TestMethod]
     public void Notification_PermissionPrompt_CapturesTranscriptPath()
     {
         _dispatcher.Dispatch(new HookPayload

@@ -12,6 +12,15 @@ namespace Claude.Core.Tests;
 public class SessionsPageViewModelSmokeTests
 {
     [TestMethod]
+    public void SessionSnapshot_ExposesCurrentCwdSeparatelyFromRootCwd()
+    {
+        var property = typeof(SessionSnapshot).GetProperty("CurrentCwd");
+
+        Assert.IsNotNull(property);
+        Assert.AreEqual(typeof(string), property.PropertyType);
+    }
+
+    [TestMethod]
     public void Enumerate_WithNoWindows_ReturnsEmptyList_DoesNotThrow()
     {
         using var fixture = new ClaudeProjectsFixture();

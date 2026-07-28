@@ -91,6 +91,7 @@ public sealed class HookDispatcher
         if (existing is not null
             && existing.Reason == reason
             && existing.Message == message
+            && string.Equals(existing.Cwd, payload.Cwd ?? "", StringComparison.Ordinal)
             && string.Equals(existing.TranscriptPath, payload.TranscriptPath, StringComparison.Ordinal))
         {
             return;

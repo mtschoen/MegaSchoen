@@ -63,10 +63,24 @@
                                                FontAttributes="Bold"
                                                VerticalOptions="Center"/>
                                     </HorizontalStackLayout>
-                                    <Label Grid.Column="1"
-                                           Text="{Binding CwdShort}"
-                                           VerticalOptions="Center"
-                                           FontSize="13"/>
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         Spacing="2"
+                                                         VerticalOptions="Center">
+                                        <HorizontalStackLayout Spacing="6">
+                                            <Label Text="Root"
+                                                   TextColor="{StaticResource Gray500}"
+                                                   FontSize="11"/>
+                                            <Label Text="{Binding CwdShort}"
+                                                   FontSize="13"/>
+                                        </HorizontalStackLayout>
+                                        <HorizontalStackLayout Spacing="6">
+                                            <Label Text="Current"
+                                                   TextColor="{StaticResource Gray500}"
+                                                   FontSize="11"/>
+                                            <Label Text="{Binding CurrentCwdShort}"
+                                                   FontSize="13"/>
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
                                     <Label Grid.Column="2"
                                            Text="{Binding LastActivityRelative}"
                                            TextColor="{StaticResource Gray500}"

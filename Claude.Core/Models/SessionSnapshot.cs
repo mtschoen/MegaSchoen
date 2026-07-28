@@ -14,6 +14,8 @@ public sealed record SessionSnapshot(
     int? SshClientPort = null,
     string? Title = null)
 {
+    public string CurrentCwd { get; init; } = Cwd;
+
     public SessionState RollupState
     {
         get

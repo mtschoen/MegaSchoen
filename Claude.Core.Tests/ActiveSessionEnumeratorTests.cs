@@ -47,6 +47,35 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
+    public void Enumerate_SessionMovedDirectories_PreservesRootAndReportsCurrentCwd()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        const string rootCwd = @"C:\repo\start";
+        const string currentCwd = @"C:\repo\other";
+        var transcriptPath = fixture.AddSession(
+            SlugEncoder.Encode(rootCwd),
+            "moved-1",
+            """{"type":"assistant","message":{},"cwd":"C:\\repo\\start"}""",
+            DateTime.UtcNow);
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        store.Upsert("moved-1", new SessionEntry
+        {
+            Cwd = currentCwd,
+            TranscriptPath = transcriptPath,
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.Working
+        });
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, currentCwd, new IntPtr(1)));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
+
+        Assert.HasCount(1, result);
+        Assert.AreEqual(rootCwd, result[0].Cwd);
+        Assert.AreEqual(currentCwd, result[0].CurrentCwd);
+    }
+
+    [TestMethod]
     public void Enumerate_PopulatesTitleFromTranscript()
     {
         using var fixture = new ClaudeProjectsFixture();

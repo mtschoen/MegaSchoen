@@ -41,12 +41,13 @@ public class RemoteSessionStreamClientTests
 
         var cts = new CancellationTokenSource();
         var run = client.RunAsync(cts.Token);
-        fake.Emit("""[{"SessionId":"abc","Cwd":"/home/schoen/pr-crew","TranscriptPath":"/x","LastActivityUtc":"2026-05-24T03:00:00+00:00","State":"PendingPermission","RollupState":"PendingPermission","PendingMessage":null,"WindowTitle":"t","Subagents":[]}]""");
+        fake.Emit("""[{"SessionId":"abc","Cwd":"/home/schoen/pr-crew","CurrentCwd":"/home/schoen/pr-crew/other","TranscriptPath":"/x","LastActivityUtc":"2026-05-24T03:00:00+00:00","State":"PendingPermission","RollupState":"PendingPermission","PendingMessage":null,"WindowTitle":"t","Subagents":[]}]""");
         await firstSnapshot.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
 
         Assert.IsTrue(fake.Started);   // the client starts the process before reading
         Assert.HasCount(1, received);
         Assert.AreEqual("abc", received[0][0].SessionId);
+        Assert.AreEqual("/home/schoen/pr-crew/other", received[0][0].CurrentCwd);
         Assert.AreEqual("llamabox", received[0][0].Host);   // tagged by the client
 
         fake.EndStream();
@@ -88,7 +89,7 @@ public class RemoteSessionStreamClientTests
     {
         // A wire line as emitted by the remote CLI (SnapshotDto shape).
         const string line = """
-        [{"SessionId":"r1","Cwd":"/home/schoen/site","TranscriptPath":"/t.jsonl","LastActivityUtc":"2026-06-04T00:00:00+00:00","State":"Working","RollupState":"Working","PendingMessage":null,"WindowTitle":null,"Subagents":[],"SshClientPort":51000}]
+        [{"SessionId":"r1","Cwd":"/home/schoen/site","CurrentCwd":"/home/schoen/site/src","TranscriptPath":"/t.jsonl","LastActivityUtc":"2026-06-04T00:00:00+00:00","State":"Working","RollupState":"Working","PendingMessage":null,"WindowTitle":null,"Subagents":[],"SshClientPort":51000}]
         """;
 
         var client = new RemoteSessionStreamClient("llamabox", () => throw new InvalidOperationException("not used"));
@@ -96,8 +97,23 @@ public class RemoteSessionStreamClientTests
 
         Assert.IsNotNull(snaps);
         Assert.HasCount(1, snaps);
+        Assert.AreEqual("/home/schoen/site/src", snaps[0].CurrentCwd);
         Assert.AreEqual(51000, snaps[0].SshClientPort);
         Assert.AreEqual("llamabox", snaps[0].Host);
+    }
+
+    [TestMethod]
+    public void Parse_LegacyPayloadWithoutCurrentCwd_DefaultsToRootCwd()
+    {
+        const string line = """
+        [{"SessionId":"r1","Cwd":"/home/schoen/site","TranscriptPath":"/t.jsonl","LastActivityUtc":"2026-06-04T00:00:00+00:00","State":"Working","RollupState":"Working","PendingMessage":null,"WindowTitle":null,"Subagents":[]}]
+        """;
+
+        var client = new RemoteSessionStreamClient("llamabox", () => throw new InvalidOperationException("not used"));
+        var snaps = client.ParseForTest(line);
+
+        Assert.IsNotNull(snaps);
+        Assert.AreEqual("/home/schoen/site", snaps[0].CurrentCwd);
     }
 
     public TestContext TestContext { get; set; } = null!;

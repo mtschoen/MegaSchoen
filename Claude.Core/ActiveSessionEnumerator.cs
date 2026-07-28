@@ -125,11 +125,16 @@ public sealed class ActiveSessionEnumerator
             var state = SessionStateClassifier.Classify(entry, candidate.TranscriptPath);
             var process = slot.Process;
             var title = process?.Title ?? "";
-            var subagents = EnumerateSubagents(slugDir, candidate.Id);
+            var rootCwd = NormalizeCwd(ReadTranscriptCwd(candidate.TranscriptPath) ?? cwd);
+            var transcriptDirectory = Path.GetDirectoryName(candidate.TranscriptPath);
+            var subagentsRoot = string.IsNullOrEmpty(transcriptDirectory)
+                ? Path.Combine(_projectsRoot, SlugEncoder.Encode(rootCwd))
+                : transcriptDirectory;
+            var subagents = EnumerateSubagents(subagentsRoot, candidate.Id);
 
             result.Add(new SessionSnapshot(
                 SessionId: candidate.Id,
-                Cwd: cwd,
+                Cwd: rootCwd,
                 TranscriptPath: candidate.TranscriptPath,
                 LastActivityUtc: new DateTimeOffset(candidate.LastWriteUtc, TimeSpan.Zero),
                 State: state,
@@ -138,7 +143,10 @@ public sealed class ActiveSessionEnumerator
                 WindowTitle: string.IsNullOrEmpty(title) ? null : title,
                 Subagents: subagents,
                 SshClientPort: process?.SshClientPort,
-                Title: TranscriptTitleReader.ReadTitle(candidate.TranscriptPath)));
+                Title: TranscriptTitleReader.ReadTitle(candidate.TranscriptPath))
+            {
+                CurrentCwd = cwd
+            });
         }
         return result;
     }
@@ -266,8 +274,10 @@ public sealed class ActiveSessionEnumerator
             if (process.SessionId is not { } id || !emitted.Add(id)) continue;
 
             var entry = stateBySessionId.TryGetValue(id, out var e) ? e : null;
-            var cwd = NormalizeCwd(entry?.Cwd ?? process.WorkingDirectory ?? "");
-            var slugDir = cwd.Length > 0 ? Path.Combine(_projectsRoot, SlugEncoder.Encode(cwd)) : "";
+            var currentCwd = NormalizeCwd(entry?.Cwd ?? process.WorkingDirectory ?? "");
+            var slugDir = currentCwd.Length > 0
+                ? Path.Combine(_projectsRoot, SlugEncoder.Encode(currentCwd))
+                : "";
 
             var transcriptPath = entry?.TranscriptPath;
             if (string.IsNullOrEmpty(transcriptPath) && slugDir.Length > 0)
@@ -278,13 +288,20 @@ public sealed class ActiveSessionEnumerator
             var existingTranscript = !string.IsNullOrEmpty(transcriptPath) && File.Exists(transcriptPath)
                 ? transcriptPath
                 : null;
+            var rootCwd = NormalizeCwd(existingTranscript is not null
+                ? ReadTranscriptCwd(existingTranscript) ?? currentCwd
+                : currentCwd);
+            if (existingTranscript is not null)
+            {
+                slugDir = Path.GetDirectoryName(existingTranscript) ?? slugDir;
+            }
             var lastWrite = existingTranscript is not null
                 ? File.GetLastWriteTimeUtc(existingTranscript)
                 : entry?.NotifiedAt.UtcDateTime ?? DateTime.UtcNow;
 
             snapshots.Add(new SessionSnapshot(
                 SessionId: id,
-                Cwd: cwd,
+                Cwd: rootCwd,
                 TranscriptPath: existingTranscript ?? "",
                 LastActivityUtc: new DateTimeOffset(lastWrite, TimeSpan.Zero),
                 State: SessionStateClassifier.Classify(entry, existingTranscript ?? ""),
@@ -295,7 +312,10 @@ public sealed class ActiveSessionEnumerator
                     ? EnumerateSubagents(slugDir, id)
                     : Array.Empty<SubagentSnapshot>(),
                 SshClientPort: process.SshClientPort,
-                Title: existingTranscript is not null ? TranscriptTitleReader.ReadTitle(existingTranscript) : null));
+                Title: existingTranscript is not null ? TranscriptTitleReader.ReadTitle(existingTranscript) : null)
+            {
+                CurrentCwd = currentCwd
+            });
         }
     }
 

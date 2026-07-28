@@ -30,6 +30,7 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(StateColor));
             OnPropertyChanged(nameof(CwdShort));
+            OnPropertyChanged(nameof(CurrentCwdShort));
             OnPropertyChanged(nameof(SessionIdStem));
             OnPropertyChanged(nameof(LastActivityRelative));
             OnPropertyChanged(nameof(SubagentSummary));
@@ -72,14 +73,10 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
 
     public string CwdShort
     {
-        get
-        {
-            const int maximum = 60;
-            if (_snapshot.Cwd.Length <= maximum) return _snapshot.Cwd;
-            var keep = (maximum - 3) / 2;
-            return _snapshot.Cwd[..keep] + "..." + _snapshot.Cwd[^keep..];
-        }
+        get => TruncatePath(_snapshot.Cwd);
     }
+
+    public string CurrentCwdShort => TruncatePath(_snapshot.CurrentCwd);
 
     public string SessionIdStem => _snapshot.SessionId.Length >= 8 ? _snapshot.SessionId[..8] : _snapshot.SessionId;
 
@@ -111,6 +108,14 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
     public string HostLabel => _snapshot.Host ?? "";
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    static string TruncatePath(string path)
+    {
+        const int maximum = 60;
+        if (path.Length <= maximum) return path;
+        var keep = (maximum - 3) / 2;
+        return path[..keep] + "..." + path[^keep..];
+    }
 
     void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
