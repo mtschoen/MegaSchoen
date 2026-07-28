@@ -48,6 +48,7 @@ public partial class App
         // swallowed-but-logged display/profile failures stay diagnosable. Wired
         // before the startup profile load below, which goes through it.
         DisplayManager.Core.DiagnosticLog.Sink = Claude.Core.Logger.Log;
+        WireDisplayResumeEvents();
 
         var services = MauiWinUIApplication.Current.Services;
 
@@ -81,26 +82,6 @@ public partial class App
         WireClaudeCycling(tray, claudeWindowService);
     }
 
-    static void WireProfileSelection(TrayIconService tray, List<SavedDisplayProfile> profiles, DisplayProfileService profileService)
-    {
-        tray.ProfileSelected += (_, profileId) =>
-        {
-            var profile = profiles.FirstOrDefault(p => p.Id == profileId);
-            if (profile != null)
-            {
-                var result = profileService.ApplyProfile(profile);
-                if (result.Success)
-                {
-                    tray.ShowNotification("Profile Applied", $"'{profile.Name}' applied successfully.");
-                }
-                else
-                {
-                    tray.ShowNotification("Profile Failed", $"Failed to apply '{profile.Name}'.", NotificationIcon.Error);
-                }
-            }
-        };
-    }
-
     static void WireShowAndExit(TrayIconService tray, GlobalHotkeyService hotkeys, MessageWindow messageWindow)
     {
         tray.ShowRequested += (_, _) =>
@@ -114,6 +95,7 @@ public partial class App
             tray.Dispose();
             hotkeys.Dispose();
             messageWindow.Dispose();
+            UnwireDisplayResumeEvents();
             _singleInstance?.Dispose();
             Environment.Exit(0);
         };
@@ -187,22 +169,7 @@ public partial class App
         List<SavedDisplayProfile> profiles)
     {
         // Wire up hotkey events
-        hotkeys.HotkeyTriggered += (_, profileId) =>
-        {
-            var profile = profiles.FirstOrDefault(p => p.Id == profileId);
-            if (profile != null)
-            {
-                var result = profileService.ApplyProfile(profile);
-                if (result.Success)
-                {
-                    tray.ShowNotification("Profile Applied", $"'{profile.Name}' applied via hotkey.");
-                }
-                else
-                {
-                    tray.ShowNotification("Profile Failed", $"Failed to apply '{profile.Name}'.", NotificationIcon.Error);
-                }
-            }
-        };
+        WireDisplayHotkeys(hotkeys, tray, profileService, profiles);
 
         if (!hotkeys.RegisterNamedHotkey("claude-cycle-perms", "9", CtrlAlt))
         {

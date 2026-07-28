@@ -11,12 +11,19 @@ namespace DisplayManager.Core;
 public class ApplyResult
 {
     public bool Success { get; set; }
+    public bool Deferred { get; set; }
+    public TimeSpan RetryAfter { get; set; }
     public List<string> Errors { get; set; } = [];
     public List<string> Applied { get; set; } = [];
 }
 
 public static class DisplayManager
 {
+    static readonly DisplayApplyCooldown ApplyCooldown = new(
+        TimeProvider.System,
+        TimeSpan.FromSeconds(15),
+        DisplayApplyCooldown.DefaultSharedStatePath);
+
     [DllImport("DisplayManagerNative.dll")]
     static extern int GetAllDisplaysJson(byte[] buffer, int bufferSize);
 
@@ -114,6 +121,15 @@ public static class DisplayManager
     }
 
     /// <summary>
+    /// Starts the display-apply safety cooldown after Windows reports a system resume.
+    /// </summary>
+    public static void RecordSystemResume()
+    {
+        ApplyCooldown.RecordResume();
+        DiagnosticLog.Log($"DisplayManager: system resumed; display applies paused for {ApplyCooldown.Cooldown.TotalSeconds:0} seconds.");
+    }
+
+    /// <summary>
     /// Apply a display configuration. All displays in the list will be enabled,
     /// all displays NOT in the list will be disabled.
     /// Requests are dropped while another apply is running and for 1.5 seconds
@@ -122,12 +138,29 @@ public static class DisplayManager
     /// <param name="displays">Display configurations that should be active</param>
     /// <returns>Result with success status and any errors</returns>
     public static ApplyResult ApplyConfiguration(IEnumerable<SavedDisplayConfig> displays) =>
-        _applyGate.Apply(() => ApplyConfigurationCore(displays));
+        _applyGate.Apply(() => ApplyConfiguration(displays, ApplyCooldown, ApplyConfigurationNative));
 
-    static ApplyResult ApplyConfigurationCore(IEnumerable<SavedDisplayConfig> displays)
+    internal static ApplyResult ApplyConfiguration(
+        IEnumerable<SavedDisplayConfig> displays,
+        DisplayApplyCooldown applyCooldown,
+        Func<string, int> applyNative)
     {
         var result = new ApplyResult { Success = true };
         var displayList = displays.ToList();
+        var remainingCooldown = applyCooldown.GetRemainingCooldown();
+        if (remainingCooldown > TimeSpan.Zero)
+        {
+            var seconds = Math.Max(1, (int)Math.Ceiling(remainingCooldown.TotalSeconds));
+            var message = $"Display apply deferred for {seconds} seconds after system resume while display drivers reinitialize.";
+            DiagnosticLog.Log($"DisplayManager.ApplyConfiguration: {message}");
+            return new ApplyResult
+            {
+                Success = false,
+                Deferred = true,
+                RetryAfter = remainingCooldown,
+                Errors = [message]
+            };
+        }
 
         try
         {
@@ -135,7 +168,7 @@ public static class DisplayManager
             var json = JsonSerializer.Serialize(displayList, JsonOptions);
 
             // Call the native function
-            var nativeResult = ApplyConfigurationNative(json);
+            var nativeResult = applyNative(json);
 
             if (nativeResult == 0)
             {
