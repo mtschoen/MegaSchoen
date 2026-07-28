@@ -128,45 +128,34 @@ jobs:
     name: Lint C++ (cppcheck)
     runs-on: windows-latest
     timeout-minutes: 15
+    env:
+      # Runner-image contract: the host-mode Windows image is provisioned outside
+      # this repository and must expose this validated version on PATH. Bump only
+      # after re-validating the finding set against DisplayManagerNative.
+      CPPCHECK_VERSION: "2.19.0"
     steps:
       - uses: actions/checkout@v4
-      # Resolve cppcheck self-contained, no package manager. The self-hosted Windows
-      # runner executes as SYSTEM with neither `choco` nor cppcheck on PATH, so the
-      # original `choco install cppcheck` failed ("term not recognized") and the analysis
-      # never ran. Prefer an already-installed cppcheck (PATH or standard Program Files
-      # location); otherwise download the pinned official MSI from GitHub releases and
-      # silent-install it (SYSTEM is elevated). Pinned version => stable finding set.
-      # The resolved directory is exported to GITHUB_PATH for the analysis step.
-      - name: Resolve cppcheck
+      - name: Verify runner-provisioned cppcheck
         shell: pwsh
-        env:
-          # Pinned to the version validated locally against the .cpp (0 findings).
-          # Bump deliberately + re-validate, since a new cppcheck can surface new checks.
-          CPPCHECK_VERSION: "2.19.0"
         run: |
           $ErrorActionPreference = 'Stop'
-          $candidates = @(
-            "$env:ProgramFiles\Cppcheck\cppcheck.exe",
-            "${env:ProgramFiles(x86)}\Cppcheck\cppcheck.exe"
-          )
-          $cppcheck = Get-Command cppcheck -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Source
-          if (-not $cppcheck) { $cppcheck = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1 }
+          $cppcheck = Get-Command cppcheck -CommandType Application -ErrorAction SilentlyContinue |
+            Select-Object -First 1
           if (-not $cppcheck) {
-            $ver = $env:CPPCHECK_VERSION
-            $msi = Join-Path $env:RUNNER_TEMP "cppcheck-$ver-x64-Setup.msi"
-            $url = "https://github.com/danmar/cppcheck/releases/download/$ver/cppcheck-$ver-x64-Setup.msi"
-            Write-Host "cppcheck not present; downloading $url"
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri $url -OutFile $msi -UseBasicParsing
-            $log = Join-Path $env:RUNNER_TEMP "cppcheck-msi.log"
-            $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart /l*v `"$log`"" -Wait -PassThru
-            if ($p.ExitCode -ne 0) { Get-Content $log -Tail 30; throw "cppcheck MSI install failed ($($p.ExitCode))" }
-            $cppcheck = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            throw "cppcheck $env:CPPCHECK_VERSION must be pre-installed on the Windows runner and available on PATH. Update the runner image before rerunning CI."
           }
-          if (-not $cppcheck) { throw "cppcheck still not found after install" }
-          $dir = Split-Path -Parent $cppcheck
-          Add-Content -Path $env:GITHUB_PATH -Value $dir
-          & $cppcheck --version
+
+          $versionOutput = (& $cppcheck.Source --version | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) {
+            throw "Runner-provided cppcheck failed its version check with exit code $LASTEXITCODE."
+          }
+
+          $expectedVersionOutput = "Cppcheck $env:CPPCHECK_VERSION"
+          if ($versionOutput -ne $expectedVersionOutput) {
+            throw "Expected runner-provided $expectedVersionOutput, but found '$versionOutput' at '$($cppcheck.Source)'. Update the runner image or deliberately bump CPPCHECK_VERSION after re-validating the finding set."
+          }
+
+          Write-Host "Using $versionOutput from $($cppcheck.Source)"
       # The vendored single-header json.hpp (nlohmann/json) is excluded from analysis.
       # The three suppressed info-level IDs are meta-diagnostics, not code findings:
       # --enable=all turns on `information` reporting and --error-exitcode trips on it.

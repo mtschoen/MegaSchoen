@@ -70,7 +70,7 @@ uint64_t LuidKey(const LUID &id)
 struct PathCandidate
 {
     UINT32 pathIdx;
-    uint64_t adapterKey;
+    uint64_t adapterKey = 0;
     UINT32 sourceId;
 };
 
