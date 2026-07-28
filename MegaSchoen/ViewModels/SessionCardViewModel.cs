@@ -29,6 +29,8 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(StateEmoji));
             OnPropertyChanged(nameof(StateText));
             OnPropertyChanged(nameof(StateColor));
+            OnPropertyChanged(nameof(ModeText));
+            OnPropertyChanged(nameof(ModeColor));
             OnPropertyChanged(nameof(CwdShort));
             OnPropertyChanged(nameof(CurrentCwdShort));
             OnPropertyChanged(nameof(SessionIdStem));
@@ -69,6 +71,16 @@ public sealed partial class SessionCardViewModel : INotifyPropertyChanged
         SessionState.Working => "#5CB85C",
         SessionState.Idle => "#777777",
         _ => "#999999"
+    };
+
+    public string ModeText => _snapshot.Mode.ToString();
+
+    public string ModeColor => _snapshot.Mode switch
+    {
+        SessionMode.Plan => "#3B82F6",
+        SessionMode.Build => "#5CB85C",
+        SessionMode.Auto => "#A855F7",
+        _ => "#777777"
     };
 
     public string CwdShort

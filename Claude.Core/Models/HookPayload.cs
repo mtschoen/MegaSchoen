@@ -13,6 +13,9 @@ public sealed class HookPayload
     [JsonPropertyName("cwd")]
     public string? Cwd { get; set; }
 
+    [JsonPropertyName("permission_mode")]
+    public string? PermissionMode { get; set; }
+
     [JsonPropertyName("hook_event_name")]
     public string? HookEventName { get; set; }
 

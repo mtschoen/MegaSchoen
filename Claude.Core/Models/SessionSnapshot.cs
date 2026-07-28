@@ -12,6 +12,7 @@ public sealed record SessionSnapshot(
     IReadOnlyList<SubagentSnapshot> Subagents,
     string? Host = null,
     int? SshClientPort = null,
+    SessionMode Mode = SessionMode.Unknown,
     string? Title = null)
 {
     public string CurrentCwd { get; init; } = Cwd;

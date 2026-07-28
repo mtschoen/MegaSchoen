@@ -157,6 +157,90 @@ public class HookDispatcherTests
     }
 
     [TestMethod]
+    public void UserPromptSubmit_PersistsPlanMode()
+    {
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "UserPromptSubmit",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            PermissionMode = "plan"
+        });
+
+        Assert.AreEqual(SessionMode.Plan, _store.Read()["s1"].Mode);
+    }
+
+    [TestMethod]
+    public void PostToolUse_MissingPermissionMode_PreservesKnownMode()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.Working,
+            Mode = SessionMode.Auto
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "PostToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\foo"
+        });
+
+        Assert.AreEqual(SessionMode.Auto, _store.Read()["s1"].Mode);
+    }
+
+    [TestMethod]
+    public void PostToolUse_UnrecognizedPermissionMode_ReplacesKnownModeWithUnknown()
+    {
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow.AddSeconds(-1),
+            Reason = WaitingReason.Working,
+            Mode = SessionMode.Build
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "PostToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            PermissionMode = "future"
+        });
+
+        Assert.AreEqual(SessionMode.Unknown, _store.Read()["s1"].Mode);
+    }
+
+    [TestMethod]
+    public void PostToolUse_ChangedMode_RewritesWorkingEntry()
+    {
+        var earlier = DateTimeOffset.UtcNow.AddSeconds(-5);
+        _store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\foo\\t.jsonl",
+            NotifiedAt = earlier,
+            Reason = WaitingReason.Working,
+            Mode = SessionMode.Build
+        });
+
+        _dispatcher.Dispatch(new HookPayload
+        {
+            HookEventName = "PostToolUse",
+            SessionId = "s1",
+            Cwd = "C:\\foo",
+            TranscriptPath = "C:\\foo\\t.jsonl",
+            PermissionMode = "auto"
+        });
+
+        var updated = _store.Read()["s1"];
+        Assert.AreEqual(SessionMode.Auto, updated.Mode);
+        Assert.IsTrue(updated.NotifiedAt > earlier);
+    }
+
+    [TestMethod]
     public void UserPromptSubmit_OverwritesAwaitingInputWithWorking()
     {
         _store.Upsert("s1", new SessionEntry

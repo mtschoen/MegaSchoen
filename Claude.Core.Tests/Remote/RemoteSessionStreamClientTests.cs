@@ -89,7 +89,7 @@ public class RemoteSessionStreamClientTests
     {
         // A wire line as emitted by the remote CLI (SnapshotDto shape).
         const string line = """
-        [{"SessionId":"r1","Cwd":"/home/schoen/site","CurrentCwd":"/home/schoen/site/src","TranscriptPath":"/t.jsonl","LastActivityUtc":"2026-06-04T00:00:00+00:00","State":"Working","RollupState":"Working","PendingMessage":null,"WindowTitle":null,"Subagents":[],"SshClientPort":51000}]
+        [{"SessionId":"r1","Cwd":"/home/schoen/site","CurrentCwd":"/home/schoen/site/src","TranscriptPath":"/t.jsonl","LastActivityUtc":"2026-06-04T00:00:00+00:00","State":"Working","RollupState":"Working","Mode":"Auto","PendingMessage":null,"WindowTitle":null,"Subagents":[],"SshClientPort":51000}]
         """;
 
         var client = new RemoteSessionStreamClient("llamabox", () => throw new InvalidOperationException("not used"));
@@ -97,6 +97,7 @@ public class RemoteSessionStreamClientTests
 
         Assert.IsNotNull(snaps);
         Assert.HasCount(1, snaps);
+        Assert.AreEqual(SessionMode.Auto, snaps[0].Mode);
         Assert.AreEqual("/home/schoen/site/src", snaps[0].CurrentCwd);
         Assert.AreEqual(51000, snaps[0].SshClientPort);
         Assert.AreEqual("llamabox", snaps[0].Host);

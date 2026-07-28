@@ -189,4 +189,34 @@ public class StateStoreTests
 
         Assert.AreEqual(WaitingReason.Permission, new StateStore(_tempDir).Read()["s1"].Reason);
     }
+
+    [TestMethod]
+    public void Mode_RoundtripsThroughStore()
+    {
+        var store = new StateStore(_tempDir);
+        store.Upsert("s1", new SessionEntry
+        {
+            Cwd = "C:\\foo",
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Mode = SessionMode.Plan
+        });
+
+        Assert.AreEqual(SessionMode.Plan, new StateStore(_tempDir).Read()["s1"].Mode);
+    }
+
+    [TestMethod]
+    public void Mode_LegacyEntryWithoutField_DefaultsToUnknown()
+    {
+        Directory.CreateDirectory(_tempDir);
+        File.WriteAllText(
+            Path.Combine(_tempDir, "s1.json"),
+            """
+            {
+              "cwd": "C:\\foo",
+              "notifiedAt": "2026-04-01T00:00:00+00:00"
+            }
+            """);
+
+        Assert.AreEqual(SessionMode.Unknown, new StateStore(_tempDir).Read()["s1"].Mode);
+    }
 }

@@ -47,6 +47,34 @@ public class ActiveSessionEnumeratorTests
     }
 
     [TestMethod]
+    public void Enumerate_StateEntry_ThreadsModeIntoSnapshot()
+    {
+        using var fixture = new ClaudeProjectsFixture();
+        const string cwd = @"C:\repo\plan";
+        var slug = SlugEncoder.Encode(cwd);
+        var transcript = fixture.AddSession(
+            slug,
+            "plan-1",
+            """{"type":"assistant","message":{}}""",
+            DateTime.UtcNow);
+        var store = new StateStore(Path.Combine(fixture.Root, "state"));
+        store.Upsert("plan-1", new SessionEntry
+        {
+            Cwd = cwd,
+            TranscriptPath = transcript,
+            NotifiedAt = DateTimeOffset.UtcNow,
+            Reason = WaitingReason.Working,
+            Mode = SessionMode.Plan
+        });
+        var locator = new FakeProcessLocator();
+        locator.Sessions.Add(LiveProc(100, cwd, new IntPtr(1)));
+
+        var result = new ActiveSessionEnumerator(locator, store, fixture.Root, fixture.GetCreationTimeUtc).Enumerate();
+
+        Assert.AreEqual(SessionMode.Plan, result.Single().Mode);
+    }
+
+    [TestMethod]
     public void Enumerate_SessionMovedDirectories_PreservesRootAndReportsCurrentCwd()
     {
         using var fixture = new ClaudeProjectsFixture();
@@ -179,6 +207,7 @@ public class ActiveSessionEnumeratorTests
         Assert.HasCount(1, result);
         Assert.AreEqual("fresh-1", result[0].SessionId);
         Assert.AreEqual(SessionState.Working, result[0].State, "assistant-last => Working via tail read");
+        Assert.AreEqual(SessionMode.Unknown, result[0].Mode);
     }
 
     [TestMethod]
@@ -329,7 +358,8 @@ public class ActiveSessionEnumeratorTests
         {
             Cwd = @"C:\actual\task",
             NotifiedAt = DateTimeOffset.UtcNow,
-            Reason = WaitingReason.AwaitingInput
+            Reason = WaitingReason.AwaitingInput,
+            Mode = SessionMode.Auto
         });
 
         var locator = new FakeProcessLocator();
@@ -341,6 +371,7 @@ public class ActiveSessionEnumeratorTests
         Assert.IsNotNull(session, "authoritative id surfaces even when cwd-keying would mis-bucket the home dir");
         Assert.AreEqual(SessionState.AwaitingInput, session.State);
         Assert.AreEqual(@"C:\actual\task", session.Cwd, "prefer the hook-recorded cwd over the worker's home-dir PEB cwd");
+        Assert.AreEqual(SessionMode.Auto, session.Mode);
     }
 
     [TestMethod]

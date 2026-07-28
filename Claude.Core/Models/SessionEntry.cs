@@ -18,4 +18,7 @@ public sealed class SessionEntry
 
     [JsonPropertyName("reason")]
     public WaitingReason Reason { get; set; } = WaitingReason.Permission;
+
+    [JsonPropertyName("mode")]
+    public SessionMode Mode { get; set; }
 }

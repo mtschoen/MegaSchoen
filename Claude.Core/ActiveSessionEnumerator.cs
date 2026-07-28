@@ -143,6 +143,7 @@ public sealed class ActiveSessionEnumerator
                 WindowTitle: string.IsNullOrEmpty(title) ? null : title,
                 Subagents: subagents,
                 SshClientPort: process?.SshClientPort,
+                Mode: entry?.Mode ?? SessionMode.Unknown,
                 Title: TranscriptTitleReader.ReadTitle(candidate.TranscriptPath))
             {
                 CurrentCwd = cwd
@@ -312,6 +313,7 @@ public sealed class ActiveSessionEnumerator
                     ? EnumerateSubagents(slugDir, id)
                     : Array.Empty<SubagentSnapshot>(),
                 SshClientPort: process.SshClientPort,
+                Mode: entry?.Mode ?? SessionMode.Unknown,
                 Title: existingTranscript is not null ? TranscriptTitleReader.ReadTitle(existingTranscript) : null)
             {
                 CurrentCwd = currentCwd

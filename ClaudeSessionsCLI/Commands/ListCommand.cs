@@ -157,7 +157,7 @@ static class ListCommand
     static Table BuildTable(IReadOnlyList<SessionSnapshot> snapshots)
     {
         var table = new Table();
-        table.AddColumns("State", "Root", "Current", "Session", "Last activity");
+        table.AddColumns("State", "Mode", "Root", "Current", "Session", "Last activity");
         Repopulate(table, snapshots);
         return table;
     }
@@ -167,13 +167,14 @@ static class ListCommand
         table.Rows.Clear();
         if (snapshots.Count == 0)
         {
-            table.AddRow("[grey](no active sessions)[/]", "", "", "", "");
+            table.AddRow("[grey](no active sessions)[/]", "", "", "", "", "");
             return;
         }
         foreach (var s in snapshots)
         {
             table.AddRow(
                 FormatState(s.RollupState),
+                FormatMode(s.Mode),
                 Markup.Escape(TruncateMiddle(s.Cwd, 40)),
                 Markup.Escape(TruncateMiddle(s.CurrentCwd, 40)),
                 s.SessionId.Length >= 8 ? s.SessionId[..8] : s.SessionId,
@@ -195,6 +196,14 @@ static class ListCommand
         return $"{emoji} {label}";
     }
 
+    static string FormatMode(SessionMode mode) => mode switch
+    {
+        SessionMode.Plan => "[blue]PLAN[/]",
+        SessionMode.Build => "[green]BUILD[/]",
+        SessionMode.Auto => "[purple]AUTO[/]",
+        _ => "[grey]?[/]"
+    };
+
     static string TruncateMiddle(string s, int maximum)
     {
         if (s.Length <= maximum) return s;
@@ -211,6 +220,7 @@ sealed record SnapshotDto(
     DateTimeOffset LastActivityUtc,
     string State,
     string RollupState,
+    string Mode,
     // Glyph for the effective (rollup) status, so JSON consumers get the same
     // at-a-glance icon shown in the human table.
     string Emoji,
@@ -230,6 +240,7 @@ sealed record SnapshotDto(
         snapshot.LastActivityUtc,
         snapshot.State.ToString(),
         snapshot.RollupState.ToString(),
+        snapshot.Mode.ToString(),
         SessionStateEmoji.For(snapshot.RollupState),
         snapshot.PendingMessage,
         snapshot.WindowTitle,

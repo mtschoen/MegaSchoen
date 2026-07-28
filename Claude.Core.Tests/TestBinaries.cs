@@ -5,9 +5,12 @@ namespace Claude.Core.Tests;
 // find executables built in the same configuration: CI builds Release, local MSBuild builds Debug.
 static class TestBinaries
 {
-    const string TargetFramework = "net10.0-windows10.0.26100.0";
+    static string TargetFramework =>
+        OperatingSystem.IsWindows() ? "net10.0-windows10.0.26100.0" : "net10.0";
 
     internal static string Configuration { get; } = DeriveConfiguration();
+    internal static string ExecutableName(string projectName) =>
+        OperatingSystem.IsWindows() ? $"{projectName}.exe" : projectName;
 
     static string DeriveConfiguration()
     {

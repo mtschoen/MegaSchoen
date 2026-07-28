@@ -88,9 +88,14 @@ public sealed class HookDispatcher
     void SetState(string sessionId, HookPayload payload, WaitingReason reason, string? message)
     {
         var existing = _store.ReadSession(sessionId);
+        var reportedMode = SessionModeMapper.FromPermissionMode(payload.PermissionMode);
+        var mode = payload.PermissionMode is null
+            ? existing?.Mode ?? SessionMode.Unknown
+            : reportedMode;
         if (existing is not null
             && existing.Reason == reason
             && existing.Message == message
+            && existing.Mode == mode
             && string.Equals(existing.Cwd, payload.Cwd ?? "", StringComparison.Ordinal)
             && string.Equals(existing.TranscriptPath, payload.TranscriptPath, StringComparison.Ordinal))
         {
@@ -103,7 +108,8 @@ public sealed class HookDispatcher
             TranscriptPath = payload.TranscriptPath,
             NotifiedAt = DateTimeOffset.UtcNow,
             Message = message,
-            Reason = reason
+            Reason = reason,
+            Mode = mode
         });
     }
 }
