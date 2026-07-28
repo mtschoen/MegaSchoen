@@ -114,9 +114,18 @@ A live dashboard for active Claude Code sessions - see at a glance which session
 
 - **MegaSchoen Sessions tab** (MAUI, Windows) - live cards driven by a `FileSystemWatcher`
 - **MegaSchoen.Avalonia** - a cross-platform Avalonia app with the same session cards, verified on Linux/steamdeck
-- **ClaudeSessionsCLI** - `list` (Spectre.Console live table, one-shot `--json`, or NDJSON `--json-stream`) and `focus <session-prefix>`, cross-platform
+- **AgentSessionsCLI** (`agent-sessions`) - `list` (Spectre.Console live table, one-shot `--json`, or NDJSON `--json-stream`) and `focus <session-prefix>`, cross-platform
 
 All three read from the same source of truth: `ClaudeHookBridge`, a small console app that Claude Code's hooks invoke on every event, writing one state file per session that the frontends watch and re-render from. See `AGENTS.md` ("Architecture Overview") for the full component breakdown.
+
+`ActiveSessionEnumerator` combines provider-neutral `ISessionSource`
+implementations; `ClaudeSessionSource` is currently the only configured
+provider. This is the extension point for adding other coding agents without
+changing dashboard or CLI consumers.
+
+To provision a Linux sessions host, run `scripts/setup-sessions-host.sh` on that
+host. It installs `agent-sessions` and retains `claude-sessions` as a
+compatibility launcher for existing remote-host configurations.
 
 ## License
 

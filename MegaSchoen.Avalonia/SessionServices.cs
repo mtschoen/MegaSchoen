@@ -22,6 +22,6 @@ static class SessionServices
 
         var stateDirectory = Environment.GetEnvironmentVariable("MEGASCHOEN_STATE_DIR");
         var store = string.IsNullOrWhiteSpace(stateDirectory) ? new StateStore() : new StateStore(stateDirectory);
-        return new ActiveSessionEnumerator(locator, store);
+        return new ActiveSessionEnumerator([new ClaudeSessionSource(locator, store)]);
     }
 }

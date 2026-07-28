@@ -1,67 +1,54 @@
-MegaSchoen test report — 2026-07-28T12:38:15-07:00
+MegaSchoen test report — 2026-07-28T12:58:12-07:00
 =================================================
 
 Status:   PASS
-Tests:    228 Claude.Core.Tests + 3 MegaSchoen.Avalonia.Tests
-          + 61 DisplayManager.Core.Tests, all passing
-Git:      7ca728a (main baseline after #43 #44 #45 #46 #47)
-          41275bf (DisplayApplyGate branch measurement)
-          872668c (PR #50 merge head)
-Coverage: Claude.Core 1060/1139 lines (93.06%), branch 86.5%, method 95.78%
-          MegaSchoen.Avalonia ShutdownCoordinator 3/3 statements (100%)
-          DisplayManager.Core merged scope 1036/1242 lines (83.41%),
-          230/310 branches
-          DisplayManager.Core DisplayApplyGate 30/30 lines (100%),
-          6/6 branches (100%), 3/3 methods (100%)
+Tests:    255 Claude.Core.Tests + 3 MegaSchoen.Avalonia.Tests, all passing
+Git:      97fd729 (issue #31 Phase 1; report includes final working-tree tests)
+Coverage: Claude.Core 944/1067 lines (88.47%), branch 83.67%,
+          method 88.61% on the cross-platform net10.0 scope
+          ActiveSessionEnumerator coordinator 10/10 lines (100%)
+          ClaudeSessionSource 182/185 lines (98.38%)
 
 Scope:
-  - Repo-wide re-measure on the Windows TFM after the merge wave landed the
-    tray/logout fix (#44), /wrap status (#46), session mode badges (#47),
-    session cwd display (#45), and the lint-cpp policy change (#43).
-  - Measured with `pwsh .claude/scripts/measure-coverage.ps1` (the documented
-    scope CI uses); the Avalonia shutdown coordinator is measured separately
-    with coverlet.msbuild and merged by CI into the posted status.
-  - The pr-crew/coverage gate threshold is 80%; the posted main status is
-    green.
-  - Coverlet separately measured `DisplayManager.Core.DisplayApplyGate`, the
-    serialization and cooldown policy at the managed/native apply boundary.
-    Tests cover accepted applies, concurrent drops, cooldown drops, cooldown
-    expiry, diagnostic logging, action suppression, and exception cleanup.
-    DisplayManager.Core remains outside the automated pr-crew coverage scope
-    because it is coupled to the Windows-native display project.
+  - Issue #31 Phase 1 adds the provider-neutral ISessionSource seam, keeps
+    ClaudeSessionSource as the only configured provider, and renames the
+    sessions CLI and host setup entry points.
+  - Coverage was measured with coverlet.msbuild on the net10.0 TFM available
+    in this Linux worktree. The configured pr-crew threshold is 80%.
+  - CI measures the Windows TFM and merges the separately measured Avalonia
+    scope. The last Windows baseline recorded on main was 93.06% for
+    Claude.Core.
 
-PR #50 changed scope:
-  - `DisplayApplyCooldown`: 100% line and branch coverage.
-  - The deferred `ApplyConfiguration` return path is covered, including
-    structured retry metadata and diagnostic logging.
-  - Cooldown behavior is covered before resume, during the interval, at expiry,
-    when a second resume restarts the interval, and across independent core
-    instances through the shared monotonic resume timestamp.
-  - Missing, malformed, future, and unreadable shared timestamps are covered,
-    along with wall-clock correction, named-mutex contention, abandoned-mutex
-    recovery, and persistence failure retaining the in-process guard.
-
-Lowest-covered files (from the same main measurement):
-  - Logger.cs 78.6%, SessionStateClassifier.cs 83.3%,
-    Remote/RemoteSessionStreamClient.cs 83.9%, EnvironmentProcessLocator.cs
-    85.0%, StateStore.cs 85.6%.
+Prior recorded scopes (not rerun because issue #31 does not touch them):
+  - DisplayManager.Core merged scope: 1036/1242 lines (83.41%) and 230/310
+    branches.
+  - DisplayManager.Core DisplayApplyGate: 30/30 lines, 6/6 branches, and 3/3
+    methods (100%).
 
 Verification:
-  - `dotnet test DisplayManager.Core.Tests/DisplayManager.Core.Tests.csproj
-    -f net10.0 -c Release` with the documented Linux managed-only targets
-    override: 61 passed after conflict resolution.
-  - The merged suite under Microsoft Code Coverage produced Cobertura results:
-    1036/1242 lines and 230/310 branches overall.
-  - `dotnet build DisplayManager.Core/DisplayManager.Core.csproj -f net10.0
-    -c Release -warnaserror` with that override: 0 warnings, 0 errors.
-  - `roslynator analyze` on DisplayManager.Core and
-    DisplayManager.Core.Tests: 0 diagnostics.
-  - `aislop scan .`: 0 code-quality, AI-slop, or security findings.
+  - `dotnet build Claude.Core.Tests/Claude.Core.Tests.csproj -c Release
+    --no-restore -warnaserror`: 0 warnings, 0 errors.
+  - `dotnet build AgentSessionsCLI/AgentSessionsCLI.csproj -f net10.0
+    -c Release --no-restore -warnaserror`: 0 warnings, 0 errors.
+  - `dotnet build MegaSchoen.Avalonia/MegaSchoen.Avalonia.csproj -c Release
+    -warnaserror`: 0 warnings, 0 errors.
+  - `dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -f net10.0
+    -c Release /p:CollectCoverage=true`: 255 passed.
+  - `dotnet test MegaSchoen.Avalonia.Tests/MegaSchoen.Avalonia.Tests.csproj
+    -c Release`: 3 passed.
+  - Built `AgentSessionsCLI` was invoked with no arguments and with isolated
+    `list --json`; usage names `agent-sessions`, and the isolated snapshot was
+    an empty JSON array.
+  - `scripts/setup-sessions-host.sh` passed `bash -n` and a disposable fake
+    publish smoke. Both installed launchers (`agent-sessions` and the
+    compatibility `claude-sessions`) invoked the built CLI successfully.
+  - `aislop scan .` and `aislop ci .` reported 0 lint, code-quality, AI-slop,
+    or security findings.
 
 Platform limits:
-  - The Linux worktree cannot build or launch the Windows MAUI host because the
-    MAUI/Visual Studio native workload is unavailable. The Windows CI solution
-    build remains the authoritative check for `SystemEvents` host wiring.
-  - The Linux checkout stores LF while `.editorconfig` mandates CRLF, so the
-    local formatter and aislop report the documented whole-tree line-ending
-    warnings. Windows CI checks out CRLF and runs the authoritative format gate.
+  - The Linux host cannot restore the full solution because the Windows MAUI
+    project requires an unavailable MAUI Tizen workload (`NETSDK1147`).
+  - `.editorconfig` mandates CRLF while this Linux checkout stores C# as LF.
+    The formatter and aislop therefore report the documented whole-tree set of
+    196 C# formatting warnings. No whole-tree line-ending rewrite was applied;
+    Windows CI checks out CRLF and remains authoritative for formatting.

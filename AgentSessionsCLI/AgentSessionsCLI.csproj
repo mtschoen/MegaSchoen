@@ -4,7 +4,7 @@
     <TargetFrameworks>net10.0;net10.0-windows10.0.26100.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>ClaudeSessionsCLI</RootNamespace>
+    <RootNamespace>AgentSessionsCLI</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

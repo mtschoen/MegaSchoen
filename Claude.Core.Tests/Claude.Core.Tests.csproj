@@ -49,7 +49,7 @@
        ReferenceOutputAssembly=false builds them (so they exist on disk for the tests to find)
        without linking their output into the test assembly. -->
   <ItemGroup>
-    <ProjectReference Include="..\ClaudeSessionsCLI\ClaudeSessionsCLI.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\AgentSessionsCLI\AgentSessionsCLI.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.26100.0'">
     <ProjectReference Include="..\ClaudeHookBridge\ClaudeHookBridge.csproj" ReferenceOutputAssembly="false" />

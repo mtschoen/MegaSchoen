@@ -23,7 +23,7 @@ public class RemoteHostConfigTests
             Assert.HasCount(1, hosts);
             Assert.AreEqual("llamabox", hosts[0].Name);
             Assert.AreEqual("schoen@llamabox", hosts[0].SshTarget);
-            Assert.AreEqual("claude-sessions", hosts[0].RemoteCli);   // default
+            Assert.AreEqual("agent-sessions", hosts[0].RemoteCli);
         }
         finally { File.Delete(path); }
     }

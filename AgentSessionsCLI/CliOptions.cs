@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace ClaudeSessionsCLI;
+namespace AgentSessionsCLI;
 
 sealed class CliOptions
 {

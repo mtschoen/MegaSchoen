@@ -6,7 +6,7 @@ using Claude.Core.Windows;
 #endif
 using Spectre.Console;
 
-namespace ClaudeSessionsCLI.Commands;
+namespace AgentSessionsCLI.Commands;
 
 static class ListCommand
 {
@@ -51,7 +51,7 @@ static class ListCommand
 
         var stateDir = Environment.GetEnvironmentVariable("MEGASCHOEN_STATE_DIR");
         var store = string.IsNullOrWhiteSpace(stateDir) ? new StateStore() : new StateStore(stateDir);
-        return new ActiveSessionEnumerator(locator, store);
+        return new ActiveSessionEnumerator([new ClaudeSessionSource(locator, store)]);
     }
 
     static int EmitJsonOnce(ActiveSessionEnumerator enumerator)

@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Claude.Core.Tests", "Claude
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeHookBridge", "ClaudeHookBridge\ClaudeHookBridge.csproj", "{8F5B748C-467A-4FE6-AA93-73292AC233B8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClaudeSessionsCLI", "ClaudeSessionsCLI\ClaudeSessionsCLI.csproj", "{C5D8E001-0001-0001-0001-000000000001}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgentSessionsCLI", "AgentSessionsCLI\AgentSessionsCLI.csproj", "{C5D8E001-0001-0001-0001-000000000001}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DisplayManager.Core.Tests", "DisplayManager.Core.Tests\DisplayManager.Core.Tests.csproj", "{9C0077BF-7200-4502-947C-7E78F4662C45}"
 EndProject

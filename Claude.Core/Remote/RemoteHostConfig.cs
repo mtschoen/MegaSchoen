@@ -7,7 +7,7 @@ public sealed class RemoteHostConfig
 {
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("sshTarget")] public string SshTarget { get; set; } = "";
-    [JsonPropertyName("remoteCli")] public string RemoteCli { get; set; } = "claude-sessions";
+    [JsonPropertyName("remoteCli")] public string RemoteCli { get; set; } = "agent-sessions";
 
     public static string DefaultPath =>
         Path.Combine(Paths.AppDataDirectory, "remote-hosts.json");

@@ -1,4 +1,4 @@
-using ClaudeSessionsCLI.Commands;
+using AgentSessionsCLI.Commands;
 
 if (args.Length == 0)
 {
@@ -15,10 +15,10 @@ return args[0].ToLowerInvariant() switch
 
 static void PrintUsage()
 {
-    Console.WriteLine("Usage: ClaudeSessionsCLI <command> [arguments]");
+    Console.WriteLine("Usage: agent-sessions <command> [arguments]");
     Console.WriteLine();
     Console.WriteLine("Commands:");
-    Console.WriteLine("  list  [--json] [--json-stream] [--interval 1.5]   List active Claude sessions");
+    Console.WriteLine("  list  [--json] [--json-stream] [--interval 1.5]   List active agent sessions");
     Console.WriteLine("  focus <session-id-prefix>                          Bring matching window to foreground");
 }
 

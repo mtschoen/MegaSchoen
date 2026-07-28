@@ -5,7 +5,7 @@ using Claude.Core.Windows;
 using Claude.Core.Linux;
 #endif
 
-namespace ClaudeSessionsCLI.Commands;
+namespace AgentSessionsCLI.Commands;
 
 static class FocusCommand
 {
@@ -26,7 +26,7 @@ static class FocusCommand
         var focuser = new LinuxClaudeWindowFocuser();
 #endif
         var store = new StateStore();
-        var enumerator = new ActiveSessionEnumerator(locator, store);
+        var enumerator = new ActiveSessionEnumerator([new ClaudeSessionSource(locator, store)]);
         var snapshots = enumerator.Enumerate();
 
         var matches = snapshots.Where(s => s.SessionId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).ToList();

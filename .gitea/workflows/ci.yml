@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet build Claude.Core.Tests/Claude.Core.Tests.csproj -c Release --no-restore -warnaserror
-          dotnet build ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -c Release --no-restore -warnaserror
+          dotnet build AgentSessionsCLI/AgentSessionsCLI.csproj -c Release --no-restore -warnaserror
           dotnet build ClaudeHookBridge/ClaudeHookBridge.csproj -c Release --no-restore -warnaserror
 
   lint-cpp:

@@ -49,7 +49,7 @@ on non-Windows hosts so the multi-TFM projects restore):
 
 ```bash
 dotnet build MegaSchoen.Avalonia/MegaSchoen.Avalonia.csproj   # cross-platform sessions GUI
-dotnet build ClaudeSessionsCLI/ClaudeSessionsCLI.csproj -f net10.0
+dotnet build AgentSessionsCLI/AgentSessionsCLI.csproj -f net10.0
 dotnet build ClaudeHookBridge/ClaudeHookBridge.csproj -c Release -f net10.0
 dotnet test Claude.Core.Tests/Claude.Core.Tests.csproj -f net10.0
 
@@ -88,7 +88,7 @@ Output locations after a successful build:
 
 - `MegaSchoen\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\MegaSchoen.exe` — **the MAUI app (authoritative path)**
 - `DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe` — display-management CLI (AnyCPU)
-- `ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe` — active-Claude-sessions CLI (AnyCPU, Windows TFM)
+- `AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe` — active-agent-sessions CLI (AnyCPU, Windows TFM)
 - `ClaudeHookBridge\bin\Debug\net10.0-windows10.0.26100.0\ClaudeHookBridge.exe` — hook bridge (AnyCPU)
 - Library DLLs at `<project>\bin\Debug\...` (AnyCPU)
 
@@ -103,12 +103,12 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw               # Show raw JSON
 ```
 
-### Running the Claude Sessions CLI
+### Running the Agent Sessions CLI
 ```bash
-".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list                    # Spectre.Console live table (refreshes on FileSystemWatcher events)
-".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json             # One-shot JSON snapshot, exit
-".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" list --json-stream      # NDJSON, one snapshot per --interval (default 1.5s)
-".\ClaudeSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\ClaudeSessionsCLI.exe" focus <session-prefix>  # Bring matching window to foreground
+".\AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe" list                    # Spectre.Console live table (refreshes on FileSystemWatcher events)
+".\AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe" list --json             # One-shot JSON snapshot, exit
+".\AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe" list --json-stream      # NDJSON, one snapshot per --interval (default 1.5s)
+".\AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe" focus <session-prefix>  # Bring matching window to foreground
 ```
 Default `list` is pipe-aware: when stdout is redirected (e.g., `... | clip`) it emits one-shot JSON instead of an ANSI live table.
 
@@ -128,7 +128,7 @@ See "Exotic-context session Focus" under Architecture Overview for the design.
 ### ✅ Active Claude Sessions Dashboard Working
 
 **What's Working:**
-- New `ClaudeSessionsCLI` binary with `list` (one-shot JSON / NDJSON stream / Spectre.Console live table showing mode + root + current cwd) and `focus <prefix>` verbs
+- New `AgentSessionsCLI` binary with `list` (one-shot JSON / NDJSON stream / Spectre.Console live table showing mode + root + current cwd) and `focus <prefix>` verbs
 - New MAUI Sessions tab (sibling to Display Manager via AppShell flyout) showing per-session cards: session title (Claude Code's generated `ai-title`, read from the transcript by `TranscriptTitleReader`; hidden when the session has none), state + Plan/Build/Auto mode badges, root/start cwd, current cwd, last-activity, a Copy-path button (copies the transcript `.jsonl` path to the clipboard; hidden for transcript-less sessions), Focus button, plus optional Refresh button
 - Session mode is event-driven from Claude Code's hook `permission_mode`: `plan`→Plan, `auto`→Auto, and the documented execution-capable permission modes→Build. Missing or future values remain Unknown, including legacy state files until the session's next state-relevant hook.
 - Sessions whose latest assistant response ends with the wrap skill's successful closing sentinel show as `Wrapped` (`WRAP` in the CLI). The successful transcript marker overrides the final `Stop` hook's `AwaitingInput`; interrupted wraps and sessions with later activity do not remain wrapped.
@@ -200,9 +200,9 @@ app is ever to be retired.
 
 - **DisplayManagerCLI** (.NET 10 Console App) - Display CLI. Commands: list, apply, save, load, profiles, delete, config, raw.
 
-- **Claude.Core** (.NET 10 Library) - Cycler + active-sessions primitives. Owns `StateStore` (`needy-sessions.json`), `SessionLivenessVerifier`, `SlugEncoder`, `SessionStateClassifier`, `ActiveSessionEnumerator`, `SessionRefreshLoop`, the `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces, and Windows impls (`WindowsClaudeProcessLocator`, `WindowsClaudeWindowFocuser`). Win32 interop in `Claude.Core/Interop/`. Was originally `ClaudeCycler.Core`; renamed when scope grew beyond cycling.
+- **Claude.Core** (.NET 10 Library) - Cycler + active-sessions primitives. `ActiveSessionEnumerator` is a provider-neutral coordinator over `ISessionSource`; `ClaudeSessionSource` owns the existing Claude transcript/state/process correlation and is currently the only configured provider. The library also owns `StateStore` (`needy-sessions.json`), `SessionLivenessVerifier`, `SlugEncoder`, `SessionStateClassifier`, `SessionRefreshLoop`, the `IClaudeProcessLocator` / `IClaudeWindowFocuser` interfaces, and Windows impls (`WindowsClaudeProcessLocator`, `WindowsClaudeWindowFocuser`). Win32 interop is in `Claude.Core/Interop/`. Was originally `ClaudeCycler.Core`; renamed when scope grew beyond cycling.
 
-- **ClaudeSessionsCLI** (.NET 10 Console App, Windows TFM) - Active-Claude-sessions CLI. `list` (default human / `--json` / `--json-stream`) + `focus <prefix>`. Uses `Spectre.Console` for live table.
+- **AgentSessionsCLI** (.NET 10 Console App, Windows + cross-platform TFMs) - Active-agent-sessions CLI, installed as `agent-sessions` on Linux sessions hosts (`claude-sessions` remains a compatibility launcher). `list` (default human / `--json` / `--json-stream`) + `focus <prefix>`. Uses `Spectre.Console` for live table.
 
 - **ClaudeHookBridge** (.NET 10 Console App) - Claude Code hook receiver. Spawned by hooks; writes one file per session under `%LOCALAPPDATA%\MegaSchoen\needy-sessions\<sessionId>.json` via `Claude.Core.StateStore`.
 
@@ -210,7 +210,7 @@ app is ever to be retired.
 
 - **MegaSchoen.Avalonia** (Avalonia App, net10.0) - Cross-platform sessions GUI (added 2026-07-19; runs on the steamdeck). Ports the MAUI Sessions page and its viewmodels onto Avalonia 12: same enumerator/state-store/refresh-loop backend from `Claude.Core` (net10.0 flavor), same event-driven watchers, plus remote-host NDJSON streams. Local Focus works on KDE via `LinuxClaudeWindowFocuser`, and remote (ssh) sessions resolve their window via `LinuxSshSessionWindowResolver` (see "Linux session Focus" below); non-Linux hosts still fall back to `NullSshSessionWindowResolver`. Viewmodels are deliberate ports, not shared code, because the MAUI originals are `#if WINDOWS` and the MAUI project can't compile on Linux; keep the two in sync when touching either.
 
-- **Linux session Focus** (KDE Plasma) - On Linux, `WindowToken` carries the claude PID (stamped by `LinuxClaudeProcessLocator`), not a native handle: Wayland has no cross-client activation protocol, so `Claude.Core/Linux/LinuxClaudeWindowFocuser.cs` climbs the `/proc` ancestor chain (claude -> shell -> terminal emulator) and activates the nearest ancestor's window through KWin's DBus scripting interface (`org.kde.KWin /Scripting` loadScript/run/unloadScript of a generated `workspace.activeWindow` script, via `qdbus6`/`qdbus`). Rig-verified on SteamOS Plasma 6, 2026-07-19; end-to-end path is `ClaudeSessionsCLI focus <prefix>`, which is cross-platform. Limits: activates the terminal *window* (cannot select a Konsole tab), and no-ops silently on non-KDE compositors (returns false). Remote ssh Focus is handled by `Claude.Core/Linux/LinuxSshSessionWindowResolver.cs`, mirroring the Windows `SshSessionWindowResolver` design without a native TCP table API: it parses `/proc/net/tcp` and `/proc/net/tcp6` for the ESTABLISHED row whose local port matches the reported ssh client port, takes its socket inode, scans every process's `/proc/<pid>/fd/*` for a symlink to that inode to find the owning pid, rejects anything whose `comm` is not `ssh` (stale port reuse), and returns a PID-carrying `WindowToken` that `LinuxClaudeWindowFocuser` activates unchanged. Wired into `MegaSchoen.Avalonia/MainWindow.axaml.cs` behind `OperatingSystem.IsLinux()`.
+- **Linux session Focus** (KDE Plasma) - On Linux, `WindowToken` carries the claude PID (stamped by `LinuxClaudeProcessLocator`), not a native handle: Wayland has no cross-client activation protocol, so `Claude.Core/Linux/LinuxClaudeWindowFocuser.cs` climbs the `/proc` ancestor chain (claude -> shell -> terminal emulator) and activates the nearest ancestor's window through KWin's DBus scripting interface (`org.kde.KWin /Scripting` loadScript/run/unloadScript of a generated `workspace.activeWindow` script, via `qdbus6`/`qdbus`). Rig-verified on SteamOS Plasma 6, 2026-07-19; end-to-end path is `AgentSessionsCLI focus <prefix>`, which is cross-platform. Limits: activates the terminal *window* (cannot select a Konsole tab), and no-ops silently on non-KDE compositors (returns false). Remote ssh Focus is handled by `Claude.Core/Linux/LinuxSshSessionWindowResolver.cs`, mirroring the Windows `SshSessionWindowResolver` design without a native TCP table API: it parses `/proc/net/tcp` and `/proc/net/tcp6` for the ESTABLISHED row whose local port matches the reported ssh client port, takes its socket inode, scans every process's `/proc/<pid>/fd/*` for a symlink to that inode to find the owning pid, rejects anything whose `comm` is not `ssh` (stale port reuse), and returns a PID-carrying `WindowToken` that `LinuxClaudeWindowFocuser` activates unchanged. Wired into `MegaSchoen.Avalonia/MainWindow.axaml.cs` behind `OperatingSystem.IsLinux()`.
 
 ### Key Files
 
@@ -219,7 +219,8 @@ app is ever to be retired.
 - `DisplayManager.Core/DisplayInfo.cs` - Display data model
 - `DisplayManager.Core/Services/DisplayProfileService.cs` - Profile save/load/apply
 - `DisplayManagerCLI/Program.cs` - Display CLI commands
-- `Claude.Core/ActiveSessionEnumerator.cs` - Source-of-truth-first enumeration: (transcripts ∪ StateStore) keyed by real `session_id`, gated by process-presence liveness per cwd; preserves the transcript's first-line cwd as the root while surfacing the hook/process cwd as current; best-effort window attach for Focus (identity never depends on it)
+- `Claude.Core/ActiveSessionEnumerator.cs` - Provider-neutral coordinator: enumerates every configured `ISessionSource`, merges snapshots, and globally attention/activity sorts them
+- `Claude.Core/ClaudeSessionSource.cs` - Claude source-of-truth-first enumeration: (transcripts ∪ StateStore) keyed by real `session_id`, gated by process-presence liveness per cwd; preserves the transcript's first-line cwd as the root while surfacing the hook/process cwd as current; best-effort window attach for Focus (identity never depends on it)
 - `Claude.Core/SessionStateClassifier.cs` - Pure-function state mapping: a successful wrap sentinel → `Wrapped`, otherwise stored `WaitingReason` → `SessionState` (Permission/AwaitingInput/Working), with transcript tail-read as the no-state-file fallback
 - `Claude.Core/TranscriptTitleReader.cs` - Reads a session's generated title (the transcript `ai-title` entry, last-wins) via a bounded 256KB tail read; pure `ExtractTitle` + IO wrapper, both unit-tested
 - `Claude.Core/HookDispatcher.cs` - Maps each Claude Code hook event to a state upsert/delete; churn-guarded so the per-tool `PostToolUse`/`PreToolUse` floods don't rewrite unchanged state
@@ -229,8 +230,8 @@ app is ever to be retired.
 - `Claude.Core/SshSessionWindowResolver.cs` - ssh client port → owning `ssh.exe` pid → hosting terminal window (pure orchestration, Win32 injected)
 - `Claude.Core/Windows/WindowsClaudeProcessLocator.cs` - `EnumerateLiveSessions()`: every live claude.exe (via `ProcessResolver`), each mapped to its parent shell's terminal window when one exists; windowless processes are **kept** (emitted with `WindowToken.Null`), not dropped, so headless sessions still count for liveness
 - `Claude.Core/Windows/WindowsClaudeWindowFocuser.cs` - `BringToFront` via `Win32ForegroundHelper` (three-way `AttachThreadInput`)
-- `ClaudeSessionsCLI/Commands/ListCommand.cs` - Three-mode list (human/JSON/NDJSON)
-- `ClaudeSessionsCLI/Commands/FocusCommand.cs` - Unique-prefix focus
+- `AgentSessionsCLI/Commands/ListCommand.cs` - Three-mode list (human/JSON/NDJSON)
+- `AgentSessionsCLI/Commands/FocusCommand.cs` - Unique-prefix focus
 - `MegaSchoen/AppShell.xaml` - Two-entry flyout (Display Manager + Claude Sessions)
 - `MegaSchoen/SessionsPage.xaml(.cs)` - Sessions UI; `OnAppearing` calls `_viewModel.Start()`, `OnDisappearing` calls `Dispose`
 - `MegaSchoen/ViewModels/SessionsPageViewModel.cs` - FileSystemWatcher → bounded `Channel<byte>` → `SessionRefreshLoop` (250ms debounce → re-enumerate, per-tick guarded); idempotent `Start()`. `RefreshNow()` (initial load + Refresh button) is independently try/guarded

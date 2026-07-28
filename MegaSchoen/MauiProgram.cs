@@ -37,7 +37,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<ClaudeWindowService>();
         builder.Services.AddSingleton<IClaudeProcessLocator, WindowsClaudeProcessLocator>();
         builder.Services.AddSingleton<StateStore>();
-        builder.Services.AddSingleton<ActiveSessionEnumerator>();
+        builder.Services.AddSingleton<ISessionSource, ClaudeSessionSource>();
+        builder.Services.AddSingleton<ActiveSessionEnumerator>(services =>
+            new ActiveSessionEnumerator(services.GetServices<ISessionSource>()));
         builder.Services.AddTransient<ViewModels.SessionsPageViewModel>();
         builder.Services.AddTransient<SessionsPage>();
         builder.Services.AddTransient<DisplayManagerPage>();

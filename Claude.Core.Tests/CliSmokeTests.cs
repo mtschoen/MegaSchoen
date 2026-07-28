@@ -8,7 +8,7 @@ namespace Claude.Core.Tests;
 public class CliSmokeTests
 {
     static string CliPath() =>
-        TestBinaries.LocateExecutable("ClaudeSessionsCLI", TestBinaries.ExecutableName("ClaudeSessionsCLI"));
+        TestBinaries.LocateExecutable("AgentSessionsCLI", TestBinaries.ExecutableName("AgentSessionsCLI"));
 
     [TestMethod]
     public void ListJson_ProducesParseableJsonAndExitsZero()

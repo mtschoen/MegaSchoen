@@ -8,7 +8,7 @@ Recommended linting setup for MegaSchoen — fleet survey 2026-05-29.
 
 | Item | Status |
 |---|---|
-| **Languages** | C# (primary — ~50 `.cs` files across `Claude.Core`, `Claude.Core.Tests`, `ClaudeHookBridge`, `ClaudeSessionsCLI`, `DisplayManager.Core`, `DisplayManager.Core.Tests`, `DisplayManagerCLI`, `MegaSchoen`, `MegaSchoen.UITests`) + C++ (`DisplayManagerNative/DisplayManagerNative.cpp` + `.h`) |
+| **Languages** | C# (primary — ~50 `.cs` files across `Claude.Core`, `Claude.Core.Tests`, `ClaudeHookBridge`, `AgentSessionsCLI`, `DisplayManager.Core`, `DisplayManager.Core.Tests`, `DisplayManagerCLI`, `MegaSchoen`, `MegaSchoen.UITests`) + C++ (`DisplayManagerNative/DisplayManagerNative.cpp` + `.h`) |
 | **C++ vendor header** | `DisplayManagerNative/json.hpp` — nlohmann/json, exclude from linting |
 | **`.editorconfig`** | Present and comprehensive — full C# style/naming/formatting rules, all at `suggestion` severity |
 | **`Directory.Build.props`** | None |

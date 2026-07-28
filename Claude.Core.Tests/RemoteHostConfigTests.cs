@@ -62,8 +62,8 @@ public class RemoteHostConfigTests
     }
 
     [TestMethod]
-    public void RemoteCli_DefaultsToClaudeSessions()
+    public void RemoteCli_DefaultsToAgentSessions()
     {
-        Assert.AreEqual("claude-sessions", new RemoteHostConfig().RemoteCli);
+        Assert.AreEqual("agent-sessions", new RemoteHostConfig().RemoteCli);
     }
 }
