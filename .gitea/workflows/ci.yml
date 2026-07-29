@@ -18,9 +18,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.x'
       - name: Restore
         shell: pwsh
         run: |
@@ -99,9 +96,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.x'
       - name: Restore
         shell: pwsh
         run: dotnet restore MegaSchoen.sln
@@ -201,9 +195,6 @@ jobs:
       # host mode setup-node@v4 tries to download a node .7z and extract it with
       # act's bundled 7zr.exe, which fails with exit code 2 and breaks the job.
       # The host node (>= aislop's node>=20 floor) serves npx directly.
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '10.x'
       - name: Install C# lint engines (roslynator + jb / ReSharper CLT)
         shell: pwsh
         run: |
