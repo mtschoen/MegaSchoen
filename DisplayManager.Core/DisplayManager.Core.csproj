@@ -15,7 +15,7 @@
     </ProjectReference>
   </ItemGroup>
 
-  <Target Name="CopyDisplayManagerNative" AfterTargets="Build">
+  <Target Name="CopyDisplayManagerNative" AfterTargets="Build" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <ItemGroup>
       <_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.dll" />
       <_NativeArtifact Include="..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.pdb" />

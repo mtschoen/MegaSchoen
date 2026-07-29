@@ -1,12 +1,13 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MegaSchoen.Avalonia.ViewModels"
+        xmlns:views="using:MegaSchoen.Avalonia.Views"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
         x:Class="MegaSchoen.Avalonia.MainWindow"
         x:DataType="vm:SessionsViewModel"
-        Title="MegaSchoen - Claude Sessions"
+        Title="MegaSchoen"
         Icon="/Assets/appicon.png"
         Width="900" Height="600">
 
@@ -16,8 +17,10 @@
                       Content="Start on login (hidden in tray)"
                       FontSize="12"/>
         </Border>
-    <ScrollViewer>
-        <StackPanel Margin="20" Spacing="12">
+        <TabControl>
+            <TabItem Header="Claude Sessions">
+                <ScrollViewer>
+                    <StackPanel Margin="20" Spacing="12">
 
             <Grid ColumnDefinitions="*,Auto">
                 <TextBlock Grid.Column="0"
@@ -108,7 +111,14 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-        </StackPanel>
-    </ScrollViewer>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem x:Name="DisplayManagerTab"
+                     Header="Display Manager"
+                     IsVisible="False">
+                <views:DisplayManagerPage/>
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </Window>

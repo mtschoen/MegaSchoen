@@ -52,7 +52,8 @@ public static class DisplayManager
             var result = GetAllDisplaysJson(buffer, bufferSize);
             if (result < 0)
             {
-                // Native enumeration failed; degrade to an empty list.
+                DiagnosticLog.Log(
+                    $"DisplayManager.GetAllDisplays: native enumeration failed with code {result}.");
                 return [];
             }
 
@@ -104,6 +105,8 @@ public static class DisplayManager
             var result = GetSupportedModesJson(edidManufactureId, edidProductCodeId, buffer, bufferSize);
             if (result < 0)
             {
+                DiagnosticLog.Log(
+                    $"DisplayManager.GetSupportedModes(edid {edidManufactureId}/{edidProductCodeId}): native enumeration failed with code {result}.");
                 return [];
             }
 

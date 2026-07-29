@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <CoverletOutputFormat>cobertura</CoverletOutputFormat>
-    <Include>[MegaSchoen.Avalonia]MegaSchoen.Avalonia.ShutdownCoordinator,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.ViewModels.Layout*,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.AutostartController,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.WindowsAutostartBackend,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.SingleInstanceGuard,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.HotkeyService,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.HotkeyGesture,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.DisplayHotkeyCoordinator,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.StartupCommands,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.WindowsPackagingVerifier</Include>
+    <Include>[MegaSchoen.Avalonia]MegaSchoen.Avalonia.ShutdownCoordinator,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.ViewModels.DisplayManager*,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.ViewModels.Layout*,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.AutostartController,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.WindowsAutostartBackend,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.SingleInstanceGuard,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.HotkeyService,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.HotkeyGesture,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.DisplayHotkeyCoordinator,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.StartupCommands,[MegaSchoen.Avalonia]MegaSchoen.Avalonia.WindowsPackagingVerifier</Include>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</RuntimeIdentifier>
     <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-x64'">x64</PlatformTarget>
   </PropertyGroup>
@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DisplayManager.Core\DisplayManager.Core.csproj" />
     <ProjectReference Include="..\MegaSchoen.Avalonia\MegaSchoen.Avalonia.csproj" />
   </ItemGroup>
 

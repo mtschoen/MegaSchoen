@@ -23,6 +23,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        DisplayManager.Core.DiagnosticLog.Sink = Claude.Core.Logger.Log;
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Tray-resident monitor: closing the window never terminates the
@@ -72,6 +74,16 @@ public partial class App : Application
 
         _windowsIntegration?.Dispose();
         _windowsIntegration = null;
+    }
+
+    internal static Task RefreshDisplayHotkeysAsync()
+    {
+        if (!OperatingSystem.IsWindows() || _windowsIntegration is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _windowsIntegration.StartAsync();
     }
 
     // Tray icon (KDE StatusNotifier on Linux): the dashboard is a background

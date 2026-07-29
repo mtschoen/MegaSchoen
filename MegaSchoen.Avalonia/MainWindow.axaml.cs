@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        DisplayManagerTab.IsVisible = OperatingSystem.IsWindows();
 
         // Held via the event closures rather than a field: the window is not
         // IDisposable, so the viewmodel's lifetime is tied to Opened/Closed.
