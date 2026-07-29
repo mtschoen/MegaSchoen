@@ -3,7 +3,14 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Plain net10.0 is sufficient for Win32 P/Invoke and keeps the Linux
+         build intact. Windows builds are nevertheless architecture-specific
+         because DisplayManagerNative is x64-only. -->
+    <Platforms>AnyCPU;x64</Platforms>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">win-x64</RuntimeIdentifier>
+    <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-x64' or '$(Platform)' == 'x64'">x64</PlatformTarget>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,9 +26,26 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Claude.Core\Claude.Core.csproj" />
+    <ProjectReference Include="..\DisplayManager.Core\DisplayManager.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
+
+  <!-- Full Visual Studio MSBuild builds the x64 C++ dependency through
+       DisplayManager.Core. Fail closed if that artifact is missing, then put
+       it beside the Avalonia executable where DllImport resolves it. -->
+  <Target Name="CopyNativeDllToOutput"
+          AfterTargets="Build"
+          Condition="'$(MSBuildRuntimeType)' != 'Core' and $([MSBuild]::IsOSPlatform('Windows'))">
+    <PropertyGroup>
+      <_NativeDll>$(MSBuildProjectDirectory)\..\DisplayManagerNative\bin\x64\$(Configuration)\DisplayManagerNative.dll</_NativeDll>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_NativeDll)')"
+           Text="Required x64 native artifact was not built: $(_NativeDll)" />
+    <Copy SourceFiles="$(_NativeDll)"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

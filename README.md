@@ -86,6 +86,9 @@ Profiles are stored in `%APPDATA%\MegaSchoen\configs.json`.
 - **DisplayManager.Core** (.NET 10) - Managed wrapper with profile management
 - **DisplayManagerCLI** (.NET 10) - Command-line interface
 - **MegaSchoen** (MAUI) - Cross-platform GUI (currently Windows-only for display features)
+- **MegaSchoen.Avalonia** (.NET 10) - Cross-platform sessions GUI; on Windows it
+  also registers saved display-profile hotkeys, runs as a single tray-resident
+  instance, and supports HKCU login autostart
 
 ## How Display Manager Works
 
@@ -113,7 +116,7 @@ A live dashboard for active Claude Code sessions - see at a glance which session
 **Three frontends, one backend:**
 
 - **MegaSchoen Sessions tab** (MAUI, Windows) - live cards driven by a `FileSystemWatcher`
-- **MegaSchoen.Avalonia** - a cross-platform Avalonia app with the same session cards, verified on Linux/steamdeck
+- **MegaSchoen.Avalonia** - a cross-platform Avalonia app with the same session cards, verified on Linux/steamdeck; its Windows x64 build also supplies tray/autostart, single-instance activation, and saved display-profile hotkeys
 - **AgentSessionsCLI** (`agent-sessions`) - `list` (Spectre.Console live table, one-shot `--json`, or NDJSON `--json-stream`) and `focus <session-prefix>`, cross-platform
 
 All three read from the same source of truth: `ClaudeHookBridge`, a small console app that Claude Code's hooks invoke on every event, writing one state file per session that the frontends watch and re-render from. See `AGENTS.md` ("Architecture Overview") for the full component breakdown.

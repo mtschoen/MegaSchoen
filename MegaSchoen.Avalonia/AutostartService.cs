@@ -3,10 +3,55 @@ using System.IO;
 
 namespace MegaSchoen.Avalonia;
 
-// XDG autostart toggle: a .desktop entry under ~/.config/autostart launches
-// the dashboard hidden to the tray on login - the Linux analog of the MAUI
-// app's Windows startup registration. Enabled == the entry file exists.
 static class AutostartService
+{
+    static readonly AutostartController Controller = CreateController();
+
+    public static bool IsEnabled => Controller.IsEnabled;
+
+    public static void SetEnabled(bool enabled)
+    {
+        Controller.SetEnabled(enabled);
+    }
+
+    static AutostartController CreateController()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return new AutostartController(new WindowsAutostartBackend(
+                new RegistryStartupValueStore(),
+                () => Environment.ProcessPath));
+        }
+
+        return new AutostartController(new XdgAutostartBackend());
+    }
+}
+
+sealed class AutostartController
+{
+    readonly IAutostartBackend _backend;
+
+    public AutostartController(IAutostartBackend backend)
+    {
+        _backend = backend;
+    }
+
+    public bool IsEnabled => _backend.IsEnabled;
+
+    public void SetEnabled(bool enabled)
+    {
+        _backend.SetEnabled(enabled);
+    }
+}
+
+interface IAutostartBackend
+{
+    bool IsEnabled { get; }
+
+    void SetEnabled(bool enabled);
+}
+
+sealed class XdgAutostartBackend : IAutostartBackend
 {
     static string AutostartDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -14,9 +59,9 @@ static class AutostartService
 
     static string EntryPath => Path.Combine(AutostartDirectory, "megaschoen-sessions.desktop");
 
-    public static bool IsEnabled => File.Exists(EntryPath);
+    public bool IsEnabled => File.Exists(EntryPath);
 
-    public static void SetEnabled(bool enabled)
+    public void SetEnabled(bool enabled)
     {
         if (!enabled)
         {
@@ -37,9 +82,6 @@ static class AutostartService
             """);
     }
 
-    // Prefer the machine's launcher script (it sets DOTNET_ROOT, which login
-    // autostart processes do not otherwise inherit); fall back to the running
-    // apphost for setups without one.
     static string LauncherPath()
     {
         var launcher = Path.Combine(

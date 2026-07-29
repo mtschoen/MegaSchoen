@@ -90,6 +90,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+  package-windows:
+    name: Avalonia Release package (Windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Release solution with VS 2026 MSBuild
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & $vswhere -latest -prerelease -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\amd64\MSBuild.exe" | Select-Object -First 1
+          if (-not $msbuild) { throw "64-bit MSBuild.exe not found via vswhere." }
+          Write-Host "Using MSBuild: $msbuild"
+          & $msbuild MegaSchoen.sln -p:Configuration=Release -restore -nologo -v:minimal -m
+          if ($LASTEXITCODE -ne 0) { throw "Release solution build failed ($LASTEXITCODE)" }
+      - name: Verify Avalonia x64 output and native P/Invoke
+        shell: pwsh
+        run: |
+          $expectedSuffix = [IO.Path]::Combine("x64", "Release", "net10.0", "win-x64", "MegaSchoen.Avalonia.exe")
+          $executable = Get-ChildItem MegaSchoen.Avalonia\bin -Recurse -Filter MegaSchoen.Avalonia.exe |
+            Where-Object { $_.FullName.EndsWith($expectedSuffix, [StringComparison]::OrdinalIgnoreCase) } |
+            Select-Object -First 1
+          if (-not $executable) { throw "Expected Windows x64 Avalonia executable ending in '$expectedSuffix' was not produced." }
+          $nativeDll = Join-Path $executable.DirectoryName "DisplayManagerNative.dll"
+          if (-not (Test-Path -LiteralPath $nativeDll -PathType Leaf)) {
+            throw "DisplayManagerNative.dll was not copied beside $($executable.FullName)."
+          }
+          $process = Start-Process -FilePath $executable.FullName -ArgumentList "--verify-native" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Avalonia native P/Invoke verification failed ($($process.ExitCode))." }
+          Write-Host "Verified x64 Release executable and DisplayManagerNative P/Invoke: $($executable.FullName)"
+
   lint:
     name: Lint C# (format + analyzers)
     runs-on: windows-latest

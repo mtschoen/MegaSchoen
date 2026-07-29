@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -10,6 +11,7 @@ namespace MegaSchoen.Avalonia;
 
 public partial class App : Application
 {
+    static WindowsPlatformIntegration? _windowsIntegration;
     MainWindow? _mainWindow;
 
     internal ShutdownCoordinator Shutdown { get; } = new();
@@ -30,15 +32,46 @@ public partial class App : Application
             desktop.ShutdownRequested += (_, _) => Shutdown.RequestShutdown();
 
             _mainWindow = new MainWindow();
+            _ = StartWindowsIntegrationAsync();
             var startHidden = desktop.Args?.Contains("--hidden", StringComparer.OrdinalIgnoreCase) == true;
             if (!startHidden)
             {
                 _mainWindow.Show();
             }
             SetUpTrayIcon(desktop);
+            desktop.Exit += (_, _) => DisposeWindowsIntegration();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    async Task StartWindowsIntegrationAsync()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        try
+        {
+            _windowsIntegration = new WindowsPlatformIntegration(ShowMainWindow);
+            await _windowsIntegration.StartAsync();
+        }
+        catch (Exception exception)
+        {
+            Claude.Core.Logger.Log($"Windows platform integration failed to start: {exception}");
+        }
+    }
+
+    static void DisposeWindowsIntegration()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        _windowsIntegration?.Dispose();
+        _windowsIntegration = null;
     }
 
     // Tray icon (KDE StatusNotifier on Linux): the dashboard is a background
