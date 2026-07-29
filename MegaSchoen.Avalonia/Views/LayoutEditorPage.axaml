@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MegaSchoen.Avalonia.ViewModels"
+             x:Class="MegaSchoen.Avalonia.Views.LayoutEditorPage"
+             x:DataType="vm:LayoutEditorViewModel">
+
+    <Grid RowDefinitions="*,Auto"
+          ColumnDefinitions="*,260"
+          Margin="12"
+          ColumnSpacing="12"
+          RowSpacing="12">
+
+        <Border Grid.Row="0"
+                Grid.Column="0"
+                BorderBrush="#60808080"
+                BorderThickness="1"
+                CornerRadius="6"
+                Background="#18000000"
+                ClipToBounds="True">
+            <Canvas x:Name="LayoutCanvas"
+                    Background="Transparent"/>
+        </Border>
+
+        <StackPanel Grid.Row="0"
+                    Grid.Column="1"
+                    Spacing="10">
+            <TextBlock Text="Layout editor"
+                       FontSize="18"
+                       FontWeight="Bold"/>
+            <TextBlock Text="{Binding Title}"
+                       TextWrapping="Wrap"
+                       Foreground="Gray"/>
+
+            <Border BorderBrush="#40808080"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="10">
+                <StackPanel Spacing="5">
+                    <TextBlock Text="Selected monitor"
+                               FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Selected.Label, FallbackValue=Click a monitor}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <CheckBox Content="Snap to neighboring edges"
+                      IsChecked="{Binding SnappingEnabled}"/>
+            <Button Content="Normalize"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding NormalizeCommand}"/>
+
+            <TextBlock Text="Drag a monitor to reposition it. Normalize anchors the primary display at (0,0) and removes gaps or overlaps."
+                       TextWrapping="Wrap"
+                       FontSize="12"
+                       Foreground="Gray"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1"
+              Grid.ColumnSpan="2"
+              ColumnDefinitions="*,Auto,Auto,Auto"
+              ColumnSpacing="8">
+            <TextBlock Grid.Column="0"
+                       Text="{Binding Status}"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Center"/>
+            <Button Grid.Column="1"
+                    Content="Test"
+                    MinWidth="90"
+                    Command="{Binding TestCommand}"/>
+            <Button Grid.Column="2"
+                    Content="Stash"
+                    MinWidth="90"
+                    Command="{Binding StashCommand}"/>
+            <Button Grid.Column="3"
+                    Content="Commit"
+                    MinWidth="90"
+                    Command="{Binding CommitCommand}"/>
+        </Grid>
+    </Grid>
+</UserControl>

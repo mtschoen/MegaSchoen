@@ -9,7 +9,7 @@
   <!-- dotnet's Core MSBuild cannot load C++ .vcxproj targets. Full Visual Studio
        MSBuild keeps this build dependency, while dotnet builds compile the
        managed P/Invoke wrapper without attempting to produce a Windows DLL. -->
-  <ItemGroup Condition="'$(MSBuildRuntimeType)' != 'Core'">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(MSBuildRuntimeType)' == 'Full'">
     <ProjectReference Include="..\DisplayManagerNative\DisplayManagerNative.vcxproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
