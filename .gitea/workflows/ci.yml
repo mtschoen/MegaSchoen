@@ -120,6 +120,9 @@ jobs:
           $process = Start-Process -FilePath $executable.FullName -ArgumentList "--verify-native" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "Avalonia native P/Invoke verification failed ($($process.ExitCode))." }
           Write-Host "Verified x64 Release executable and DisplayManagerNative P/Invoke: $($executable.FullName)"
+      - name: Test display manager core and CLI cooldown
+        shell: pwsh
+        run: dotnet test DisplayManager.Core.Tests/DisplayManager.Core.Tests.csproj -c Release --no-build -v normal
 
   lint:
     name: Lint C# (format + analyzers)

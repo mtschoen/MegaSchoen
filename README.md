@@ -78,7 +78,10 @@ DisplayManagerCLI.exe profiles          # List all saved profiles
 DisplayManagerCLI.exe raw               # Show raw JSON display data
 ```
 
-Profiles are stored in `%APPDATA%\MegaSchoen\configs.json`.
+Profiles are stored in `%APPDATA%\MegaSchoen\configs.json` by default. Set
+`MEGASCHOEN_PROFILE_DATA_DIRECTORY` to keep `configs.json` and the shared
+post-resume cooldown timestamp in another directory for portable or isolated
+CLI runs.
 
 ## Display Manager Project Structure
 

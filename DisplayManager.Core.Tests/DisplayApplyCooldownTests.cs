@@ -41,6 +41,52 @@ public class DisplayApplyCooldownTests
     }
 
     [TestMethod]
+    public void GetRemainingCooldown_FourSecondsAfterSystemWake_ReturnsElevenSeconds()
+    {
+        var timeProvider = new ManualTimeProvider();
+        var cooldown = CreateCooldown(
+            timeProvider,
+            new FixedSystemWakeTimeProvider(TimeSpan.FromSeconds(4)));
+
+        Assert.AreEqual(TimeSpan.FromSeconds(11), cooldown.GetRemainingCooldown());
+    }
+
+    [TestMethod]
+    public void GetRemainingCooldown_SystemWakeBeforeCooldown_ReturnsZero()
+    {
+        var timeProvider = new ManualTimeProvider();
+        var cooldown = CreateCooldown(
+            timeProvider,
+            new FixedSystemWakeTimeProvider(TimeSpan.FromSeconds(15)));
+
+        Assert.AreEqual(TimeSpan.Zero, cooldown.GetRemainingCooldown());
+    }
+
+    [TestMethod]
+    public void GetRemainingCooldown_InvalidNegativeSystemWakeElapsedTime_ReturnsZero()
+    {
+        var timeProvider = new ManualTimeProvider();
+        var cooldown = CreateCooldown(
+            timeProvider,
+            new FixedSystemWakeTimeProvider(TimeSpan.FromSeconds(-1)));
+
+        Assert.AreEqual(TimeSpan.Zero, cooldown.GetRemainingCooldown());
+    }
+
+    [TestMethod]
+    public void GetRemainingCooldown_SharedResumeIsMoreRecentThanSystemWake_ReturnsSharedCooldown()
+    {
+        var timeProvider = new ManualTimeProvider();
+        var cooldown = CreateCooldown(
+            timeProvider,
+            new FixedSystemWakeTimeProvider(TimeSpan.FromSeconds(8)));
+        cooldown.RecordResume();
+        timeProvider.Advance(TimeSpan.FromSeconds(3));
+
+        Assert.AreEqual(TimeSpan.FromSeconds(12), cooldown.GetRemainingCooldown());
+    }
+
+    [TestMethod]
     public void Constructor_RootPath_ThrowsArgumentException()
     {
         var timeProvider = new ManualTimeProvider();
@@ -49,7 +95,8 @@ public class DisplayApplyCooldownTests
             new DisplayApplyCooldown(
                 timeProvider,
                 TimeSpan.FromSeconds(15),
-                Path.DirectorySeparatorChar.ToString()));
+                Path.DirectorySeparatorChar.ToString(),
+                NullSystemWakeTimeProvider.Instance));
     }
 
     [TestMethod]
@@ -95,8 +142,8 @@ public class DisplayApplyCooldownTests
     {
         var timeProvider = new ManualTimeProvider();
         var statePath = CreateStatePath();
-        var source = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
-        var observer = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var source = CreateCooldown(timeProvider, statePath);
+        var observer = CreateCooldown(timeProvider, statePath);
 
         try
         {
@@ -116,8 +163,8 @@ public class DisplayApplyCooldownTests
     {
         var timeProvider = new ManualTimeProvider();
         var statePath = CreateStatePath();
-        var source = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
-        var observer = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var source = CreateCooldown(timeProvider, statePath);
+        var observer = CreateCooldown(timeProvider, statePath);
 
         source.RecordResume();
         timeProvider.Advance(TimeSpan.FromSeconds(4));
@@ -192,7 +239,7 @@ public class DisplayApplyCooldownTests
         var timeProvider = new ManualTimeProvider();
         var statePath = CreateStatePath();
         File.WriteAllText(statePath, "not-a-timestamp");
-        var cooldown = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var cooldown = CreateCooldown(timeProvider, statePath);
 
         try
         {
@@ -211,7 +258,7 @@ public class DisplayApplyCooldownTests
         var statePath = CreateStatePath();
         var future = long.MaxValue;
         File.WriteAllText(statePath, future.ToString(CultureInfo.InvariantCulture));
-        var cooldown = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var cooldown = CreateCooldown(timeProvider, statePath);
 
         try
         {
@@ -229,7 +276,7 @@ public class DisplayApplyCooldownTests
         var timeProvider = new ManualTimeProvider();
         var statePath = CreateStatePath();
         File.WriteAllText(statePath, timeProvider.GetTimestamp().ToString(CultureInfo.InvariantCulture));
-        var cooldown = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var cooldown = CreateCooldown(timeProvider, statePath);
 
         Assert.AreEqual(TimeSpan.FromSeconds(15), cooldown.GetRemainingCooldown());
     }
@@ -242,7 +289,7 @@ public class DisplayApplyCooldownTests
         var timeProvider = new ManualTimeProvider();
         var statePath = CreateStatePath();
         Directory.CreateDirectory(statePath);
-        var cooldown = new DisplayApplyCooldown(timeProvider, TimeSpan.FromSeconds(15), statePath);
+        var cooldown = CreateCooldown(timeProvider, statePath);
 
         try
         {
@@ -268,7 +315,8 @@ public class DisplayApplyCooldownTests
         var cooldown = new DisplayApplyCooldown(
             timeProvider,
             TimeSpan.FromSeconds(15),
-            Path.Combine(blockingFile, "display-resume.timestamp"));
+            Path.Combine(blockingFile, "display-resume.timestamp"),
+            NullSystemWakeTimeProvider.Instance);
 
         try
         {
@@ -319,7 +367,19 @@ public class DisplayApplyCooldownTests
     }
 
     DisplayApplyCooldown CreateCooldown(TimeProvider timeProvider) =>
-        new(timeProvider, TimeSpan.FromSeconds(15), CreateStatePath());
+        CreateCooldown(timeProvider, CreateStatePath());
+
+    static DisplayApplyCooldown CreateCooldown(TimeProvider timeProvider, string statePath) =>
+        new(
+            timeProvider,
+            TimeSpan.FromSeconds(15),
+            statePath,
+            NullSystemWakeTimeProvider.Instance);
+
+    DisplayApplyCooldown CreateCooldown(
+        TimeProvider timeProvider,
+        ISystemWakeTimeProvider systemWakeTimeProvider) =>
+        new(timeProvider, TimeSpan.FromSeconds(15), CreateStatePath(), systemWakeTimeProvider);
 
     string CreateStatePath()
     {
@@ -349,5 +409,10 @@ public class DisplayApplyCooldownTests
         {
             _utcNow += duration;
         }
+    }
+
+    sealed class FixedSystemWakeTimeProvider(TimeSpan? elapsedTimeSinceWake) : ISystemWakeTimeProvider
+    {
+        public TimeSpan? GetElapsedTimeSinceWake() => elapsedTimeSinceWake;
     }
 }

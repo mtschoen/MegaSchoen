@@ -15,9 +15,7 @@ public class ProfileStorageService
 
     public ProfileStorageService()
     {
-        // Store in %APPDATA%\MegaSchoen\
-        var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        _configDirectory = Path.Combine(appDataPath, "MegaSchoen");
+        _configDirectory = DisplayProfileDataPaths.ConfigurationDirectory;
         _configFilePath = Path.Combine(_configDirectory, "configs.json");
 
         // Ensure directory exists

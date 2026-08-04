@@ -4,19 +4,36 @@ namespace DisplayManager.Core;
 
 /// <summary>
 /// Tracks the interval after a system resume during which display mode sets are unsafe.
-/// Uses the same monotonic timestamp source in-process and across processes.
+/// Combines the operating system's last-wake time with in-process and shared monotonic timestamps.
 /// </summary>
 public sealed class DisplayApplyCooldown
 {
     readonly TimeProvider _timeProvider;
     readonly string _sharedStateDirectory;
     readonly string _sharedStatePath;
+    readonly ISystemWakeTimeProvider _systemWakeTimeProvider;
     long _lastResumeTimestamp;
     int _hasResumed;
 
     public DisplayApplyCooldown(TimeProvider timeProvider, TimeSpan cooldown, string sharedStatePath)
+        : this(
+            timeProvider,
+            cooldown,
+            sharedStatePath,
+            OperatingSystem.IsWindows()
+                ? new WindowsSystemWakeTimeProvider()
+                : NullSystemWakeTimeProvider.Instance)
+    {
+    }
+
+    internal DisplayApplyCooldown(
+        TimeProvider timeProvider,
+        TimeSpan cooldown,
+        string sharedStatePath,
+        ISystemWakeTimeProvider systemWakeTimeProvider)
     {
         _timeProvider = timeProvider;
+        _systemWakeTimeProvider = systemWakeTimeProvider;
         Cooldown = cooldown;
         _sharedStatePath = Path.GetFullPath(sharedStatePath);
         _sharedStateDirectory = Path.GetDirectoryName(_sharedStatePath)
@@ -24,10 +41,7 @@ public sealed class DisplayApplyCooldown
     }
 
     public static string DefaultSharedStatePath =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MegaSchoen",
-            "display-resume.timestamp");
+        Path.Combine(DisplayProfileDataPaths.LocalStateDirectory, "display-resume.timestamp");
 
     public TimeSpan Cooldown { get; }
 
@@ -50,8 +64,31 @@ public sealed class DisplayApplyCooldown
     {
         var localRemaining = GetLocalRemainingCooldown();
         var sharedRemaining = GetSharedRemainingCooldown();
-        return localRemaining > sharedRemaining ? localRemaining : sharedRemaining;
+        var systemRemaining = GetSystemRemainingCooldown();
+        if (sharedRemaining > TimeSpan.Zero)
+        {
+            DiagnosticLog.Log("DisplayApplyCooldown: shared resume timestamp is active.");
+        }
+
+        return Max(localRemaining, sharedRemaining, systemRemaining);
     }
+
+    TimeSpan GetSystemRemainingCooldown()
+    {
+        var elapsedTimeSinceWake = _systemWakeTimeProvider.GetElapsedTimeSinceWake();
+        if (elapsedTimeSinceWake is null || elapsedTimeSinceWake < TimeSpan.Zero)
+        {
+            return TimeSpan.Zero;
+        }
+
+        var remaining = Cooldown - elapsedTimeSinceWake.Value;
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    static TimeSpan Max(TimeSpan first, TimeSpan second, TimeSpan third) =>
+        first > second
+            ? first > third ? first : third
+            : second > third ? second : third;
 
     TimeSpan GetLocalRemainingCooldown()
     {

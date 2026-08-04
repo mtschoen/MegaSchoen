@@ -103,6 +103,11 @@ If `MegaSchoen\bin\Debug\` ever reappears, something has bypassed the solution m
 ".\DisplayManagerCLI\bin\Debug\net10.0\DisplayManagerCLI.exe" raw               # Show raw JSON
 ```
 
+Set `MEGASCHOEN_PROFILE_DATA_DIRECTORY` to keep `configs.json` and the shared
+post-resume cooldown timestamp in another directory for portable or isolated
+CLI runs. Without the override, profiles remain under `%APPDATA%\MegaSchoen`
+and cooldown state under `%LOCALAPPDATA%\MegaSchoen`.
+
 ### Running the Agent Sessions CLI
 ```bash
 ".\AgentSessionsCLI\bin\Debug\net10.0-windows10.0.26100.0\AgentSessionsCLI.exe" list                    # Spectre.Console live table (refreshes on FileSystemWatcher events)
