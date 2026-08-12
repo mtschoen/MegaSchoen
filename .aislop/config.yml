@@ -31,6 +31,10 @@ ci:
 # never analyzes the C++ (cppcheck owns it, see .gitea/workflows/ci.yml lint-cpp job).
 lint:
   csharp:
+    # Required 0.14.1 opt-in to keep jb inspectcode / roslynator / dotnet format running.
+    # This is a first-party trusted repo and CI already builds the full solution these
+    # project-backed engines need, so evaluating real projects is safe here.
+    projectEvaluation: true
     jbProjects: "Claude*;DisplayManager.Core*;DisplayManagerCLI;MegaSchoen*"
     # jb (ReSharper) cannot follow .NET MAUI's RelativeSource / BindableLayout XAML
     # bindings, nor members that are only ever touched by XAML binding or

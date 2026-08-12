@@ -232,6 +232,8 @@ jobs:
       - name: Install C# lint engines (roslynator + jb / ReSharper CLT)
         shell: pwsh
         run: |
+          # Keep these synchronized with the fleet analyzer pins. Run 20425's unversioned
+          # install upgraded Roslynator from 0.12.0 to 0.13.0 and drifted the finding set.
           dotnet tool update -g roslynator.dotnet.cli --version 0.12.0 --allow-downgrade
           dotnet tool update -g JetBrains.ReSharper.GlobalTools --version 2026.2.0 --allow-downgrade
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:USERPROFILE ".dotnet\tools")

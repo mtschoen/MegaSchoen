@@ -20,10 +20,12 @@
 # Scratch output (screenshots from screenshot-editor.ps1, throwaway artifacts)
 scratch/
 
-# aislop runtime logs (keep .aislop/config.yml tracked)
-.aislop/*.jsonl
-
 # Coverage artifacts (coverlet.msbuild output + `dotnet test --collect` results)
 [Tt]est[Rr]esults/
 coverage.cobertura*.xml
 .maintenance.json
+
+# aislop runtime artifacts (session/history logs, caches, baselines).
+# Unanchored so nested project directories are covered too.
+**/.aislop/*
+!**/.aislop/config.yml
