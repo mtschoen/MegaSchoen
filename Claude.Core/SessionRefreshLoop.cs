@@ -47,11 +47,7 @@ public sealed class SessionRefreshLoop
                     while (_signal.TryRead(out var __)) { }
                     await _refresh(cancellationToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
-                {
-                    throw; // honor shutdown; do not treat as a per-iteration fault
-                }
-                catch (Exception exception)
+                catch (Exception exception) when (exception is not OperationCanceledException)
                 {
                     // Keep looping; the next watcher event retries. A single bad
                     // tick must not take down the whole dashboard refresh.

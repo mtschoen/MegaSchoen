@@ -232,8 +232,8 @@ jobs:
       - name: Install C# lint engines (roslynator + jb / ReSharper CLT)
         shell: pwsh
         run: |
-          dotnet tool install -g roslynator.dotnet.cli
-          dotnet tool install -g JetBrains.ReSharper.GlobalTools
+          dotnet tool update -g roslynator.dotnet.cli --version 0.12.0 --allow-downgrade
+          dotnet tool update -g JetBrains.ReSharper.GlobalTools --version 2026.2.0 --allow-downgrade
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $env:USERPROFILE ".dotnet\tools")
       # jb inspectcode loads + builds the whole solution graph (native C++ + MAUI), so it
       # needs the VS 2026 (v18) toolchain, not the dotnet CLI: the C++ "VCTools" workload
