@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using DisplayManager.Core;
 using DisplayManager.Core.Models;
-using MegaSchoen.Avalonia;
 
 namespace MegaSchoen.Avalonia.Tests;
 
@@ -24,7 +23,7 @@ public sealed class HotkeyServiceTests
 
         Assert.AreEqual(profile.Id, triggeredProfile);
         Assert.AreEqual(0x4003u, registrar.OnlyRegistration.Modifiers);
-        Assert.AreEqual((uint)'D', registrar.OnlyRegistration.VirtualKey);
+        Assert.AreEqual('D', registrar.OnlyRegistration.VirtualKey);
     }
 
     [TestMethod]

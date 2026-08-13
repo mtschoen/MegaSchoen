@@ -1,5 +1,4 @@
 using System;
-using MegaSchoen.Avalonia;
 
 namespace MegaSchoen.Avalonia.Tests;
 

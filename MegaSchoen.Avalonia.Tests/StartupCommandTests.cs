@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using MegaSchoen.Avalonia;
 
 namespace MegaSchoen.Avalonia.Tests;
 

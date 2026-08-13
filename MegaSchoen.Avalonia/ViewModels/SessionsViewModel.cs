@@ -26,7 +26,6 @@ public sealed class SessionsViewModel : INotifyPropertyChanged, IDisposable
 {
     readonly ActiveSessionEnumerator _enumerator;
     readonly ISshSessionWindowResolver _sshWindowResolver;
-    readonly Func<string, Task> _setClipboardText;
 
     readonly Channel<byte> _refreshSignal =
         Channel.CreateBounded<byte>(
@@ -68,7 +67,6 @@ public sealed class SessionsViewModel : INotifyPropertyChanged, IDisposable
     {
         _enumerator = enumerator;
         _sshWindowResolver = sshWindowResolver;
-        _setClipboardText = setClipboardText;
 
         FocusCommand = new RelayCommand(parameter =>
         {
@@ -80,7 +78,7 @@ public sealed class SessionsViewModel : INotifyPropertyChanged, IDisposable
             if (parameter is not SessionCardViewModel card) return;
             var path = card.Snapshot.TranscriptPath;
             if (string.IsNullOrEmpty(path)) return;
-            await _setClipboardText(path);
+            await setClipboardText(path);
         }));
         RefreshCommand = new RelayCommand(_ => RefreshNow());
     }

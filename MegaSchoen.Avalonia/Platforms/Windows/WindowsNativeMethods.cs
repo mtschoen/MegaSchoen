@@ -14,7 +14,7 @@ static partial class WindowsNativeMethods
     {
         public uint Size;
         public uint Style;
-        public IntPtr WindowProcedure;
+        public IntPtr WindowProcedurePointer;
         public int ClassExtraBytes;
         public int WindowExtraBytes;
         public IntPtr Instance;

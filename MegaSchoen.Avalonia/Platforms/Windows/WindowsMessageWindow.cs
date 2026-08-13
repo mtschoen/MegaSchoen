@@ -70,7 +70,7 @@ sealed class WindowsMessageWindow : IHotkeyRegistrar, IDisposable
         var windowClass = new WindowClass
         {
             Size = checked((uint)Marshal.SizeOf<WindowClass>()),
-            WindowProcedure = Marshal.GetFunctionPointerForDelegate(_windowProcedure),
+            WindowProcedurePointer = Marshal.GetFunctionPointerForDelegate(_windowProcedure),
             Instance = instance,
             ClassName = WindowClassName
         };

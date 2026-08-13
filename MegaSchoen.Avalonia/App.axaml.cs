@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -9,7 +8,7 @@ using Avalonia.Platform;
 
 namespace MegaSchoen.Avalonia;
 
-public partial class App : Application
+public class App : Application
 {
     static WindowsPlatformIntegration? _windowsIntegration;
     MainWindow? _mainWindow;

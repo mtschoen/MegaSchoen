@@ -1,5 +1,3 @@
-using DisplayManager.Core;
-
 namespace DisplayManager.Core.Tests;
 
 [TestClass]
@@ -19,23 +17,23 @@ public class DisplayApplyGateTests
     [TestMethod]
     public async Task Apply_WhileAnotherApplyIsInFlight_DropsAndLogsRequest()
     {
-        using var applyEntered = new ManualResetEventSlim();
-        using var releaseApply = new ManualResetEventSlim();
+        var applyEntered = new TaskCompletionSource();
+        var releaseApply = new TaskCompletionSource();
         var log = new List<string>();
         var gate = CreateGate(log: log.Add);
 
         var firstApply = Task.Run(() => gate.Apply(() =>
         {
-            applyEntered.Set();
-            releaseApply.Wait();
+            applyEntered.SetResult();
+            releaseApply.Task.Wait();
             return SuccessfulResult();
         }));
 
-        ApplyResult? dropped = null;
+        ApplyResult? dropped;
         var droppedApplyExecuted = false;
         try
         {
-            Assert.IsTrue(applyEntered.Wait(TimeSpan.FromSeconds(5)));
+            Assert.IsTrue(applyEntered.Task.Wait(TimeSpan.FromSeconds(5)));
             dropped = gate.Apply(() =>
             {
                 droppedApplyExecuted = true;
@@ -44,7 +42,7 @@ public class DisplayApplyGateTests
         }
         finally
         {
-            releaseApply.Set();
+            releaseApply.SetResult();
         }
 
         var accepted = await firstApply;
@@ -80,12 +78,12 @@ public class DisplayApplyGateTests
     [TestMethod]
     public void Apply_WhenCooldownExpires_AcceptsNextRequest()
     {
-        var elapsed = TimeSpan.Zero;
+        var elapsed = new FakeElapsed();
         var applyCount = 0;
-        var gate = CreateGate(() => elapsed);
+        var gate = CreateGate(() => elapsed.Value);
 
         gate.Apply(CountApply);
-        elapsed = TimeSpan.FromSeconds(1.5);
+        elapsed.Value = TimeSpan.FromSeconds(1.5);
         var result = gate.Apply(CountApply);
 
         Assert.IsTrue(result.Success);
@@ -101,13 +99,13 @@ public class DisplayApplyGateTests
     [TestMethod]
     public void Apply_WhenActionThrows_ReleasesGateIntoCooldown()
     {
-        var elapsed = TimeSpan.Zero;
-        var gate = CreateGate(() => elapsed);
+        var elapsed = new FakeElapsed();
+        var gate = CreateGate(() => elapsed.Value);
 
         Assert.ThrowsExactly<InvalidOperationException>(() =>
             gate.Apply(() => throw new InvalidOperationException("native failure")));
         var dropped = gate.Apply(SuccessfulResult);
-        elapsed = TimeSpan.FromSeconds(1.5);
+        elapsed.Value = TimeSpan.FromSeconds(1.5);
         var accepted = gate.Apply(SuccessfulResult);
 
         Assert.IsFalse(dropped.Success);
@@ -120,4 +118,11 @@ public class DisplayApplyGateTests
         new(TimeSpan.FromSeconds(1.5), getElapsed ?? (() => TimeSpan.Zero), log ?? (_ => { }));
 
     static ApplyResult SuccessfulResult() => new() { Success = true };
+
+    // Holder so tests can advance the fake clock without reassigning the
+    // captured variable itself (jb AccessToModifiedClosure).
+    sealed class FakeElapsed
+    {
+        public TimeSpan Value { get; set; }
+    }
 }

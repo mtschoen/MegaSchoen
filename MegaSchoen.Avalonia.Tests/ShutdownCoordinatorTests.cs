@@ -1,5 +1,3 @@
-using MegaSchoen.Avalonia;
-
 namespace MegaSchoen.Avalonia.Tests;
 
 [TestClass]

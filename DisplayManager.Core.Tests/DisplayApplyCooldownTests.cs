@@ -178,20 +178,20 @@ public class DisplayApplyCooldownTests
     {
         const string mutexName = "MegaSchoen.DisplayApplyCooldown";
         using var mutex = new Mutex(false, mutexName);
-        using var started = new ManualResetEventSlim();
+        var started = new TaskCompletionSource();
         var timeProvider = new ManualTimeProvider();
         var cooldown = CreateCooldown(timeProvider);
         mutex.WaitOne();
 
         var recordTask = Task.Run(() =>
         {
-            started.Set();
+            started.SetResult();
             cooldown.RecordResume();
         });
 
         try
         {
-            Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(1)));
+            Assert.IsTrue(started.Task.Wait(TimeSpan.FromSeconds(1)));
             Assert.IsFalse(recordTask.Wait(TimeSpan.FromMilliseconds(100)));
         }
         finally

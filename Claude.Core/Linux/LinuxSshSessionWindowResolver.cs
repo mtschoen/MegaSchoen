@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Linq;
 using Claude.Core.Models;
 
 namespace Claude.Core.Linux;

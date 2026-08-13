@@ -17,8 +17,8 @@ public class LinuxClaudeProcessLocatorTests
         public string? ReadCwd(int pid) => Procs.TryGetValue(pid, out var p) ? p.cwd : null;
         public long? ReadStartTicks(int pid) => Procs.TryGetValue(pid, out var p) ? p.ticks : null;
         public string? ReadEnviron(int pid) => Environs.TryGetValue(pid, out var e) ? e : null;
-        public Dictionary<int, int?> Parents = new();
-        public int? ReadParentPid(int pid) => Parents.TryGetValue(pid, out var parent) ? parent : null;
+        public Func<int, int?> ParentLookup = _ => null;
+        public int? ReadParentPid(int pid) => ParentLookup(pid);
         public string? ReadNetTcp() => null;
         public string? ReadNetTcp6() => null;
         public int? FindPidOwningSocketInode(long inode) => null;
