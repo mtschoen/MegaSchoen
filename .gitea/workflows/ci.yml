@@ -287,7 +287,18 @@ jobs:
           $files = $report.summary.files
           Write-Host "aislop score $($report.score) over $files files"
           if ($files -lt 50) { Write-Host "::error::aislop scanned only $files files - the C# engine did not run"; exit 1 }
-          if ($gate -ne 0) { Write-Host "::error::aislop score $($report.score) below failBelow"; exit 1 }
+          if ($gate -ne 0) {
+            # The JSON report carries the findings; surface them in the job log so a
+            # red gate names its culprits without a local repro of the runner state.
+            $findings = @($report.diagnostics | Where-Object { $_.severity -ne 'info' })
+            Write-Host "aislop findings behind the gate:"
+            foreach ($d in $findings) {
+              Write-Host ("  [{0}] {1}:{2}:{3} {4} - {5}" -f $d.severity, $d.filePath, $d.line, $d.column, $d.rule, $d.message)
+            }
+            $infos = @($report.diagnostics | Where-Object { $_.severity -eq 'info' }).Count
+            Write-Host "  plus $infos info-level indicators (report-only, no score impact)"
+            Write-Host "::error::aislop score $($report.score) below failBelow"; exit 1
+          }
           "GATE_STATE=success" | Add-Content $env:GITHUB_ENV
       # Surfaces the score in the PR's checks list (context aislop/score, e.g.
       # "score 100/100 over 124 files"), the way pr-crew/coverage shows its
