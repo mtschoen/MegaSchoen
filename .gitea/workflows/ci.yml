@@ -228,7 +228,10 @@ jobs:
       # Node LTS pre-installed (v24, the same node actions/checkout uses). On
       # host mode setup-node@v4 tries to download a node .7z and extract it with
       # act's bundled 7zr.exe, which fails with exit code 2 and breaks the job.
-      # The host node (>= aislop's node>=20 floor) serves npx directly.
+      # The host node serves npx directly. It must satisfy tsdown's build floor
+      # (node ^22.18 || >=24.11), because `npm install` on the fork runs its
+      # "prepare": "tsdown" build; below that, tsdown dies on
+      # Promise.withResolvers. Not aislop's runtime floor, which is still node 18.
       - name: Install C# lint engines (roslynator + jb / ReSharper CLT)
         shell: pwsh
         run: |
